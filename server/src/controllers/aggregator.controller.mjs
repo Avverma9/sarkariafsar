@@ -156,10 +156,13 @@ export const postListBysectionUrl = async (req, res, next) => {
         { $limit: lim },
         {
           $project: {
-            _id: 0,
+            _id: 1,
             title: 1,
             canonicalKey: 1,
             megaTitle: 1,
+            megaSlug: 1,
+            originalUrl: 1,
+            sourceSectionUrl: 1,
             postDate: "$createdAt",
           },
         },
@@ -176,7 +179,16 @@ export const postListBysectionUrl = async (req, res, next) => {
         limit: lim,
         pages: Math.ceil(totalRows / lim),
       },
-      data: rows,
+      data: rows.map((r) => ({
+        postId: String(r._id),
+        title: r.title,
+        canonicalKey: r.canonicalKey,
+        megaTitle: r.megaTitle,
+        megaSlug: r.megaSlug,
+        sourceUrl: r.originalUrl,
+        sectionUrl: r.sourceSectionUrl,
+        postDate: r.postDate,
+      })),
     });
   } catch (err) {
     next(err);
@@ -250,6 +262,7 @@ export const findMegaPostsByTitle = async (req, res, next) => {
         {
           $project: {
             _id: 1,
+            postDetailId: "$postDetail._id",
             title: 1,
             canonicalKey: 1,
             megaSlug: 1,
@@ -281,6 +294,7 @@ export const findMegaPostsByTitle = async (req, res, next) => {
       },
       data: rows.map((r) => ({
         postId: String(r._id),
+        postDetailId: String(r.postDetailId || ""),
         title: r.title,
         canonicalKey: r.canonicalKey,
         megaSlug: r.megaSlug,

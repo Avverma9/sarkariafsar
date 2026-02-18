@@ -302,6 +302,24 @@ export async function updateSinglePostById(postId, options = {}) {
   }
 
   await post.save();
+  try {
+    await PostDetail.updateOne(
+      { megaPostId: post._id },
+      {
+        $set: {
+          postTitle: String(post.title || "").trim(),
+          sourceUrl: String(post.originalUrl || "").trim(),
+          pageHash: String(post.pageHash || "").trim(),
+          htmlStableHash: String(post.updateSnapshot?._hash?.htmlStableHash || newHtmlHash || "").trim(),
+          textHash: String(post.updateSnapshot?._hash?.textHash || newTextHash || "").trim(),
+          updateSnapshot: post.updateSnapshot || null,
+          lastScrapedAt: new Date(),
+        },
+      },
+    );
+  } catch (err) {
+    logger.warn(`PostDetail sync failed for post=${post._id}: ${err.message}`);
+  }
 
   const notifyChanges = [...fieldChanges];
   if (htmlChanged) {

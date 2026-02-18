@@ -45,7 +45,7 @@ Use: Mega sections list.
 Use: Mega posts pagination with optional slug filter.
 
 7. `GET http://localhost:5000/api/site/post-list-by-section-url?megaTitle=Latest%20Gov%20Jobs&page=1&limit=100`  
-Use: Fast listing API for frontend (title, canonicalKey, megaTitle, postDate).
+Use: Fast listing API for frontend (`postId`, `title`, `canonicalKey`, `megaTitle`, `postDate`).
 
 8. `GET http://localhost:5000/api/site/find-by-title?title=railway+group+d+recruitment&page=1&limit=20`  
 Use: MegaPost title search (case-insensitive).
@@ -63,7 +63,7 @@ Body:
   "limit": 20
 }
 ```
-Response data includes: `title`, `applicationLastDate`, `jobType` (`APPLICATION|ADMIT_CARD|RESULT|ANSWER_KEY|...`).
+Response data includes: `postId` (MegaPost id), `postDetailId` (if available), `title`, `applicationLastDate`, `jobType` (`APPLICATION|ADMIT_CARD|RESULT|ANSWER_KEY|...`).
 
 10. `POST http://localhost:5000/api/site/favorite-job`  
 Use: MegaPost me favorite mark/unmark karna.  
@@ -209,19 +209,32 @@ Route group: `/api/watch`
 1. `POST http://localhost:5000/api/watch`  
 Use: User email ke liye recruitment notification watch create/update.
 
-Important: body ka `postId` **PostDetail._id** hoga, `MegaPost._id` nahi.
+Important:
+- Backward-compatible `postId` ab **PostDetail._id ya MegaPost._id** dono accept karta hai.
+- Aap `postDetailId`, `megaPostId`, ya `canonicalKey` (+ optional `megaSlug`) bhi bhej sakte ho.
+- Agar `canonicalKey` se resolve karna ho to latest matched MegaPost use hota hai.
 
 Body:
 ```json
 {
   "email": "user@example.com",
-  "postId": "POSTDETAIL_OBJECT_ID",
+  "postId": "POSTDETAIL_OR_MEGAPOST_OBJECT_ID",
   "enabled": true,
   "priority": 10,
   "channels": {
     "email": true,
     "whatsapp": false
   }
+}
+```
+
+Alternative body (canonical key based):
+```json
+{
+  "email": "user@example.com",
+  "canonicalKey": "assistant-date-development-grade-last-nabard-3b9c4353",
+  "megaSlug": "latest-gov-jobs",
+  "enabled": true
 }
 ```
 
@@ -259,5 +272,5 @@ Use: Watched recruitments ke related unprocessed posts process karna.
 1. `POST /api/site/site` se source sites add karo.
 2. `POST /api/site/sync` se MegaPost sync trigger karo.
 3. `POST /api/post/scrape` se PostDetail + formatted recruitment JSON cache karo.
-4. `POST /api/watch` me user email + `PostDetail._id` dekar watch on karo.
+4. `POST /api/watch` me user email + (`postId` as PostDetail/MegaPost id OR `canonicalKey`) dekar watch on karo.
 5. `POST /api/cron/process-new-posts` aur `POST /api/cron/watch-sweep` schedule karo for continuous notifications.

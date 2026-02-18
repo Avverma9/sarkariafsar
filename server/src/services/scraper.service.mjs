@@ -339,19 +339,102 @@ export async function syncMegaSectionsAndPosts(options = {}) {
           const { canonicalKey, altKeys } = buildDedupeKeys(p.title, p.postUrl);
           if (!canonicalKey) continue;
 
-          const existing = await MegaPost.findOne({
+          const matchOr = [
+            { canonicalKey },
+            ...(altKeys.idKey ? [{ altIdKey: altKeys.idKey }] : []),
+            ...(altKeys.tokenKey ? [{ altTokenKey: altKeys.tokenKey }] : []),
+            ...(altKeys.urlKey ? [{ altUrlKey: altKeys.urlKey }] : []),
+          ];
+
+          let existing = await MegaPost.findOne({
             megaSlug: m.slug,
-            $or: [
-              { canonicalKey },
-              ...(altKeys.idKey ? [{ altIdKey: altKeys.idKey }] : []),
-              ...(altKeys.tokenKey ? [{ altTokenKey: altKeys.tokenKey }] : []),
-              ...(altKeys.urlKey ? [{ altUrlKey: altKeys.urlKey }] : []),
-            ],
+            $or: matchOr,
           })
-            .select("_id originalUrl")
+            .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
             .lean();
 
+          // If post moved across section/slugs, keep same document identity by URL/id fallback.
+          if (!existing && altKeys.urlKey) {
+            existing = await MegaPost.findOne({ altUrlKey: altKeys.urlKey })
+              .sort({ updatedAt: -1 })
+              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
+              .lean();
+          }
+          if (!existing && altKeys.idKey) {
+            const idFallbackOr = [{ megaTitle: m.title }];
+            if (src.siteId) idFallbackOr.push({ sourceSiteId: src.siteId });
+            existing = await MegaPost.findOne({
+              altIdKey: altKeys.idKey,
+              $or: idFallbackOr,
+            })
+              .sort({ updatedAt: -1 })
+              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
+              .lean();
+          }
+
           if (existing) {
+            const currentUrl = String(existing.originalUrl || "").trim().replace(/\/+$/, "");
+            const nextUrl = String(p.postUrl || "").trim().replace(/\/+$/, "");
+            const metadataChanged =
+              String(existing.megaSlug || "") !== String(m.slug || "") ||
+              String(existing.canonicalKey || "") !== String(canonicalKey || "") ||
+              currentUrl !== nextUrl;
+            const contentMissing =
+              !String(existing.contentHtml || "").trim() &&
+              !String(existing.contentText || "").trim();
+
+            let refreshedHtml = "";
+            let refreshedText = "";
+            let refreshedContent = false;
+            if (metadataChanged || contentMissing) {
+              try {
+                const raw = await scrapePostDetails(p.postUrl);
+                refreshedHtml = String(raw?.contentHtml || "").trim();
+                refreshedText = String(raw?.contentText || "").trim();
+                refreshedContent = !!(refreshedHtml || refreshedText);
+              } catch (err) {
+                logger.warn(
+                  `Existing post refresh failed (${m.slug} / ${src.siteName}): ${p.postUrl} :: ${err.message}`,
+                );
+              } finally {
+                if (postDelayMs > 0) {
+                  await sleep(postDelayMs);
+                }
+              }
+            }
+
+            const setFields = {
+              megaSlug: m.slug,
+              megaTitle: m.title,
+              title: p.title,
+              canonicalKey,
+              originalUrl: p.postUrl,
+              altIdKey: altKeys.idKey || "",
+              altTokenKey: altKeys.tokenKey || "",
+              altUrlKey: altKeys.urlKey || "",
+              sourceSiteId: src.siteId,
+              sourceSiteName: src.siteName,
+              sourceSectionUrl: src.sectionUrl,
+            };
+            if (refreshedContent) {
+              setFields.contentHtml = refreshedHtml;
+              setFields.contentText = refreshedText;
+              setFields.aiScraped = false;
+              setFields.aiScrapedAt = null;
+              setFields.lastEventProcessedAt = null;
+            }
+
+            try {
+              await MegaPost.updateOne({ _id: existing._id }, { $set: setFields });
+            } catch (err) {
+              if (err?.code === 11000) {
+                logger.warn(
+                  `Duplicate-key while refreshing existing MegaPost ${existing._id}; skipped merge for ${p.postUrl}`,
+                );
+              } else {
+                throw err;
+              }
+            }
             continue;
           }
 
