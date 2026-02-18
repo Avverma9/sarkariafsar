@@ -1,0 +1,3086 @@
+[{
+  "_id": {
+    "$oid": "69945a123e5f96399c8c9d3e"
+  },
+  "megaPostId": {
+    "$oid": "6994558a3e5f96399c8c9c69"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T12:07:45.226Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "Bihar Police BPSSC Havildar Clerk Recruitment 2026",
+      "advertisementNumber": "01/2026",
+      "organization": {
+        "name": "Bihar Police Subordinate Service Commission (BPSSC)",
+        "shortName": "BPSSC",
+        "website": "https://bpssc.bihar.gov.in/",
+        "type": "Government"
+      },
+      "importantDates": {
+        "notificationDate": null,
+        "postDate": "2026-02-02T16:54:00",
+        "applicationStartDate": "2026-01-02",
+        "applicationLastDate": "2026-02-02",
+        "feePaymentLastDate": "2026-02-02",
+        "correctionDate": null,
+        "preExamDate": null,
+        "mainsExamDate": null,
+        "examDate": null,
+        "admitCardDate": null,
+        "resultDate": null,
+        "answerKeyReleaseDate": null,
+        "finalAnswerKeyDate": null,
+        "documentVerificationDate": null,
+        "counsellingDate": null,
+        "meritListDate": null
+      },
+      "vacancyDetails": {
+        "totalPosts": 64,
+        "positions": [
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 26,
+            "category": "UR",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 11,
+            "category": "EBC",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 6,
+            "category": "EWS",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 8,
+            "category": "BC",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 2,
+            "category": "BC-Female",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 10,
+            "category": "SC",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Havildar Clerk",
+            "numberOfPosts": 1,
+            "category": "ST",
+            "areaType": null,
+            "discipline": null
+          }
+        ],
+        "categoryWise": {
+          "general": 26,
+          "obc": 8,
+          "sc": 10,
+          "st": 1,
+          "ewsExemption": 6,
+          "ph": 0,
+          "other": {
+            "ebc": 11,
+            "bcFemale": 2
+          }
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 100,
+        "ewsObc": 100,
+        "scSt": 100,
+        "female": 100,
+        "ph": 100,
+        "correctionCharge": null,
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Cash Card",
+          "Mobile Wallet"
+        ],
+        "exemptions": "Not specified"
+      },
+      "ageLimit": {
+        "minimumAge": 18,
+        "maximumAge": 42,
+        "asOn": "01-08-2025",
+        "ageRelaxation": {
+          "scSt": 5,
+          "obc": 3,
+          "ph": null,
+          "exServicemen": null,
+          "other": {}
+        },
+        "categoryWise": {
+          "ur": {
+            "male": 37,
+            "female": 40
+          },
+          "obc": {
+            "male": 40,
+            "female": 40
+          },
+          "sc": {
+            "male": 42,
+            "female": 42
+          },
+          "st": {
+            "male": 42,
+            "female": 42
+          }
+        }
+      },
+      "eligibility": {
+        "educationQualification": "10+2 (Intermediate)",
+        "streamRequired": null,
+        "minimumPercentage": null,
+        "experienceRequired": null,
+        "specialRequirements": []
+      },
+      "physicalStandards": {
+        "male": {
+          "height": "UR/BC: 165 cms, EBC/SC/ST: 160 cms",
+          "chest": "UR/BC: 81-86 cm, EBC: 81-86 cm, SC/ST: 79-84 cm",
+          "weight": "Not specified",
+          "eyesight": "Not specified"
+        },
+        "female": {
+          "height": "155 cms",
+          "weight": "48 kg",
+          "eyesight": "Not specified"
+        }
+      },
+      "physicalEfficiencyTest": {
+        "male": {
+          "distance": "Running: 1.6 KM in 6 Min.",
+          "duration": "Running: 6 Min."
+        },
+        "female": {
+          "distance": "Running: 1 Km in 5 Min.",
+          "duration": "Running: 5 Min."
+        }
+      },
+      "selectionProcess": [
+        "Written Examination (OMR Based)",
+        "Physical Efficiency Test (PET)",
+        "Physical Standard Test (PST)",
+        "Document Verification",
+        "Final Merit List"
+      ],
+      "importantLinks": {
+        "applyOnline": "https://apply-bpssc.com/bpssc_havr_clerk_v1/applicationIndex",
+        "officialNotification": "Click Here",
+        "officialWebsite": "https://bpssc.bihar.gov.in/",
+        "syllabus": null,
+        "examPattern": null,
+        "admitCard": null,
+        "resultLink": null,
+        "answerKey": null,
+        "documentVerificationNotice": null,
+        "faq": null,
+        "other": {
+          "sarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+          "instagram": "https://www.instagram.com/sarkariresult.com.cm_?igsh=MXF4a3Jtb3lmNmI1cw=="
+        }
+      },
+      "documentation": [
+        "Citizenship proof",
+        "Educational certificates",
+        "Identity proof"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/bihar-police-bpssc-havildar-clerk-2026/",
+      "additionalInfo": "Candidates are advised to confirm from the Bihar Police BPSSC official website. Candidates are requested to read the Official Notification carefully before filling their form.",
+      "content": {
+        "originalSummary": "Bihar Police Subordinate Service Commission (BPSSC) is recruiting for 64 Havildar Clerk positions. Applications are open from January 2, 2026, to February 2, 2026. The minimum age is 18 years, with maximum age limits varying by category up to 42 years as of August 1, 2025. Applicants need to have passed the 10+2 examination. The selection process includes a written exam, physical efficiency and standard tests, document verification, and a final merit list.",
+        "whoShouldApply": [
+          "Candidates who have completed 10+2 (Intermediate) education and are seeking a career in the Bihar Police force.",
+          "Individuals meeting the specified age criteria and physical standards for Havildar Clerk roles."
+        ],
+        "keyHighlights": [
+          "Recruitment for 64 Havildar Clerk posts by BPSSC.",
+          "Application period: January 2, 2026, to February 2, 2026.",
+          "Age limit ranges from 18 to 42 years (category-wise) as of August 1, 2025.",
+          "Eligibility requires passing the 10+2 examination.",
+          "Selection involves a written exam, PET/PST, and document verification."
+        ],
+        "applicationSteps": [
+          "Visit the official BPSSC website or the provided apply link.",
+          "Fill out the online application form with accurate details.",
+          "Upload necessary documents and photograph.",
+          "Pay the application fee through the available online modes.",
+          "Submit the application form before the deadline of February 2, 2026.",
+          "Keep a copy of the submitted application for future reference."
+        ],
+        "selectionProcessSummary": "The selection process for the Bihar Police BPSSC Havildar Clerk recruitment comprises a written examination (OMR based), followed by a Physical Efficiency Test (PET) and Physical Standard Test (PST). Candidates who qualify in these stages will proceed to document verification, and a final merit list will be prepared based on performance in all stages.",
+        "documentsChecklist": [
+          "10+2 (Intermediate) or equivalent examination certificate",
+          "Proof of Date of Birth",
+          "Category certificate (if applicable)",
+          "Identity proof (Aadhaar card, Voter ID, etc.)",
+          "Passport size photograph",
+          "Signature"
+        ],
+        "feeSummary": "The application fee for all categories of candidates is ₹100. Payment can be made online using Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet.",
+        "importantNotes": [
+          "The last date to apply and pay the fee is February 2, 2026.",
+          "Age will be calculated as of August 1, 2025.",
+          "Candidates must read the official notification carefully before applying.",
+          "Ensure all details in the application form are correct to avoid issues."
+        ],
+        "faq": [
+          {
+            "q": "When will the online application for Bihar Police BPSSC Havildar Clerk Recruitment 2026 Start?",
+            "a": "The online application for this recruitment has started on 02 January 2026."
+          },
+          {
+            "q": "What is the last date for online application for Bihar Police BPSSC Havildar Clerk Online Form 2026?",
+            "a": "The last date for online application Form is 02 February 2026."
+          },
+          {
+            "q": "What is the age limit for Bihar Police BPSSC Havildar Clerk Bharti 2026?",
+            "a": "The minimum age is 18 and the maximum age is 42 years as on 01 August 2025."
+          },
+          {
+            "q": "What is the eligibility for Bihar Police BPSSC Havildar Clerk Vacancy 2026?",
+            "a": "Candidates must have passed the 10+2 (Intermediate) exam from any recognized board in India."
+          },
+          {
+            "q": "What is the official website for BPSSC?",
+            "a": "The official website for BPSSC is https://bpssc.bihar.gov.in/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "c3218c36ccf79cdb82cc38b831d1db050771b23348eb6d28f9ef48efd00bfac3",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T12:07:45.225Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "ce5e93c40527499c5a6d18a8edbc02f1488f7c0af27c214b86be0d1ddf5bbfd3",
+  "postTitle": "Bihar Police BPSSC Havildar Clerk Recruitment 2026",
+  "recruitment": {
+    "title": "Bihar Police BPSSC Havildar Clerk Recruitment 2026",
+    "advertisementNumber": "01/2026",
+    "organization": {
+      "name": "Bihar Police Subordinate Service Commission (BPSSC)",
+      "shortName": "BPSSC",
+      "website": "https://bpssc.bihar.gov.in/",
+      "type": "Government"
+    },
+    "importantDates": {
+      "notificationDate": null,
+      "postDate": "2026-02-02T16:54:00",
+      "applicationStartDate": "2026-01-02",
+      "applicationLastDate": "2026-02-02",
+      "feePaymentLastDate": "2026-02-02",
+      "correctionDate": null,
+      "preExamDate": null,
+      "mainsExamDate": null,
+      "examDate": null,
+      "admitCardDate": null,
+      "resultDate": null,
+      "answerKeyReleaseDate": null,
+      "finalAnswerKeyDate": null,
+      "documentVerificationDate": null,
+      "counsellingDate": null,
+      "meritListDate": null
+    },
+    "vacancyDetails": {
+      "totalPosts": 64,
+      "positions": [
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 26,
+          "category": "UR",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 11,
+          "category": "EBC",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 6,
+          "category": "EWS",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 8,
+          "category": "BC",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 2,
+          "category": "BC-Female",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 10,
+          "category": "SC",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Havildar Clerk",
+          "numberOfPosts": 1,
+          "category": "ST",
+          "areaType": null,
+          "discipline": null
+        }
+      ],
+      "categoryWise": {
+        "general": 26,
+        "obc": 8,
+        "sc": 10,
+        "st": 1,
+        "ewsExemption": 6,
+        "ph": 0,
+        "other": {
+          "ebc": 11,
+          "bcFemale": 2
+        }
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 100,
+      "ewsObc": 100,
+      "scSt": 100,
+      "female": 100,
+      "ph": 100,
+      "correctionCharge": null,
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Cash Card",
+        "Mobile Wallet"
+      ],
+      "exemptions": "Not specified"
+    },
+    "ageLimit": {
+      "minimumAge": 18,
+      "maximumAge": 42,
+      "asOn": "01-08-2025",
+      "ageRelaxation": {
+        "scSt": 5,
+        "obc": 3,
+        "ph": null,
+        "exServicemen": null,
+        "other": {}
+      },
+      "categoryWise": {
+        "ur": {
+          "male": 37,
+          "female": 40
+        },
+        "obc": {
+          "male": 40,
+          "female": 40
+        },
+        "sc": {
+          "male": 42,
+          "female": 42
+        },
+        "st": {
+          "male": 42,
+          "female": 42
+        }
+      }
+    },
+    "eligibility": {
+      "educationQualification": "10+2 (Intermediate)",
+      "streamRequired": null,
+      "minimumPercentage": null,
+      "experienceRequired": null,
+      "specialRequirements": []
+    },
+    "physicalStandards": {
+      "male": {
+        "height": "UR/BC: 165 cms, EBC/SC/ST: 160 cms",
+        "chest": "UR/BC: 81-86 cm, EBC: 81-86 cm, SC/ST: 79-84 cm",
+        "weight": "Not specified",
+        "eyesight": "Not specified"
+      },
+      "female": {
+        "height": "155 cms",
+        "weight": "48 kg",
+        "eyesight": "Not specified"
+      }
+    },
+    "physicalEfficiencyTest": {
+      "male": {
+        "distance": "Running: 1.6 KM in 6 Min.",
+        "duration": "Running: 6 Min."
+      },
+      "female": {
+        "distance": "Running: 1 Km in 5 Min.",
+        "duration": "Running: 5 Min."
+      }
+    },
+    "selectionProcess": [
+      "Written Examination (OMR Based)",
+      "Physical Efficiency Test (PET)",
+      "Physical Standard Test (PST)",
+      "Document Verification",
+      "Final Merit List"
+    ],
+    "importantLinks": {
+      "applyOnline": "https://apply-bpssc.com/bpssc_havr_clerk_v1/applicationIndex",
+      "officialNotification": "Click Here",
+      "officialWebsite": "https://bpssc.bihar.gov.in/",
+      "syllabus": null,
+      "examPattern": null,
+      "admitCard": null,
+      "resultLink": null,
+      "answerKey": null,
+      "documentVerificationNotice": null,
+      "faq": null,
+      "other": {
+        "sarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+        "instagram": "https://www.instagram.com/sarkariresult.com.cm_?igsh=MXF4a3Jtb3lmNmI1cw=="
+      }
+    },
+    "documentation": [
+      "Citizenship proof",
+      "Educational certificates",
+      "Identity proof"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/bihar-police-bpssc-havildar-clerk-2026/",
+    "additionalInfo": "Candidates are advised to confirm from the Bihar Police BPSSC official website. Candidates are requested to read the Official Notification carefully before filling their form.",
+    "content": {
+      "originalSummary": "Bihar Police Subordinate Service Commission (BPSSC) is recruiting for 64 Havildar Clerk positions. Applications are open from January 2, 2026, to February 2, 2026. The minimum age is 18 years, with maximum age limits varying by category up to 42 years as of August 1, 2025. Applicants need to have passed the 10+2 examination. The selection process includes a written exam, physical efficiency and standard tests, document verification, and a final merit list.",
+      "whoShouldApply": [
+        "Candidates who have completed 10+2 (Intermediate) education and are seeking a career in the Bihar Police force.",
+        "Individuals meeting the specified age criteria and physical standards for Havildar Clerk roles."
+      ],
+      "keyHighlights": [
+        "Recruitment for 64 Havildar Clerk posts by BPSSC.",
+        "Application period: January 2, 2026, to February 2, 2026.",
+        "Age limit ranges from 18 to 42 years (category-wise) as of August 1, 2025.",
+        "Eligibility requires passing the 10+2 examination.",
+        "Selection involves a written exam, PET/PST, and document verification."
+      ],
+      "applicationSteps": [
+        "Visit the official BPSSC website or the provided apply link.",
+        "Fill out the online application form with accurate details.",
+        "Upload necessary documents and photograph.",
+        "Pay the application fee through the available online modes.",
+        "Submit the application form before the deadline of February 2, 2026.",
+        "Keep a copy of the submitted application for future reference."
+      ],
+      "selectionProcessSummary": "The selection process for the Bihar Police BPSSC Havildar Clerk recruitment comprises a written examination (OMR based), followed by a Physical Efficiency Test (PET) and Physical Standard Test (PST). Candidates who qualify in these stages will proceed to document verification, and a final merit list will be prepared based on performance in all stages.",
+      "documentsChecklist": [
+        "10+2 (Intermediate) or equivalent examination certificate",
+        "Proof of Date of Birth",
+        "Category certificate (if applicable)",
+        "Identity proof (Aadhaar card, Voter ID, etc.)",
+        "Passport size photograph",
+        "Signature"
+      ],
+      "feeSummary": "The application fee for all categories of candidates is ₹100. Payment can be made online using Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet.",
+      "importantNotes": [
+        "The last date to apply and pay the fee is February 2, 2026.",
+        "Age will be calculated as of August 1, 2025.",
+        "Candidates must read the official notification carefully before applying.",
+        "Ensure all details in the application form are correct to avoid issues."
+      ],
+      "faq": [
+        {
+          "q": "When will the online application for Bihar Police BPSSC Havildar Clerk Recruitment 2026 Start?",
+          "a": "The online application for this recruitment has started on 02 January 2026."
+        },
+        {
+          "q": "What is the last date for online application for Bihar Police BPSSC Havildar Clerk Online Form 2026?",
+          "a": "The last date for online application Form is 02 February 2026."
+        },
+        {
+          "q": "What is the age limit for Bihar Police BPSSC Havildar Clerk Bharti 2026?",
+          "a": "The minimum age is 18 and the maximum age is 42 years as on 01 August 2025."
+        },
+        {
+          "q": "What is the eligibility for Bihar Police BPSSC Havildar Clerk Vacancy 2026?",
+          "a": "Candidates must have passed the 10+2 (Intermediate) exam from any recognized board in India."
+        },
+        {
+          "q": "What is the official website for BPSSC?",
+          "a": "The official website for BPSSC is https://bpssc.bihar.gov.in/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/bihar-police-bpssc-havildar-clerk-2026/",
+  "textHash": "6e887bb24dd0611ae50771c5649adee432ad5c3567de74a1e2abc876e1dbfc08",
+  "updateSnapshot": {
+    "title": "Bihar Police BPSSC Havildar Clerk Recruitment 2026",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/bihar-police-bpssc-havildar-clerk-2026/",
+    "siteHost": "",
+    "advertisementNumber": "01/2026",
+    "totalPosts": "64",
+    "dates": {
+      "postDate": "February 2, 2026",
+      "applicationStartDate": "02 January 2026 Online Apply Last Date",
+      "applicationLastDate": "02 February 2026 Last Date For Fee Payment",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "0",
+      "scSt": "0"
+    },
+    "age": {
+      "min": "18",
+      "max": "37",
+      "asOn": "01 August 2025"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "c3218c36ccf79cdb82cc38b831d1db050771b23348eb6d28f9ef48efd00bfac3",
+      "textHash": "6e887bb24dd0611ae50771c5649adee432ad5c3567de74a1e2abc876e1dbfc08"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T12:07:45.226Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6994ad7b3e5f96399c8ca17d"
+  },
+  "megaPostId": {
+    "$oid": "69945c843e5f96399c8c9e42"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T18:03:37.914Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "SBI Bank Clerk Mains Admit Card 2025",
+      "advertisementNumber": null,
+      "organization": {
+        "name": "State Bank of India",
+        "shortName": "SBI",
+        "website": "https://bank.sbi/",
+        "type": "Bank"
+      },
+      "importantDates": {
+        "notificationDate": "06-08-2025",
+        "postDate": null,
+        "applicationStartDate": "06-08-2025",
+        "applicationLastDate": "26-08-2025",
+        "feePaymentLastDate": "26-08-2025",
+        "correctionDate": null,
+        "preExamDate": null,
+        "mainsExamDate": "21-11-2025",
+        "examDate": "20-09-2025, 21-09-2025, 27-09-2025",
+        "admitCardDate": "14-11-2025",
+        "resultDate": null,
+        "answerKeyReleaseDate": null,
+        "finalAnswerKeyDate": null,
+        "documentVerificationDate": null,
+        "counsellingDate": null,
+        "meritListDate": null
+      },
+      "vacancyDetails": {
+        "totalPosts": 5180,
+        "positions": [
+          {
+            "postName": "Junior Associate Clerk (Sales & Support)",
+            "numberOfPosts": 2255,
+            "category": "UR",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Junior Associate Clerk (Sales & Support)",
+            "numberOfPosts": 508,
+            "category": "EWS",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Junior Associate Clerk (Sales & Support)",
+            "numberOfPosts": 1179,
+            "category": "OBC",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Junior Associate Clerk (Sales & Support)",
+            "numberOfPosts": 450,
+            "category": "SC",
+            "areaType": null,
+            "discipline": null
+          },
+          {
+            "postName": "Junior Associate Clerk (Sales & Support)",
+            "numberOfPosts": 788,
+            "category": "ST",
+            "areaType": null,
+            "discipline": null
+          }
+        ],
+        "categoryWise": {
+          "general": 2255,
+          "obc": 1179,
+          "sc": 450,
+          "st": 788,
+          "ewsExemption": 508,
+          "ph": 0,
+          "other": {}
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 750,
+        "ewsObc": 750,
+        "scSt": 0,
+        "female": 0,
+        "ph": 0,
+        "correctionCharge": null,
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Cash Card",
+          "Mobile Wallet"
+        ],
+        "exemptions": "PwBD candidates are exempted from fee payment."
+      },
+      "ageLimit": {
+        "minimumAge": 20,
+        "maximumAge": 28,
+        "asOn": "01-04-2025",
+        "ageRelaxation": {
+          "scSt": null,
+          "obc": null,
+          "ph": null,
+          "exServicemen": null,
+          "other": {}
+        },
+        "categoryWise": {}
+      },
+      "eligibility": {
+        "educationQualification": "Graduation degree in any field",
+        "streamRequired": null,
+        "minimumPercentage": null,
+        "experienceRequired": null,
+        "specialRequirements": [
+          "Knowledge of Local Language"
+        ]
+      },
+      "physicalStandards": null,
+      "physicalEfficiencyTest": null,
+      "selectionProcess": [
+        "Prelims Written Exam",
+        "Mains Written Exam",
+        "Local Language Test",
+        "Document Verification",
+        "Medical Examination"
+      ],
+      "importantLinks": {
+        "applyOnline": "Click Here",
+        "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/08/JA-2025-Detailed-Advt-2.pdf",
+        "officialWebsite": "https://bank.sbi/",
+        "syllabus": null,
+        "examPattern": null,
+        "admitCard": "Click Here",
+        "resultLink": "Link-I | Link-II",
+        "answerKey": null,
+        "documentVerificationNotice": null,
+        "faq": null,
+        "other": {
+          "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+          "PreAdmitCard": "Click Here",
+          "ExamDateNotice": "Click Here",
+          "PETAdmitCard": "Click Here"
+        }
+      },
+      "documentation": [
+        "Valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence)",
+        "Two passport-size photos (if required)"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/sbi-bank-clerk-mains-admit-card-2025/",
+      "additionalInfo": "Candidates are advised to confirm from the SBI official website. The Mains Admit Card was released on 14th November 2025.",
+      "content": {
+        "originalSummary": "State Bank of India (SBI) has released the Mains Admit Card for the SBI Clerk Examination 2025. The application period was from August 6 to August 26, 2025. The mains examination is scheduled for November 21, 2025. Candidates can download their admit cards using their registration number and date of birth from the official SBI website.",
+        "whoShouldApply": [
+          "Graduates from a recognized university who meet the age criteria and possess knowledge of the local language are encouraged to apply for the SBI Clerk position."
+        ],
+        "keyHighlights": [
+          "Mains Admit Card released on November 14, 2025.",
+          "Mains Exam Date: November 21, 2025.",
+          "Total vacancies: 5180.",
+          "Eligibility: Graduation degree.",
+          "Application Fee: ₹750 for General/OBC/EWS, ₹0 for SC/ST/PwBD."
+        ],
+        "applicationSteps": [
+          "Visit the official SBI website.",
+          "Navigate to the 'Careers' or 'Recruitment' section.",
+          "Click on the link for 'SBI Clerk Mains Admit Card 2025'.",
+          "Enter Registration Number/Roll Number and Date of Birth/Password.",
+          "Submit to view and download the admit card."
+        ],
+        "selectionProcessSummary": "The selection process for SBI Clerk involves a Prelims Written Exam, followed by a Mains Written Exam. Candidates who clear these stages will then undergo a Local Language Test, Document Verification, and a Medical Examination.",
+        "documentsChecklist": [
+          "Printed copy of the admit card",
+          "Valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence)",
+          "Two passport-size photos (if required)"
+        ],
+        "feeSummary": "The application fee is ₹750 for General, OBC, and EWS categories. Candidates belonging to SC, ST, and PwBD categories are exempted from paying any fee. Payment can be made online via Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet.",
+        "importantNotes": [
+          "The application last date was August 26, 2025.",
+          "The Mains examination is scheduled for November 21, 2025.",
+          "The Mains Admit Card was released on November 14, 2025.",
+          "Candidates must possess knowledge of the local language."
+        ],
+        "faq": [
+          {
+            "q": "When was the SBI Clerk Mains Admit Card 2025 released?",
+            "a": "SBI Clerk Mains Admit Card was released on 14th November 2025."
+          },
+          {
+            "q": "Where can I download the Mains Admit Card?",
+            "a": "From the official SBI website – sbi.co.in/careers."
+          },
+          {
+            "q": "What should I carry to the exam hall?",
+            "a": "A printed copy of the admit card, a valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence), and two passport-size photos (if required)."
+          },
+          {
+            "q": "What are the mains exam dates?",
+            "a": "The mains examination is scheduled for 21st November 2025."
+          },
+          {
+            "q": "What is the official website for SBI?",
+            "a": "The official website for SBI is https://bank.sbi/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "a1bc7a6d5cdcae9aa486c4c9f086f6ce1a3008553185405b2ffd4c7510abb4c6",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T18:03:37.913Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "60c4792cc3070bc16f9633946d8c5b85646c997e7e1de60de67b803a285cf130",
+  "postTitle": "SBI Bank Clerk Mains Admit Card 2025 – Out",
+  "recruitment": {
+    "title": "SBI Bank Clerk Mains Admit Card 2025",
+    "advertisementNumber": null,
+    "organization": {
+      "name": "State Bank of India",
+      "shortName": "SBI",
+      "website": "https://bank.sbi/",
+      "type": "Bank"
+    },
+    "importantDates": {
+      "notificationDate": "06-08-2025",
+      "postDate": null,
+      "applicationStartDate": "06-08-2025",
+      "applicationLastDate": "26-08-2025",
+      "feePaymentLastDate": "26-08-2025",
+      "correctionDate": null,
+      "preExamDate": null,
+      "mainsExamDate": "21-11-2025",
+      "examDate": "20-09-2025, 21-09-2025, 27-09-2025",
+      "admitCardDate": "14-11-2025",
+      "resultDate": null,
+      "answerKeyReleaseDate": null,
+      "finalAnswerKeyDate": null,
+      "documentVerificationDate": null,
+      "counsellingDate": null,
+      "meritListDate": null
+    },
+    "vacancyDetails": {
+      "totalPosts": 5180,
+      "positions": [
+        {
+          "postName": "Junior Associate Clerk (Sales & Support)",
+          "numberOfPosts": 2255,
+          "category": "UR",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Junior Associate Clerk (Sales & Support)",
+          "numberOfPosts": 508,
+          "category": "EWS",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Junior Associate Clerk (Sales & Support)",
+          "numberOfPosts": 1179,
+          "category": "OBC",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Junior Associate Clerk (Sales & Support)",
+          "numberOfPosts": 450,
+          "category": "SC",
+          "areaType": null,
+          "discipline": null
+        },
+        {
+          "postName": "Junior Associate Clerk (Sales & Support)",
+          "numberOfPosts": 788,
+          "category": "ST",
+          "areaType": null,
+          "discipline": null
+        }
+      ],
+      "categoryWise": {
+        "general": 2255,
+        "obc": 1179,
+        "sc": 450,
+        "st": 788,
+        "ewsExemption": 508,
+        "ph": 0,
+        "other": {}
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 750,
+      "ewsObc": 750,
+      "scSt": 0,
+      "female": 0,
+      "ph": 0,
+      "correctionCharge": null,
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Cash Card",
+        "Mobile Wallet"
+      ],
+      "exemptions": "PwBD candidates are exempted from fee payment."
+    },
+    "ageLimit": {
+      "minimumAge": 20,
+      "maximumAge": 28,
+      "asOn": "01-04-2025",
+      "ageRelaxation": {
+        "scSt": null,
+        "obc": null,
+        "ph": null,
+        "exServicemen": null,
+        "other": {}
+      },
+      "categoryWise": {}
+    },
+    "eligibility": {
+      "educationQualification": "Graduation degree in any field",
+      "streamRequired": null,
+      "minimumPercentage": null,
+      "experienceRequired": null,
+      "specialRequirements": [
+        "Knowledge of Local Language"
+      ]
+    },
+    "physicalStandards": null,
+    "physicalEfficiencyTest": null,
+    "selectionProcess": [
+      "Prelims Written Exam",
+      "Mains Written Exam",
+      "Local Language Test",
+      "Document Verification",
+      "Medical Examination"
+    ],
+    "importantLinks": {
+      "applyOnline": "Click Here",
+      "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/08/JA-2025-Detailed-Advt-2.pdf",
+      "officialWebsite": "https://bank.sbi/",
+      "syllabus": null,
+      "examPattern": null,
+      "admitCard": "Click Here",
+      "resultLink": "Link-I | Link-II",
+      "answerKey": null,
+      "documentVerificationNotice": null,
+      "faq": null,
+      "other": {
+        "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+        "PreAdmitCard": "Click Here",
+        "ExamDateNotice": "Click Here",
+        "PETAdmitCard": "Click Here"
+      }
+    },
+    "documentation": [
+      "Valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence)",
+      "Two passport-size photos (if required)"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/sbi-bank-clerk-mains-admit-card-2025/",
+    "additionalInfo": "Candidates are advised to confirm from the SBI official website. The Mains Admit Card was released on 14th November 2025.",
+    "content": {
+      "originalSummary": "State Bank of India (SBI) has released the Mains Admit Card for the SBI Clerk Examination 2025. The application period was from August 6 to August 26, 2025. The mains examination is scheduled for November 21, 2025. Candidates can download their admit cards using their registration number and date of birth from the official SBI website.",
+      "whoShouldApply": [
+        "Graduates from a recognized university who meet the age criteria and possess knowledge of the local language are encouraged to apply for the SBI Clerk position."
+      ],
+      "keyHighlights": [
+        "Mains Admit Card released on November 14, 2025.",
+        "Mains Exam Date: November 21, 2025.",
+        "Total vacancies: 5180.",
+        "Eligibility: Graduation degree.",
+        "Application Fee: ₹750 for General/OBC/EWS, ₹0 for SC/ST/PwBD."
+      ],
+      "applicationSteps": [
+        "Visit the official SBI website.",
+        "Navigate to the 'Careers' or 'Recruitment' section.",
+        "Click on the link for 'SBI Clerk Mains Admit Card 2025'.",
+        "Enter Registration Number/Roll Number and Date of Birth/Password.",
+        "Submit to view and download the admit card."
+      ],
+      "selectionProcessSummary": "The selection process for SBI Clerk involves a Prelims Written Exam, followed by a Mains Written Exam. Candidates who clear these stages will then undergo a Local Language Test, Document Verification, and a Medical Examination.",
+      "documentsChecklist": [
+        "Printed copy of the admit card",
+        "Valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence)",
+        "Two passport-size photos (if required)"
+      ],
+      "feeSummary": "The application fee is ₹750 for General, OBC, and EWS categories. Candidates belonging to SC, ST, and PwBD categories are exempted from paying any fee. Payment can be made online via Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet.",
+      "importantNotes": [
+        "The application last date was August 26, 2025.",
+        "The Mains examination is scheduled for November 21, 2025.",
+        "The Mains Admit Card was released on November 14, 2025.",
+        "Candidates must possess knowledge of the local language."
+      ],
+      "faq": [
+        {
+          "q": "When was the SBI Clerk Mains Admit Card 2025 released?",
+          "a": "SBI Clerk Mains Admit Card was released on 14th November 2025."
+        },
+        {
+          "q": "Where can I download the Mains Admit Card?",
+          "a": "From the official SBI website – sbi.co.in/careers."
+        },
+        {
+          "q": "What should I carry to the exam hall?",
+          "a": "A printed copy of the admit card, a valid photo ID proof (Aadhaar, Passport, Voter ID, PAN, Driving Licence), and two passport-size photos (if required)."
+        },
+        {
+          "q": "What are the mains exam dates?",
+          "a": "The mains examination is scheduled for 21st November 2025."
+        },
+        {
+          "q": "What is the official website for SBI?",
+          "a": "The official website for SBI is https://bank.sbi/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/sbi-bank-clerk-mains-admit-card-2025/",
+  "textHash": "00fcb2d409ea7c4e33896abf48c069e1babef34e0791e72b5c472f51fd3b796a",
+  "updateSnapshot": {
+    "title": "SBI Bank Clerk Mains Admit Card 2025 – Out",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/sbi-bank-clerk-mains-admit-card-2025/",
+    "siteHost": "",
+    "advertisementNumber": "",
+    "totalPosts": "5180",
+    "dates": {
+      "postDate": "November 15, 2025",
+      "applicationStartDate": "06 August 2025 Online Apply Last Date",
+      "applicationLastDate": "26 August 2025 Last Date For Fee Payment",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "750",
+      "scSt": "0"
+    },
+    "age": {
+      "min": "20",
+      "max": "28",
+      "asOn": "01 April 2025"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "a1bc7a6d5cdcae9aa486c4c9f086f6ce1a3008553185405b2ffd4c7510abb4c6",
+      "textHash": "00fcb2d409ea7c4e33896abf48c069e1babef34e0791e72b5c472f51fd3b796a"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T18:03:37.914Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6994ae7c3e5f96399c8ca185"
+  },
+  "megaPostId": {
+    "$oid": "69945c623e5f96399c8c9df4"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T18:07:55.271Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "MPESB Group 4 Online Form 2025",
+      "advertisementNumber": null,
+      "organization": {
+        "name": "Madhya Pradesh Employees Selection Board",
+        "shortName": "MPESB",
+        "website": "https://esb.mp.gov.in/",
+        "type": "Government"
+      },
+      "importantDates": {
+        "notificationDate": null,
+        "postDate": "2025-01-28",
+        "applicationStartDate": "2025-02-04",
+        "applicationLastDate": "2025-02-18",
+        "feePaymentLastDate": "2025-02-18",
+        "correctionDate": "2025-02-23",
+        "preExamDate": null,
+        "mainsExamDate": null,
+        "examDate": "2025-03-30",
+        "admitCardDate": null,
+        "resultDate": null,
+        "answerKeyReleaseDate": null,
+        "finalAnswerKeyDate": null,
+        "documentVerificationDate": null,
+        "counsellingDate": null,
+        "meritListDate": null
+      },
+      "vacancyDetails": {
+        "totalPosts": 861,
+        "positions": [
+          {
+            "postName": "Group 4 (Assistant Grade-III, Steno Typist, Stenographer, etc.)",
+            "numberOfPosts": 861,
+            "category": null,
+            "areaType": null,
+            "discipline": null
+          }
+        ],
+        "categoryWise": {
+          "general": null,
+          "obc": null,
+          "sc": null,
+          "st": null,
+          "ewsExemption": null,
+          "ph": null,
+          "other": {}
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 500,
+        "ewsObc": 250,
+        "scSt": 250,
+        "female": null,
+        "ph": 250,
+        "correctionCharge": 20,
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Cash Card",
+          "Mobile Wallet"
+        ],
+        "exemptions": "Portal Charges Extra"
+      },
+      "ageLimit": {
+        "minimumAge": 18,
+        "maximumAge": 40,
+        "asOn": "01-01-2024",
+        "ageRelaxation": {
+          "scSt": null,
+          "obc": null,
+          "ph": null,
+          "exServicemen": null,
+          "other": {}
+        },
+        "categoryWise": {}
+      },
+      "eligibility": {
+        "educationQualification": "10th grade (High School) or 12th grade (Intermediate). Diploma or Degree in a relevant field may be required for some posts.",
+        "streamRequired": null,
+        "minimumPercentage": null,
+        "experienceRequired": null,
+        "specialRequirements": []
+      },
+      "physicalStandards": null,
+      "physicalEfficiencyTest": null,
+      "selectionProcess": [
+        "Written Exam",
+        "Shortlisting of Candidates",
+        "Document Verification",
+        "Medical Examination"
+      ],
+      "importantLinks": {
+        "applyOnline": "http://sarkariresult.com.cm/wp-content/uploads/2025/01/Group4_AG3_2024_Rulebook.pdf",
+        "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/01/Group4_AG3_2024_Rulebook.pdf",
+        "officialWebsite": "https://esb.mp.gov.in/",
+        "syllabus": null,
+        "examPattern": null,
+        "admitCard": null,
+        "resultLink": null,
+        "answerKey": null,
+        "documentVerificationNotice": null,
+        "faq": null,
+        "other": {
+          "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN"
+        }
+      },
+      "documentation": [
+        "Citizenship",
+        "Educational Certificates",
+        "Identity Proof"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/mpesb-group-4-recruitment-2025/",
+      "additionalInfo": "Portal charges are extra. Age relaxation is provided as per MPESB regulations.",
+      "content": {
+        "originalSummary": "Madhya Pradesh Employees Selection Board (MPESB) is recruiting for 861 Group 4 positions, including Stenographer and Assistant Grade-III. Applications open on February 4, 2025, and close on February 18, 2025. The written exam is scheduled for March 30, 2025. Eligibility generally requires 10th or 12th grade, with potential for higher qualifications for specific roles. The age limit is 18-40 years as of January 1, 2024.",
+        "whoShouldApply": [
+          "Candidates who have completed 10th or 12th grade and are seeking government jobs in Madhya Pradesh.",
+          "Individuals interested in roles like Stenographer, Steno Typist, Assistant Grade-III, etc."
+        ],
+        "keyHighlights": [
+          "Recruitment for 861 Group 4 posts by MPESB.",
+          "Application period: February 4 to February 18, 2025.",
+          "Written exam on March 30, 2025.",
+          "Age limit: 18-40 years as of January 1, 2024.",
+          "General eligibility: 10th/12th pass, with higher qualifications for some posts."
+        ],
+        "applicationSteps": [
+          "Visit the official MPESB website or the provided apply online link.",
+          "Fill out the online application form with accurate details.",
+          "Upload necessary documents and photograph.",
+          "Pay the application fee through the available online modes.",
+          "Submit the application before the deadline of February 18, 2025.",
+          "Make corrections if needed by February 23, 2025."
+        ],
+        "selectionProcessSummary": "The selection process involves a written examination, followed by shortlisting of candidates. Successful candidates will then undergo document verification and a medical examination.",
+        "documentsChecklist": [
+          "Educational certificates (10th/12th grade, Diploma/Degree if applicable)",
+          "Identity proof",
+          "Category certificate (if applicable)",
+          "Photograph"
+        ],
+        "feeSummary": "The application fee is ₹500 for General candidates and ₹250 for SC, ST, OBC, EWS, and PH candidates. A correction charge of ₹20 applies. Payments can be made online via Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet. Portal charges are extra.",
+        "importantNotes": [
+          "The application link becomes active on February 4, 2025.",
+          "The last date for application and fee payment is February 18, 2025.",
+          "Application correction window is open until February 23, 2025.",
+          "The exam date is March 30, 2025.",
+          "Candidates are advised to read the official notification thoroughly before applying."
+        ],
+        "faq": [
+          {
+            "q": "When will the online application for MPESB Group 4 Recruitment 2025 Start?",
+            "a": "The online application will start from February 4, 2025."
+          },
+          {
+            "q": "What is the last date for online application for MPESB Group 4 Online Form 2025?",
+            "a": "The last date for online application is February 18, 2025."
+          },
+          {
+            "q": "What is the age limit for MPESB Group 4 Bharti 2025?",
+            "a": "The minimum age is 18 years and the maximum age is 40 years as on January 1, 2024."
+          },
+          {
+            "q": "What is the eligibility for MPESB Group 4 Vacancy 2025?",
+            "a": "Candidates should generally have passed 10th grade or 12th grade. A Diploma or Degree may be required for some posts."
+          },
+          {
+            "q": "What is the official website for MPESB?",
+            "a": "The official website for MPESB is https://esb.mp.gov.in/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "49eb6c1f8cfcd56fab0564fbe2939936897ddff97d9a4c528c14791f96447cbc",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T18:07:55.271Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "c5261c23a2476d74677eca1679c8a4b27b6fc84f1066ad6eb0e176858dc73e20",
+  "postTitle": "MPESB Group 4 Online Form 2025",
+  "recruitment": {
+    "title": "MPESB Group 4 Online Form 2025",
+    "advertisementNumber": null,
+    "organization": {
+      "name": "Madhya Pradesh Employees Selection Board",
+      "shortName": "MPESB",
+      "website": "https://esb.mp.gov.in/",
+      "type": "Government"
+    },
+    "importantDates": {
+      "notificationDate": null,
+      "postDate": "2025-01-28",
+      "applicationStartDate": "2025-02-04",
+      "applicationLastDate": "2025-02-18",
+      "feePaymentLastDate": "2025-02-18",
+      "correctionDate": "2025-02-23",
+      "preExamDate": null,
+      "mainsExamDate": null,
+      "examDate": "2025-03-30",
+      "admitCardDate": null,
+      "resultDate": null,
+      "answerKeyReleaseDate": null,
+      "finalAnswerKeyDate": null,
+      "documentVerificationDate": null,
+      "counsellingDate": null,
+      "meritListDate": null
+    },
+    "vacancyDetails": {
+      "totalPosts": 861,
+      "positions": [
+        {
+          "postName": "Group 4 (Assistant Grade-III, Steno Typist, Stenographer, etc.)",
+          "numberOfPosts": 861,
+          "category": null,
+          "areaType": null,
+          "discipline": null
+        }
+      ],
+      "categoryWise": {
+        "general": null,
+        "obc": null,
+        "sc": null,
+        "st": null,
+        "ewsExemption": null,
+        "ph": null,
+        "other": {}
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 500,
+      "ewsObc": 250,
+      "scSt": 250,
+      "female": null,
+      "ph": 250,
+      "correctionCharge": 20,
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Cash Card",
+        "Mobile Wallet"
+      ],
+      "exemptions": "Portal Charges Extra"
+    },
+    "ageLimit": {
+      "minimumAge": 18,
+      "maximumAge": 40,
+      "asOn": "01-01-2024",
+      "ageRelaxation": {
+        "scSt": null,
+        "obc": null,
+        "ph": null,
+        "exServicemen": null,
+        "other": {}
+      },
+      "categoryWise": {}
+    },
+    "eligibility": {
+      "educationQualification": "10th grade (High School) or 12th grade (Intermediate). Diploma or Degree in a relevant field may be required for some posts.",
+      "streamRequired": null,
+      "minimumPercentage": null,
+      "experienceRequired": null,
+      "specialRequirements": []
+    },
+    "physicalStandards": null,
+    "physicalEfficiencyTest": null,
+    "selectionProcess": [
+      "Written Exam",
+      "Shortlisting of Candidates",
+      "Document Verification",
+      "Medical Examination"
+    ],
+    "importantLinks": {
+      "applyOnline": "http://sarkariresult.com.cm/wp-content/uploads/2025/01/Group4_AG3_2024_Rulebook.pdf",
+      "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/01/Group4_AG3_2024_Rulebook.pdf",
+      "officialWebsite": "https://esb.mp.gov.in/",
+      "syllabus": null,
+      "examPattern": null,
+      "admitCard": null,
+      "resultLink": null,
+      "answerKey": null,
+      "documentVerificationNotice": null,
+      "faq": null,
+      "other": {
+        "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN"
+      }
+    },
+    "documentation": [
+      "Citizenship",
+      "Educational Certificates",
+      "Identity Proof"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/mpesb-group-4-recruitment-2025/",
+    "additionalInfo": "Portal charges are extra. Age relaxation is provided as per MPESB regulations.",
+    "content": {
+      "originalSummary": "Madhya Pradesh Employees Selection Board (MPESB) is recruiting for 861 Group 4 positions, including Stenographer and Assistant Grade-III. Applications open on February 4, 2025, and close on February 18, 2025. The written exam is scheduled for March 30, 2025. Eligibility generally requires 10th or 12th grade, with potential for higher qualifications for specific roles. The age limit is 18-40 years as of January 1, 2024.",
+      "whoShouldApply": [
+        "Candidates who have completed 10th or 12th grade and are seeking government jobs in Madhya Pradesh.",
+        "Individuals interested in roles like Stenographer, Steno Typist, Assistant Grade-III, etc."
+      ],
+      "keyHighlights": [
+        "Recruitment for 861 Group 4 posts by MPESB.",
+        "Application period: February 4 to February 18, 2025.",
+        "Written exam on March 30, 2025.",
+        "Age limit: 18-40 years as of January 1, 2024.",
+        "General eligibility: 10th/12th pass, with higher qualifications for some posts."
+      ],
+      "applicationSteps": [
+        "Visit the official MPESB website or the provided apply online link.",
+        "Fill out the online application form with accurate details.",
+        "Upload necessary documents and photograph.",
+        "Pay the application fee through the available online modes.",
+        "Submit the application before the deadline of February 18, 2025.",
+        "Make corrections if needed by February 23, 2025."
+      ],
+      "selectionProcessSummary": "The selection process involves a written examination, followed by shortlisting of candidates. Successful candidates will then undergo document verification and a medical examination.",
+      "documentsChecklist": [
+        "Educational certificates (10th/12th grade, Diploma/Degree if applicable)",
+        "Identity proof",
+        "Category certificate (if applicable)",
+        "Photograph"
+      ],
+      "feeSummary": "The application fee is ₹500 for General candidates and ₹250 for SC, ST, OBC, EWS, and PH candidates. A correction charge of ₹20 applies. Payments can be made online via Debit Card, Credit Card, Internet Banking, IMPS, Cash Card, or Mobile Wallet. Portal charges are extra.",
+      "importantNotes": [
+        "The application link becomes active on February 4, 2025.",
+        "The last date for application and fee payment is February 18, 2025.",
+        "Application correction window is open until February 23, 2025.",
+        "The exam date is March 30, 2025.",
+        "Candidates are advised to read the official notification thoroughly before applying."
+      ],
+      "faq": [
+        {
+          "q": "When will the online application for MPESB Group 4 Recruitment 2025 Start?",
+          "a": "The online application will start from February 4, 2025."
+        },
+        {
+          "q": "What is the last date for online application for MPESB Group 4 Online Form 2025?",
+          "a": "The last date for online application is February 18, 2025."
+        },
+        {
+          "q": "What is the age limit for MPESB Group 4 Bharti 2025?",
+          "a": "The minimum age is 18 years and the maximum age is 40 years as on January 1, 2024."
+        },
+        {
+          "q": "What is the eligibility for MPESB Group 4 Vacancy 2025?",
+          "a": "Candidates should generally have passed 10th grade or 12th grade. A Diploma or Degree may be required for some posts."
+        },
+        {
+          "q": "What is the official website for MPESB?",
+          "a": "The official website for MPESB is https://esb.mp.gov.in/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/mpesb-group-4-recruitment-2025/",
+  "textHash": "136605bea750a672a81f5143d1494404461e339d6f9f9466a2e36bd09e7cfa3f",
+  "updateSnapshot": {
+    "title": "MPESB Group 4 Online Form 2025",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/mpesb-group-4-recruitment-2025/",
+    "siteHost": "",
+    "advertisementNumber": "",
+    "totalPosts": "861",
+    "dates": {
+      "postDate": "January 28, 2025",
+      "applicationStartDate": "",
+      "applicationLastDate": "18 February 2025",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "500",
+      "scSt": "250"
+    },
+    "age": {
+      "min": "18",
+      "max": "40",
+      "asOn": "01 January 2024"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "49eb6c1f8cfcd56fab0564fbe2939936897ddff97d9a4c528c14791f96447cbc",
+      "textHash": "136605bea750a672a81f5143d1494404461e339d6f9f9466a2e36bd09e7cfa3f"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T18:07:55.271Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6994aef63e5f96399c8ca18a"
+  },
+  "megaPostId": {
+    "$oid": "69945c633e5f96399c8c9df7"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T18:09:57.252Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "Mazagon Dock MDL Graduate/ Diploma Apprentice Online Form 2025",
+      "advertisementNumber": null,
+      "organization": {
+        "name": "Mazagon Dock Limited",
+        "shortName": "MDL",
+        "website": "https://mazagondock.in/",
+        "type": "Other"
+      },
+      "importantDates": {
+        "notificationDate": null,
+        "postDate": "2025-01-18",
+        "applicationStartDate": "2025-01-16",
+        "applicationLastDate": "2025-02-05",
+        "feePaymentLastDate": "2025-02-07",
+        "correctionDate": null,
+        "preExamDate": null,
+        "mainsExamDate": null,
+        "examDate": null,
+        "admitCardDate": null,
+        "resultDate": null,
+        "answerKeyReleaseDate": null,
+        "finalAnswerKeyDate": null,
+        "documentVerificationDate": null,
+        "counsellingDate": null,
+        "meritListDate": null
+      },
+      "vacancyDetails": {
+        "totalPosts": 200,
+        "positions": [
+          {
+            "postName": "Civil Engineering Graduate Apprentice",
+            "numberOfPosts": 10,
+            "category": null,
+            "areaType": null,
+            "discipline": "Civil Engineering"
+          },
+          {
+            "postName": "Civil Engineering Diploma Apprentice",
+            "numberOfPosts": 5,
+            "category": null,
+            "areaType": null,
+            "discipline": "Civil Engineering"
+          },
+          {
+            "postName": "Computer Engineering Graduate Apprentice",
+            "numberOfPosts": 5,
+            "category": null,
+            "areaType": null,
+            "discipline": "Computer Engineering"
+          },
+          {
+            "postName": "Computer Engineering Diploma Apprentice",
+            "numberOfPosts": 5,
+            "category": null,
+            "areaType": null,
+            "discipline": "Computer Engineering"
+          },
+          {
+            "postName": "Electrical Engineering Graduate Apprentice",
+            "numberOfPosts": 25,
+            "category": null,
+            "areaType": null,
+            "discipline": "Electrical Engineering"
+          },
+          {
+            "postName": "Electrical Engineering Diploma Apprentice",
+            "numberOfPosts": 10,
+            "category": null,
+            "areaType": null,
+            "discipline": "Electrical Engineering"
+          },
+          {
+            "postName": "Electronics & Telecommunication Engineering Graduate Apprentice",
+            "numberOfPosts": 16,
+            "category": null,
+            "areaType": null,
+            "discipline": "Electronics & Telecommunication Engineering"
+          },
+          {
+            "postName": "Mechanical Engineering Graduate Apprentice",
+            "numberOfPosts": 60,
+            "category": null,
+            "areaType": null,
+            "discipline": "Mechanical Engineering"
+          },
+          {
+            "postName": "Mechanical Engineering Diploma Apprentice",
+            "numberOfPosts": 10,
+            "category": null,
+            "areaType": null,
+            "discipline": "Mechanical Engineering"
+          },
+          {
+            "postName": "Shipbuilding Technology or Engineering / Naval Architecture Graduate Apprentice",
+            "numberOfPosts": 10,
+            "category": null,
+            "areaType": null,
+            "discipline": "Shipbuilding Technology or Engineering / Naval Architecture"
+          },
+          {
+            "postName": "Bachelor of Commerce (BCoM) Graduate Apprentice",
+            "numberOfPosts": 50,
+            "category": null,
+            "areaType": null,
+            "discipline": "Commerce"
+          },
+          {
+            "postName": "Bachelor of Computer Application (BCA) Graduate Apprentice",
+            "numberOfPosts": null,
+            "category": null,
+            "areaType": null,
+            "discipline": "Computer Application"
+          },
+          {
+            "postName": "Bachelor of Business Administration (BBA) Graduate Apprentice",
+            "numberOfPosts": null,
+            "category": null,
+            "areaType": null,
+            "discipline": "Business Administration"
+          },
+          {
+            "postName": "Bachelor of Social Work (BSW) Graduate Apprentice",
+            "numberOfPosts": null,
+            "category": null,
+            "areaType": null,
+            "discipline": "Social Work"
+          }
+        ],
+        "categoryWise": {
+          "general": 0,
+          "obc": 0,
+          "sc": 0,
+          "st": 0,
+          "ewsExemption": 0,
+          "ph": 0,
+          "other": {}
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 0,
+        "ewsObc": 0,
+        "scSt": 0,
+        "female": 0,
+        "ph": 0,
+        "correctionCharge": 0,
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Mobile Wallet"
+        ],
+        "exemptions": "No Fee Payment For Any Candidates"
+      },
+      "ageLimit": {
+        "minimumAge": 18,
+        "maximumAge": 27,
+        "asOn": "01-03-2025",
+        "ageRelaxation": {
+          "scSt": 0,
+          "obc": 0,
+          "ph": 0,
+          "exServicemen": 0,
+          "other": {}
+        },
+        "categoryWise": {
+          "ur": {
+            "male": 0,
+            "female": 0
+          },
+          "obc": {
+            "male": 0,
+            "female": 0
+          },
+          "sc": {
+            "male": 0,
+            "female": 0
+          },
+          "st": {
+            "male": 0,
+            "female": 0
+          }
+        }
+      },
+      "eligibility": {
+        "educationQualification": "Bachelor's degree in Engineering or Technology (Graduate Apprentice) or Diploma in Engineering or Technology (Diploma Apprentice). Candidates must have completed the final qualifying semester on or after April 1, 2020.",
+        "streamRequired": "Relevant Engineering/Technology disciplines, Commerce, Computer Application, Business Administration, Social Work",
+        "minimumPercentage": null,
+        "experienceRequired": "Not specified",
+        "specialRequirements": [
+          "Degree/Diploma recognized by AICTE or Government of India",
+          "Final qualifying semester completed on or after April 1, 2020"
+        ]
+      },
+      "physicalStandards": null,
+      "physicalEfficiencyTest": null,
+      "selectionProcess": [
+        "Merit Based Shortlisting",
+        "Personal Interview"
+      ],
+      "importantLinks": {
+        "applyOnline": "Click Here",
+        "officialNotification": "Hindi | English",
+        "officialWebsite": "https://mazagondock.in/",
+        "syllabus": null,
+        "examPattern": null,
+        "admitCard": null,
+        "resultLink": null,
+        "answerKey": null,
+        "documentVerificationNotice": null,
+        "faq": null,
+        "other": {
+          "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+          "TelegramChannel": "https://t.me/sarkariresultoficial"
+        }
+      },
+      "documentation": [
+        "Citizenship proof",
+        "Educational certificates",
+        "Identity proof"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/mazagon-dock-mdl-graduate-diploma-apprentice-recruitment-2025/",
+      "additionalInfo": "Age relaxation will be provided as per MDL's rules and regulations.",
+      "content": {
+        "originalSummary": "Mazagon Dock Limited (MDL) is hiring 200 Graduate and Diploma Apprentices. Applications are open from January 16 to February 5, 2025. Candidates must be between 18 and 27 years old as of March 1, 2025, with age relaxation as per MDL rules. Eligibility requires a relevant engineering/technology degree or diploma completed on or after April 1, 2020. Selection is based on merit and interview.",
+        "whoShouldApply": [
+          "Fresh graduates and diploma holders in engineering, technology, commerce, computer application, business administration, and social work seeking apprenticeship opportunities.",
+          "Candidates who have completed their final qualifying semester on or after April 1, 2020."
+        ],
+        "keyHighlights": [
+          "Recruitment for 200 Graduate/Diploma Apprentice positions.",
+          "Application period: January 16 to February 5, 2025.",
+          "Age limit: 18-27 years (as of March 1, 2025).",
+          "No application fee for any candidate.",
+          "Selection through merit list and personal interview."
+        ],
+        "applicationSteps": [
+          "Visit the official MDL website or use the provided apply online link.",
+          "Fill in the application form with accurate personal and educational details.",
+          "Ensure all required documents are uploaded.",
+          "Submit the application before the deadline of February 5, 2025."
+        ],
+        "selectionProcessSummary": "Candidates will be shortlisted based on their merit, followed by a personal interview to determine final selection for the apprentice positions.",
+        "documentsChecklist": [
+          "Educational certificates (Degree/Diploma)",
+          "Proof of completion date (on or after April 1, 2020)",
+          "Age proof",
+          "Identity proof"
+        ],
+        "feeSummary": "There is no application fee for any candidate. Payment can be made online via Debit Card, Credit Card, Internet Banking, IMPS, or Mobile Wallet.",
+        "importantNotes": [
+          "The last date to apply online is February 5, 2025.",
+          "The last date for fee payment is February 7, 2025.",
+          "Candidates must have completed their final qualifying semester on or after April 1, 2020."
+        ],
+        "faq": [
+          {
+            "q": "When did the online application for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025 Start?",
+            "a": "The online application for this recruitment started on 16 January 2025."
+          },
+          {
+            "q": "What is the last date for online application for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+            "a": "The last date to apply online for this recruitment is 05 February 2025."
+          },
+          {
+            "q": "What is the age limit for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+            "a": "The age limit is 18 to 27 years as on 01 March 2025. Age relaxation will be provided as per MDL's rules and regulations."
+          },
+          {
+            "q": "What is the eligibility for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+            "a": "Graduate Apprentice: Bachelor's degree in Engineering or Technology in the relevant discipline. Diploma Apprentice: Diploma in Engineering or Technology in the relevant discipline. Candidates must have completed the final qualifying semester on or after April 1, 2020."
+          },
+          {
+            "q": "What is the official website of MDL?",
+            "a": "The official website of MDL is https://mazagondock.in/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "ee93fde303be701a106e5ba270af03e7c78c2938870af732575e64b7b5000e30",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T18:09:57.252Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "2506a3d1893a6986bfed48f48c785c3a06f561135bb761ac83535d0cbdb10fd3",
+  "postTitle": "Mazagon Dock MDL Graduate/ Diploma Apprentice Online Form 2025",
+  "recruitment": {
+    "title": "Mazagon Dock MDL Graduate/ Diploma Apprentice Online Form 2025",
+    "advertisementNumber": null,
+    "organization": {
+      "name": "Mazagon Dock Limited",
+      "shortName": "MDL",
+      "website": "https://mazagondock.in/",
+      "type": "Other"
+    },
+    "importantDates": {
+      "notificationDate": null,
+      "postDate": "2025-01-18",
+      "applicationStartDate": "2025-01-16",
+      "applicationLastDate": "2025-02-05",
+      "feePaymentLastDate": "2025-02-07",
+      "correctionDate": null,
+      "preExamDate": null,
+      "mainsExamDate": null,
+      "examDate": null,
+      "admitCardDate": null,
+      "resultDate": null,
+      "answerKeyReleaseDate": null,
+      "finalAnswerKeyDate": null,
+      "documentVerificationDate": null,
+      "counsellingDate": null,
+      "meritListDate": null
+    },
+    "vacancyDetails": {
+      "totalPosts": 200,
+      "positions": [
+        {
+          "postName": "Civil Engineering Graduate Apprentice",
+          "numberOfPosts": 10,
+          "category": null,
+          "areaType": null,
+          "discipline": "Civil Engineering"
+        },
+        {
+          "postName": "Civil Engineering Diploma Apprentice",
+          "numberOfPosts": 5,
+          "category": null,
+          "areaType": null,
+          "discipline": "Civil Engineering"
+        },
+        {
+          "postName": "Computer Engineering Graduate Apprentice",
+          "numberOfPosts": 5,
+          "category": null,
+          "areaType": null,
+          "discipline": "Computer Engineering"
+        },
+        {
+          "postName": "Computer Engineering Diploma Apprentice",
+          "numberOfPosts": 5,
+          "category": null,
+          "areaType": null,
+          "discipline": "Computer Engineering"
+        },
+        {
+          "postName": "Electrical Engineering Graduate Apprentice",
+          "numberOfPosts": 25,
+          "category": null,
+          "areaType": null,
+          "discipline": "Electrical Engineering"
+        },
+        {
+          "postName": "Electrical Engineering Diploma Apprentice",
+          "numberOfPosts": 10,
+          "category": null,
+          "areaType": null,
+          "discipline": "Electrical Engineering"
+        },
+        {
+          "postName": "Electronics & Telecommunication Engineering Graduate Apprentice",
+          "numberOfPosts": 16,
+          "category": null,
+          "areaType": null,
+          "discipline": "Electronics & Telecommunication Engineering"
+        },
+        {
+          "postName": "Mechanical Engineering Graduate Apprentice",
+          "numberOfPosts": 60,
+          "category": null,
+          "areaType": null,
+          "discipline": "Mechanical Engineering"
+        },
+        {
+          "postName": "Mechanical Engineering Diploma Apprentice",
+          "numberOfPosts": 10,
+          "category": null,
+          "areaType": null,
+          "discipline": "Mechanical Engineering"
+        },
+        {
+          "postName": "Shipbuilding Technology or Engineering / Naval Architecture Graduate Apprentice",
+          "numberOfPosts": 10,
+          "category": null,
+          "areaType": null,
+          "discipline": "Shipbuilding Technology or Engineering / Naval Architecture"
+        },
+        {
+          "postName": "Bachelor of Commerce (BCoM) Graduate Apprentice",
+          "numberOfPosts": 50,
+          "category": null,
+          "areaType": null,
+          "discipline": "Commerce"
+        },
+        {
+          "postName": "Bachelor of Computer Application (BCA) Graduate Apprentice",
+          "numberOfPosts": null,
+          "category": null,
+          "areaType": null,
+          "discipline": "Computer Application"
+        },
+        {
+          "postName": "Bachelor of Business Administration (BBA) Graduate Apprentice",
+          "numberOfPosts": null,
+          "category": null,
+          "areaType": null,
+          "discipline": "Business Administration"
+        },
+        {
+          "postName": "Bachelor of Social Work (BSW) Graduate Apprentice",
+          "numberOfPosts": null,
+          "category": null,
+          "areaType": null,
+          "discipline": "Social Work"
+        }
+      ],
+      "categoryWise": {
+        "general": 0,
+        "obc": 0,
+        "sc": 0,
+        "st": 0,
+        "ewsExemption": 0,
+        "ph": 0,
+        "other": {}
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 0,
+      "ewsObc": 0,
+      "scSt": 0,
+      "female": 0,
+      "ph": 0,
+      "correctionCharge": 0,
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Mobile Wallet"
+      ],
+      "exemptions": "No Fee Payment For Any Candidates"
+    },
+    "ageLimit": {
+      "minimumAge": 18,
+      "maximumAge": 27,
+      "asOn": "01-03-2025",
+      "ageRelaxation": {
+        "scSt": 0,
+        "obc": 0,
+        "ph": 0,
+        "exServicemen": 0,
+        "other": {}
+      },
+      "categoryWise": {
+        "ur": {
+          "male": 0,
+          "female": 0
+        },
+        "obc": {
+          "male": 0,
+          "female": 0
+        },
+        "sc": {
+          "male": 0,
+          "female": 0
+        },
+        "st": {
+          "male": 0,
+          "female": 0
+        }
+      }
+    },
+    "eligibility": {
+      "educationQualification": "Bachelor's degree in Engineering or Technology (Graduate Apprentice) or Diploma in Engineering or Technology (Diploma Apprentice). Candidates must have completed the final qualifying semester on or after April 1, 2020.",
+      "streamRequired": "Relevant Engineering/Technology disciplines, Commerce, Computer Application, Business Administration, Social Work",
+      "minimumPercentage": null,
+      "experienceRequired": "Not specified",
+      "specialRequirements": [
+        "Degree/Diploma recognized by AICTE or Government of India",
+        "Final qualifying semester completed on or after April 1, 2020"
+      ]
+    },
+    "physicalStandards": null,
+    "physicalEfficiencyTest": null,
+    "selectionProcess": [
+      "Merit Based Shortlisting",
+      "Personal Interview"
+    ],
+    "importantLinks": {
+      "applyOnline": "Click Here",
+      "officialNotification": "Hindi | English",
+      "officialWebsite": "https://mazagondock.in/",
+      "syllabus": null,
+      "examPattern": null,
+      "admitCard": null,
+      "resultLink": null,
+      "answerKey": null,
+      "documentVerificationNotice": null,
+      "faq": null,
+      "other": {
+        "SarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+        "TelegramChannel": "https://t.me/sarkariresultoficial"
+      }
+    },
+    "documentation": [
+      "Citizenship proof",
+      "Educational certificates",
+      "Identity proof"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/mazagon-dock-mdl-graduate-diploma-apprentice-recruitment-2025/",
+    "additionalInfo": "Age relaxation will be provided as per MDL's rules and regulations.",
+    "content": {
+      "originalSummary": "Mazagon Dock Limited (MDL) is hiring 200 Graduate and Diploma Apprentices. Applications are open from January 16 to February 5, 2025. Candidates must be between 18 and 27 years old as of March 1, 2025, with age relaxation as per MDL rules. Eligibility requires a relevant engineering/technology degree or diploma completed on or after April 1, 2020. Selection is based on merit and interview.",
+      "whoShouldApply": [
+        "Fresh graduates and diploma holders in engineering, technology, commerce, computer application, business administration, and social work seeking apprenticeship opportunities.",
+        "Candidates who have completed their final qualifying semester on or after April 1, 2020."
+      ],
+      "keyHighlights": [
+        "Recruitment for 200 Graduate/Diploma Apprentice positions.",
+        "Application period: January 16 to February 5, 2025.",
+        "Age limit: 18-27 years (as of March 1, 2025).",
+        "No application fee for any candidate.",
+        "Selection through merit list and personal interview."
+      ],
+      "applicationSteps": [
+        "Visit the official MDL website or use the provided apply online link.",
+        "Fill in the application form with accurate personal and educational details.",
+        "Ensure all required documents are uploaded.",
+        "Submit the application before the deadline of February 5, 2025."
+      ],
+      "selectionProcessSummary": "Candidates will be shortlisted based on their merit, followed by a personal interview to determine final selection for the apprentice positions.",
+      "documentsChecklist": [
+        "Educational certificates (Degree/Diploma)",
+        "Proof of completion date (on or after April 1, 2020)",
+        "Age proof",
+        "Identity proof"
+      ],
+      "feeSummary": "There is no application fee for any candidate. Payment can be made online via Debit Card, Credit Card, Internet Banking, IMPS, or Mobile Wallet.",
+      "importantNotes": [
+        "The last date to apply online is February 5, 2025.",
+        "The last date for fee payment is February 7, 2025.",
+        "Candidates must have completed their final qualifying semester on or after April 1, 2020."
+      ],
+      "faq": [
+        {
+          "q": "When did the online application for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025 Start?",
+          "a": "The online application for this recruitment started on 16 January 2025."
+        },
+        {
+          "q": "What is the last date for online application for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+          "a": "The last date to apply online for this recruitment is 05 February 2025."
+        },
+        {
+          "q": "What is the age limit for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+          "a": "The age limit is 18 to 27 years as on 01 March 2025. Age relaxation will be provided as per MDL's rules and regulations."
+        },
+        {
+          "q": "What is the eligibility for Mazagon Dock MDL Graduate/ Diploma Apprentice Recruitment 2025?",
+          "a": "Graduate Apprentice: Bachelor's degree in Engineering or Technology in the relevant discipline. Diploma Apprentice: Diploma in Engineering or Technology in the relevant discipline. Candidates must have completed the final qualifying semester on or after April 1, 2020."
+        },
+        {
+          "q": "What is the official website of MDL?",
+          "a": "The official website of MDL is https://mazagondock.in/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/mazagon-dock-mdl-graduate-diploma-apprentice-recruitment-2025/",
+  "textHash": "9652f752e4e8f44f242359db7cd03dc18451029dc2ab9da8632649df5bd177c5",
+  "updateSnapshot": {
+    "title": "Mazagon Dock MDL Graduate/ Diploma Apprentice Online Form 2025",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/mazagon-dock-mdl-graduate-diploma-apprentice-recruitment-2025/",
+    "siteHost": "",
+    "advertisementNumber": "",
+    "totalPosts": "200",
+    "dates": {
+      "postDate": "January 18, 2025",
+      "applicationStartDate": "",
+      "applicationLastDate": "online for this recruitment is 05 February 2025",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "0",
+      "scSt": "0"
+    },
+    "age": {
+      "min": "18",
+      "max": "27",
+      "asOn": "01 March 2025"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "ee93fde303be701a106e5ba270af03e7c78c2938870af732575e64b7b5000e30",
+      "textHash": "9652f752e4e8f44f242359db7cd03dc18451029dc2ab9da8632649df5bd177c5"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T18:09:57.252Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6994afd13e5f96399c8ca18c"
+  },
+  "megaPostId": {
+    "$oid": "69945cb53e5f96399c8c9ebb"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T18:13:35.749Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "SSC CGL Tier – II Answer Key 2026",
+      "advertisementNumber": "Not specified",
+      "organization": {
+        "name": "Staff Selection Commission",
+        "shortName": "SSC",
+        "website": "https://ssc.gov.in/",
+        "type": "Government"
+      },
+      "importantDates": {
+        "notificationDate": "Not specified",
+        "postDate": "2026-01-30",
+        "applicationStartDate": "2025-06-09",
+        "applicationLastDate": "2025-07-04",
+        "feePaymentLastDate": "2025-07-05",
+        "correctionDate": "2025-07-09 to 2025-07-11",
+        "preExamDate": "2025-09-12 to 2025-09-26",
+        "mainsExamDate": "2026-01-19",
+        "examDate": "Not specified",
+        "admitCardDate": "2026-01-15",
+        "resultDate": "2025-12-18",
+        "answerKeyReleaseDate": "2026-01-30",
+        "finalAnswerKeyDate": "Not specified",
+        "documentVerificationDate": "Not specified",
+        "counsellingDate": "Not specified",
+        "meritListDate": "Not specified"
+      },
+      "vacancyDetails": {
+        "totalPosts": 14582,
+        "positions": [
+          {
+            "postName": "All other Posts",
+            "numberOfPosts": "Not specified",
+            "category": "Not specified",
+            "areaType": "Not specified",
+            "discipline": "Not specified"
+          },
+          {
+            "postName": "Junior Statistical Officer",
+            "numberOfPosts": "Not specified",
+            "category": "Not specified",
+            "areaType": "Not specified",
+            "discipline": "Statistics"
+          }
+        ],
+        "categoryWise": {
+          "general": "Not specified",
+          "obc": "Not specified",
+          "sc": "Not specified",
+          "st": "Not specified",
+          "ewsExemption": "Not specified",
+          "ph": "Not specified",
+          "other": {}
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 100,
+        "ewsObc": 100,
+        "scSt": 0,
+        "female": 0,
+        "ph": 0,
+        "correctionCharge": "Not specified",
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Cash Card / Mobile Wallet"
+        ],
+        "exemptions": "Not specified"
+      },
+      "ageLimit": {
+        "minimumAge": 18,
+        "maximumAge": 30,
+        "asOn": "01-08-2025",
+        "ageRelaxation": {
+          "scSt": "As per rules",
+          "obc": "As per rules",
+          "ph": "As per rules",
+          "exServicemen": "As per rules",
+          "other": {}
+        },
+        "categoryWise": {
+          "ur": {
+            "male": 0,
+            "female": 0
+          },
+          "obc": {
+            "male": 0,
+            "female": 0
+          },
+          "sc": {
+            "male": 0,
+            "female": 0
+          },
+          "st": {
+            "male": 0,
+            "female": 0
+          }
+        }
+      },
+      "eligibility": {
+        "educationQualification": "Graduation in any stream",
+        "streamRequired": "Not specified",
+        "minimumPercentage": "Not specified",
+        "experienceRequired": "Not specified",
+        "specialRequirements": [
+          "For Junior Statistical Officer: Bachelor's degree with at least 60% marks in Mathematics at the 12th standard level, or Bachelor's degree with Statistics as a subject."
+        ]
+      },
+      "physicalStandards": null,
+      "physicalEfficiencyTest": null,
+      "selectionProcess": [
+        "Tier-I Exam",
+        "Tier-II Exam"
+      ],
+      "importantLinks": {
+        "applyOnline": "https://ssc.gov.in/candidate-portal/one-time-registration/home-page",
+        "officialNotification": "Download Official Notification",
+        "officialWebsite": "https://ssc.gov.in/",
+        "syllabus": "Not specified",
+        "examPattern": "Not specified",
+        "admitCard": "Download Admit Card",
+        "resultLink": "Download Tier-I Result",
+        "answerKey": "Download Tier-II Answer Key",
+        "documentVerificationNotice": "Not specified",
+        "faq": "Not specified",
+        "other": {
+          "Download SarkariResult App": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+          "Check Tier-II Answer Key Notice": "http://sarkariresult.com.cm/wp-content/uploads/2026/01/SSC-CGL-2025-Tier-II-Exam-City-Notice.pdf",
+          "Check Tier-II Exam City Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/Notice_02012026.pdf",
+          "Check Tier-II Exam Date Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/CGL-tier-2-exam-Date-Notice.pdf",
+          "Check Tier-II Revised Exam Date Notice": "http://sarkariresult.com.cm/wp-content/uploads/2026/01/SSC-CGL-Final-Answer-key-Notice.webp",
+          "Download Tier-I Final Answer Key": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST1_181225.pdf",
+          "Download Tier-I Result List-I": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST1_181225.pdf",
+          "Download Tier-I Result List-II": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST2_181225.pdf",
+          "Download Tier-I Result List-III": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST3_181225.pdf",
+          "Download Tier-I Cutoff": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/writeup_181225.pdf",
+          "Download Tier-I Answer Key": "http://sarkariresult.com.cm/wp-content/uploads/2025/10/Writeup_AnswerKey_Tier-I_CGLE_25-1.pdf",
+          "Download Tier-I Answer Key Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/SSC-CGL-Admit-Card-Notice.pdf",
+          "Download Tier-I Re-Exam Admit Card": "Not specified",
+          "Check Tier-I Exam City Details": "Not specified",
+          "Check Exam City & Admit Card Notice": "Not specified",
+          "Check Exam City Details": "Not specified",
+          "Check Exam City Details Notice": "Not specified",
+          "Check Exam Date Notice": "Not specified",
+          "Download Tentative Vacancy Details": "Not specified",
+          "Online Correction Link": "Not specified"
+        }
+      },
+      "documentation": [
+        "Citizenship",
+        "Educational Certificates",
+        "Identity Proof"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/ssc-cgl-tier-ii-answer-key-2026/",
+      "additionalInfo": "Objections against the answer key can be raised with a fee of ₹100 per question, which is refundable if the objection is valid.",
+      "content": {
+        "originalSummary": "The Staff Selection Commission (SSC) has released the Tier-II Answer Key for the Combined Graduate Level (CGL) Examination 2025. The Tier-II exam was conducted on January 19, 2026. Candidates can access their answer keys by logging into the official SSC portal using their registration details. The application period was from June 9 to July 4, 2025, with a fee payment deadline of July 5, 2025. The age limit for applicants is 18 to 30 years as of August 1, 2025.",
+        "whoShouldApply": [
+          "Candidates who appeared for the SSC CGL Tier-II Examination 2025 and wish to check their provisional answer key and estimate their scores."
+        ],
+        "keyHighlights": [
+          "SSC CGL Tier-II Answer Key 2026 released.",
+          "Tier-II exam conducted on January 19, 2026.",
+          "Application window: June 9 - July 4, 2025.",
+          "Age limit: 18-30 years as of August 1, 2025.",
+          "Objections can be filed with a fee."
+        ],
+        "applicationSteps": [
+          "Visit the official SSC website.",
+          "Navigate to the Answer Key/Results section.",
+          "Find and click on the SSC CGL Tier-II Answer Key 2026 notification.",
+          "Log in using your credentials (Enrollment Number, Registration Number, or Date of Birth).",
+          "Download the answer key PDF.",
+          "Compare your answers with the official key to calculate your score.",
+          "Raise objections if necessary within the specified window."
+        ],
+        "selectionProcessSummary": "The selection process for SSC CGL involves a Tier-I Exam followed by a Tier-II Exam. Candidates' performance in these tiers determines their final selection.",
+        "documentsChecklist": [
+          "Educational Certificates",
+          "Identity Proof",
+          "Citizenship Proof"
+        ],
+        "feeSummary": "The application fee for General, OBC, and EWS candidates is ₹100. SC, ST, and female candidates are exempted from the fee. Objections against the answer key cost ₹100 per question.",
+        "importantNotes": [
+          "The application last date was July 4, 2025.",
+          "The fee payment last date was July 5, 2025.",
+          "Objections against the answer key can be submitted within a specified timeframe.",
+          "The official website for SSC is ssc.gov.in."
+        ],
+        "faq": [
+          {
+            "q": "When was the SSC CGL Tier-II Answer Key 2026 released?",
+            "a": "The SSC CGL Tier-II Answer Key 2026 was released on January 30, 2026."
+          },
+          {
+            "q": "How can I check and download the Tier-II Answer Key?",
+            "a": "Visit the SSC official website, go to the 'Answer Key' section, select the CGL Tier-II 2025 notification, log in using your credentials, and download the PDF."
+          },
+          {
+            "q": "Can I challenge or raise objections against the Tier-II Answer Key?",
+            "a": "Yes, candidates can raise objections within the specified window. Each objection requires a fee of ₹100 per question, which will be refunded if the objection is found valid."
+          },
+          {
+            "q": "How will the final Tier-II Answer Key be prepared?",
+            "a": "After considering all valid objections, SSC will release the final answer key. Marks will be calculated based on this final key."
+          },
+          {
+            "q": "What is the official website for SSC?",
+            "a": "The official website for SSC is https://ssc.gov.in/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "5039fb0a9c890f6777dabc2863d0362159b27260fe557de15f6eb27a69f9a4d8",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T18:13:35.749Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "0b665f36a58ee58869a6929ba39229cff3a2b18b05d332eb9b6a3f716281634f",
+  "postTitle": "SSC CGL Tier – II Answer Key 2026 – Out",
+  "recruitment": {
+    "title": "SSC CGL Tier – II Answer Key 2026",
+    "advertisementNumber": "Not specified",
+    "organization": {
+      "name": "Staff Selection Commission",
+      "shortName": "SSC",
+      "website": "https://ssc.gov.in/",
+      "type": "Government"
+    },
+    "importantDates": {
+      "notificationDate": "Not specified",
+      "postDate": "2026-01-30",
+      "applicationStartDate": "2025-06-09",
+      "applicationLastDate": "2025-07-04",
+      "feePaymentLastDate": "2025-07-05",
+      "correctionDate": "2025-07-09 to 2025-07-11",
+      "preExamDate": "2025-09-12 to 2025-09-26",
+      "mainsExamDate": "2026-01-19",
+      "examDate": "Not specified",
+      "admitCardDate": "2026-01-15",
+      "resultDate": "2025-12-18",
+      "answerKeyReleaseDate": "2026-01-30",
+      "finalAnswerKeyDate": "Not specified",
+      "documentVerificationDate": "Not specified",
+      "counsellingDate": "Not specified",
+      "meritListDate": "Not specified"
+    },
+    "vacancyDetails": {
+      "totalPosts": 14582,
+      "positions": [
+        {
+          "postName": "All other Posts",
+          "numberOfPosts": "Not specified",
+          "category": "Not specified",
+          "areaType": "Not specified",
+          "discipline": "Not specified"
+        },
+        {
+          "postName": "Junior Statistical Officer",
+          "numberOfPosts": "Not specified",
+          "category": "Not specified",
+          "areaType": "Not specified",
+          "discipline": "Statistics"
+        }
+      ],
+      "categoryWise": {
+        "general": "Not specified",
+        "obc": "Not specified",
+        "sc": "Not specified",
+        "st": "Not specified",
+        "ewsExemption": "Not specified",
+        "ph": "Not specified",
+        "other": {}
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 100,
+      "ewsObc": 100,
+      "scSt": 0,
+      "female": 0,
+      "ph": 0,
+      "correctionCharge": "Not specified",
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Cash Card / Mobile Wallet"
+      ],
+      "exemptions": "Not specified"
+    },
+    "ageLimit": {
+      "minimumAge": 18,
+      "maximumAge": 30,
+      "asOn": "01-08-2025",
+      "ageRelaxation": {
+        "scSt": "As per rules",
+        "obc": "As per rules",
+        "ph": "As per rules",
+        "exServicemen": "As per rules",
+        "other": {}
+      },
+      "categoryWise": {
+        "ur": {
+          "male": 0,
+          "female": 0
+        },
+        "obc": {
+          "male": 0,
+          "female": 0
+        },
+        "sc": {
+          "male": 0,
+          "female": 0
+        },
+        "st": {
+          "male": 0,
+          "female": 0
+        }
+      }
+    },
+    "eligibility": {
+      "educationQualification": "Graduation in any stream",
+      "streamRequired": "Not specified",
+      "minimumPercentage": "Not specified",
+      "experienceRequired": "Not specified",
+      "specialRequirements": [
+        "For Junior Statistical Officer: Bachelor's degree with at least 60% marks in Mathematics at the 12th standard level, or Bachelor's degree with Statistics as a subject."
+      ]
+    },
+    "physicalStandards": null,
+    "physicalEfficiencyTest": null,
+    "selectionProcess": [
+      "Tier-I Exam",
+      "Tier-II Exam"
+    ],
+    "importantLinks": {
+      "applyOnline": "https://ssc.gov.in/candidate-portal/one-time-registration/home-page",
+      "officialNotification": "Download Official Notification",
+      "officialWebsite": "https://ssc.gov.in/",
+      "syllabus": "Not specified",
+      "examPattern": "Not specified",
+      "admitCard": "Download Admit Card",
+      "resultLink": "Download Tier-I Result",
+      "answerKey": "Download Tier-II Answer Key",
+      "documentVerificationNotice": "Not specified",
+      "faq": "Not specified",
+      "other": {
+        "Download SarkariResult App": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN",
+        "Check Tier-II Answer Key Notice": "http://sarkariresult.com.cm/wp-content/uploads/2026/01/SSC-CGL-2025-Tier-II-Exam-City-Notice.pdf",
+        "Check Tier-II Exam City Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/Notice_02012026.pdf",
+        "Check Tier-II Exam Date Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/CGL-tier-2-exam-Date-Notice.pdf",
+        "Check Tier-II Revised Exam Date Notice": "http://sarkariresult.com.cm/wp-content/uploads/2026/01/SSC-CGL-Final-Answer-key-Notice.webp",
+        "Download Tier-I Final Answer Key": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST1_181225.pdf",
+        "Download Tier-I Result List-I": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST1_181225.pdf",
+        "Download Tier-I Result List-II": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST2_181225.pdf",
+        "Download Tier-I Result List-III": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/LIST3_181225.pdf",
+        "Download Tier-I Cutoff": "http://sarkariresult.com.cm/wp-content/uploads/2025/12/writeup_181225.pdf",
+        "Download Tier-I Answer Key": "http://sarkariresult.com.cm/wp-content/uploads/2025/10/Writeup_AnswerKey_Tier-I_CGLE_25-1.pdf",
+        "Download Tier-I Answer Key Notice": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/SSC-CGL-Admit-Card-Notice.pdf",
+        "Download Tier-I Re-Exam Admit Card": "Not specified",
+        "Check Tier-I Exam City Details": "Not specified",
+        "Check Exam City & Admit Card Notice": "Not specified",
+        "Check Exam City Details": "Not specified",
+        "Check Exam City Details Notice": "Not specified",
+        "Check Exam Date Notice": "Not specified",
+        "Download Tentative Vacancy Details": "Not specified",
+        "Online Correction Link": "Not specified"
+      }
+    },
+    "documentation": [
+      "Citizenship",
+      "Educational Certificates",
+      "Identity Proof"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/ssc-cgl-tier-ii-answer-key-2026/",
+    "additionalInfo": "Objections against the answer key can be raised with a fee of ₹100 per question, which is refundable if the objection is valid.",
+    "content": {
+      "originalSummary": "The Staff Selection Commission (SSC) has released the Tier-II Answer Key for the Combined Graduate Level (CGL) Examination 2025. The Tier-II exam was conducted on January 19, 2026. Candidates can access their answer keys by logging into the official SSC portal using their registration details. The application period was from June 9 to July 4, 2025, with a fee payment deadline of July 5, 2025. The age limit for applicants is 18 to 30 years as of August 1, 2025.",
+      "whoShouldApply": [
+        "Candidates who appeared for the SSC CGL Tier-II Examination 2025 and wish to check their provisional answer key and estimate their scores."
+      ],
+      "keyHighlights": [
+        "SSC CGL Tier-II Answer Key 2026 released.",
+        "Tier-II exam conducted on January 19, 2026.",
+        "Application window: June 9 - July 4, 2025.",
+        "Age limit: 18-30 years as of August 1, 2025.",
+        "Objections can be filed with a fee."
+      ],
+      "applicationSteps": [
+        "Visit the official SSC website.",
+        "Navigate to the Answer Key/Results section.",
+        "Find and click on the SSC CGL Tier-II Answer Key 2026 notification.",
+        "Log in using your credentials (Enrollment Number, Registration Number, or Date of Birth).",
+        "Download the answer key PDF.",
+        "Compare your answers with the official key to calculate your score.",
+        "Raise objections if necessary within the specified window."
+      ],
+      "selectionProcessSummary": "The selection process for SSC CGL involves a Tier-I Exam followed by a Tier-II Exam. Candidates' performance in these tiers determines their final selection.",
+      "documentsChecklist": [
+        "Educational Certificates",
+        "Identity Proof",
+        "Citizenship Proof"
+      ],
+      "feeSummary": "The application fee for General, OBC, and EWS candidates is ₹100. SC, ST, and female candidates are exempted from the fee. Objections against the answer key cost ₹100 per question.",
+      "importantNotes": [
+        "The application last date was July 4, 2025.",
+        "The fee payment last date was July 5, 2025.",
+        "Objections against the answer key can be submitted within a specified timeframe.",
+        "The official website for SSC is ssc.gov.in."
+      ],
+      "faq": [
+        {
+          "q": "When was the SSC CGL Tier-II Answer Key 2026 released?",
+          "a": "The SSC CGL Tier-II Answer Key 2026 was released on January 30, 2026."
+        },
+        {
+          "q": "How can I check and download the Tier-II Answer Key?",
+          "a": "Visit the SSC official website, go to the 'Answer Key' section, select the CGL Tier-II 2025 notification, log in using your credentials, and download the PDF."
+        },
+        {
+          "q": "Can I challenge or raise objections against the Tier-II Answer Key?",
+          "a": "Yes, candidates can raise objections within the specified window. Each objection requires a fee of ₹100 per question, which will be refunded if the objection is found valid."
+        },
+        {
+          "q": "How will the final Tier-II Answer Key be prepared?",
+          "a": "After considering all valid objections, SSC will release the final answer key. Marks will be calculated based on this final key."
+        },
+        {
+          "q": "What is the official website for SSC?",
+          "a": "The official website for SSC is https://ssc.gov.in/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/ssc-cgl-tier-ii-answer-key-2026/",
+  "textHash": "ab0731c846701ad7ea4f4652496c5237326970396ee7934a4c6df6f3e9270bc0",
+  "updateSnapshot": {
+    "title": "SSC CGL Tier – II Answer Key 2026 – Out",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/ssc-cgl-tier-ii-answer-key-2026/",
+    "siteHost": "",
+    "advertisementNumber": "",
+    "totalPosts": "",
+    "dates": {
+      "postDate": "January 30, 2026",
+      "applicationStartDate": "09 June 2025 Online Apply Last Date",
+      "applicationLastDate": "04 July 2025 Last Date For Fee Payment",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "100",
+      "scSt": "0"
+    },
+    "age": {
+      "min": "18",
+      "max": "30",
+      "asOn": "01 August 2025"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "5039fb0a9c890f6777dabc2863d0362159b27260fe557de15f6eb27a69f9a4d8",
+      "textHash": "ab0731c846701ad7ea4f4652496c5237326970396ee7934a4c6df6f3e9270bc0"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T18:13:35.749Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6994b12f3e5f96399c8ca198"
+  },
+  "megaPostId": {
+    "$oid": "69945c823e5f96399c8c9e3c"
+  },
+  "__v": 0,
+  "createdAt": {
+    "$date": "2026-02-17T18:19:25.468Z"
+  },
+  "formattedData": {
+    "recruitment": {
+      "title": "Bihar Police CSBC Constable PET Admit Card 2025",
+      "advertisementNumber": "01-2025",
+      "organization": {
+        "name": "Central Selection Board of Constable (CSBC)",
+        "shortName": "CSBC",
+        "website": "https://csbc.bihar.gov.in/",
+        "type": "Government"
+      },
+      "importantDates": {
+        "notificationDate": "Not specified",
+        "postDate": "2025-11-25",
+        "applicationStartDate": "2025-03-18",
+        "applicationLastDate": "2025-04-25",
+        "feePaymentLastDate": "2025-04-25",
+        "correctionDate": "Not specified",
+        "preExamDate": "Not specified",
+        "mainsExamDate": "Not specified",
+        "examDate": "2025-07-16, 20, 23, 27, 30 & 08-03",
+        "admitCardDate": "2025-07-09 to 2025-07-27",
+        "resultDate": "2025-09-26",
+        "answerKeyReleaseDate": "Not specified",
+        "finalAnswerKeyDate": "Not specified",
+        "documentVerificationDate": "Not specified",
+        "counsellingDate": "Not specified",
+        "meritListDate": "Not specified",
+        "examCityDetailsDate": "2025-06-20",
+        "petAdmitCardAvailable": "2025-11-25",
+        "petExamStartDate": "2025-12-15"
+      },
+      "vacancyDetails": {
+        "totalPosts": 19838,
+        "positions": [
+          {
+            "postName": "Police Constable",
+            "numberOfPosts": 19838,
+            "category": "Not specified",
+            "areaType": "Not specified",
+            "discipline": "Not specified"
+          }
+        ],
+        "categoryWise": {
+          "general": 0,
+          "obc": 0,
+          "sc": 0,
+          "st": 0,
+          "ewsExemption": 0,
+          "ph": 0,
+          "other": {}
+        },
+        "districtWise": []
+      },
+      "applicationFee": {
+        "general": 675,
+        "ewsObc": 675,
+        "scSt": 180,
+        "female": 0,
+        "ph": 0,
+        "correctionCharge": 0,
+        "currency": "INR",
+        "paymentMode": [
+          "Debit Card",
+          "Credit Card",
+          "Internet Banking",
+          "IMPS",
+          "Cash Card / Mobile Wallet"
+        ],
+        "exemptions": "Not specified"
+      },
+      "ageLimit": {
+        "minimumAge": 18,
+        "maximumAge": 30,
+        "asOn": "2024-08-01",
+        "ageRelaxation": {
+          "scSt": "As per regulations",
+          "obc": "As per regulations",
+          "ph": "As per regulations",
+          "exServicemen": "As per regulations",
+          "other": {}
+        },
+        "categoryWise": {
+          "ur": {
+            "male": 0,
+            "female": 0
+          },
+          "obc": {
+            "male": 0,
+            "female": 0
+          },
+          "sc": {
+            "male": 0,
+            "female": 0
+          },
+          "st": {
+            "male": 0,
+            "female": 0
+          }
+        }
+      },
+      "eligibility": {
+        "educationQualification": "10+2 (Intermediate) or its equivalent",
+        "streamRequired": "Not specified",
+        "minimumPercentage": 0,
+        "experienceRequired": "Not specified",
+        "specialRequirements": [
+          "Must have passed 10+2 (Intermediate) or its equivalent from a recognized board or institution."
+        ]
+      },
+      "physicalStandards": {
+        "male": {
+          "height": "UR/BC-165 cm, EBC-160 cm, SC/ST- 160 cm, Gorkha Battalion- 160 cm",
+          "chest": "UR/BC/EBC-Unexpand-81, Expand-86 cm; SC/ST-Unexpand-79, Expand-84 cm",
+          "weight": "Not specified",
+          "eyesight": "Not specified"
+        },
+        "female": {
+          "height": "155 cm",
+          "weight": "Not specified",
+          "eyesight": "Not specified"
+        }
+      },
+      "physicalEfficiencyTest": {
+        "male": {
+          "distance": "1.6 km",
+          "duration": "06 Min"
+        },
+        "female": {
+          "distance": "1 km",
+          "duration": "05 Min"
+        }
+      },
+      "selectionProcess": [
+        "Written Examination",
+        "Physical Test",
+        "Document Verification"
+      ],
+      "importantLinks": {
+        "applyOnline": "https://apply-csbc.com/CSBC_CT_V1_01_2025/applicationIndex",
+        "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Advt-01-2025-Constables.pdf",
+        "officialWebsite": "https://csbc.bihar.gov.in/",
+        "syllabus": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Syllabus-01-2025.pdf",
+        "examPattern": "Not specified",
+        "admitCard": "https://apply-csbc.com/csbc_125_petadmitcards/searchApplication",
+        "resultLink": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/Results-01-2025-Written-Exam-for-PET.pdf",
+        "answerKey": "Not specified",
+        "documentVerificationNotice": "Not specified",
+        "faq": "Not specified",
+        "other": {
+          "petAdmitCardNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/11/CSBC-Constable-01-2025-PET-Notice.pdf",
+          "petExamDateNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/Notice-18-11-2025-PET.pdf",
+          "examCityDetails": "Not specified",
+          "rejectedApplicantList": "http://sarkariresult.com.cm/wp-content/uploads/2025/04/Notice-Rejected-App-06-06-2025.pdf",
+          "dateExtendNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Notice-11-03-2025.pdf",
+          "shortNotice": "Not specified",
+          "sarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN"
+        }
+      },
+      "documentation": [
+        "Identity proof",
+        "Educational certificates",
+        "Date of Birth proof"
+      ],
+      "status": "Active",
+      "sourceUrl": "https://sarkariresult.com.cm/bihar-police-csbc-constable-pet-admit-card-2025/",
+      "additionalInfo": "This recruitment is for the PET Admit Card release. The main examination dates and admit card dates are also mentioned.",
+      "content": {
+        "originalSummary": "The Central Selection Board of Constable (CSBC) has released the PET Admit Card for Bihar Police Constable Examination 2025. The application period was from March 18 to April 25, 2025. The PET exam is scheduled to commence on December 15, 2025. Candidates can download their admit cards using their registration details.",
+        "whoShouldApply": [
+          "Candidates who have successfully applied for the Bihar Police Constable Examination 2025 and are awaiting their Physical Efficiency Test (PET)."
+        ],
+        "keyHighlights": [
+          "PET Admit Card for Bihar Police Constable 2025 is now available.",
+          "Application deadline was April 25, 2025.",
+          "PET examination starts on December 15, 2025.",
+          "Total vacancies for Police Constable are 19,838.",
+          "Eligibility requires passing 10+2 (Intermediate) or equivalent."
+        ],
+        "applicationSteps": [
+          "Visit the official CSBC website.",
+          "Navigate to the 'Admit Card' or 'Latest Notification' section.",
+          "Find and click on the link for 'Constable PET Admit Card 2025'.",
+          "Enter Registration Number/Roll Number and Date of Birth on the login page.",
+          "Submit the details to download the admit card.",
+          "Print the admit card for the PET."
+        ],
+        "selectionProcessSummary": "The selection process for Bihar Police Constable involves a Written Examination, followed by a Physical Test (PET and PST), and finally Document Verification.",
+        "documentsChecklist": [
+          "PET Admit Card"
+        ],
+        "feeSummary": "Application fees vary by category: ₹675 for General/EWS/BC/EBC and ₹180 for SC/ST/OBC. Payments can be made online via Debit Card, Credit Card, Internet Banking, IMPS, or Mobile Wallet.",
+        "importantNotes": [
+          "The PET Admit Card is available from November 25, 2025.",
+          "Ensure all details on the admit card are correct.",
+          "Carry the admit card and required documents to the PET venue."
+        ],
+        "faq": [
+          {
+            "q": "When was the Bihar Police Constable PET Exam Date 2025 released?",
+            "a": "The PET Exam Date has been declared on 18 November 2025."
+          },
+          {
+            "q": "Where is the PET Admit Card available?",
+            "a": "On the official CSBC Bihar website under the PET Admit Card section."
+          },
+          {
+            "q": "In which format is the PET Admit Card published?",
+            "a": "The PET Admit Card is released in PDF format, containing roll numbers of qualified candidates."
+          },
+          {
+            "q": "How can candidates check their PET Admit Card?",
+            "a": "By downloading the PDF and searching their Roll Number / Name."
+          },
+          {
+            "q": "What is the official website for Bihar CSBC?",
+            "a": "The official website for Bihar CSBC is https://csbc.bihar.gov.in/"
+          }
+        ]
+      }
+    }
+  },
+  "htmlStableHash": "e9d64d7c06fdbfa7a25bfc91add47caf5d158a2b8b8e3438a55730c6f9168bd2",
+  "lastScrapedAt": {
+    "$date": "2026-02-17T18:19:25.467Z"
+  },
+  "modelUsed": "gemini-2.5-flash-lite",
+  "pageHash": "1c2a61031849f7c5c15f0f02d6556b120fcd13232f7ded980b1d6b100b57a8bd",
+  "postTitle": "Bihar Police CSBC Constable PET Admit Card 2025 – Out",
+  "recruitment": {
+    "title": "Bihar Police CSBC Constable PET Admit Card 2025",
+    "advertisementNumber": "01-2025",
+    "organization": {
+      "name": "Central Selection Board of Constable (CSBC)",
+      "shortName": "CSBC",
+      "website": "https://csbc.bihar.gov.in/",
+      "type": "Government"
+    },
+    "importantDates": {
+      "notificationDate": "Not specified",
+      "postDate": "2025-11-25",
+      "applicationStartDate": "2025-03-18",
+      "applicationLastDate": "2025-04-25",
+      "feePaymentLastDate": "2025-04-25",
+      "correctionDate": "Not specified",
+      "preExamDate": "Not specified",
+      "mainsExamDate": "Not specified",
+      "examDate": "2025-07-16, 20, 23, 27, 30 & 08-03",
+      "admitCardDate": "2025-07-09 to 2025-07-27",
+      "resultDate": "2025-09-26",
+      "answerKeyReleaseDate": "Not specified",
+      "finalAnswerKeyDate": "Not specified",
+      "documentVerificationDate": "Not specified",
+      "counsellingDate": "Not specified",
+      "meritListDate": "Not specified",
+      "examCityDetailsDate": "2025-06-20",
+      "petAdmitCardAvailable": "2025-11-25",
+      "petExamStartDate": "2025-12-15"
+    },
+    "vacancyDetails": {
+      "totalPosts": 19838,
+      "positions": [
+        {
+          "postName": "Police Constable",
+          "numberOfPosts": 19838,
+          "category": "Not specified",
+          "areaType": "Not specified",
+          "discipline": "Not specified"
+        }
+      ],
+      "categoryWise": {
+        "general": 0,
+        "obc": 0,
+        "sc": 0,
+        "st": 0,
+        "ewsExemption": 0,
+        "ph": 0,
+        "other": {}
+      },
+      "districtWise": []
+    },
+    "applicationFee": {
+      "general": 675,
+      "ewsObc": 675,
+      "scSt": 180,
+      "female": 0,
+      "ph": 0,
+      "correctionCharge": 0,
+      "currency": "INR",
+      "paymentMode": [
+        "Debit Card",
+        "Credit Card",
+        "Internet Banking",
+        "IMPS",
+        "Cash Card / Mobile Wallet"
+      ],
+      "exemptions": "Not specified"
+    },
+    "ageLimit": {
+      "minimumAge": 18,
+      "maximumAge": 30,
+      "asOn": "2024-08-01",
+      "ageRelaxation": {
+        "scSt": "As per regulations",
+        "obc": "As per regulations",
+        "ph": "As per regulations",
+        "exServicemen": "As per regulations",
+        "other": {}
+      },
+      "categoryWise": {
+        "ur": {
+          "male": 0,
+          "female": 0
+        },
+        "obc": {
+          "male": 0,
+          "female": 0
+        },
+        "sc": {
+          "male": 0,
+          "female": 0
+        },
+        "st": {
+          "male": 0,
+          "female": 0
+        }
+      }
+    },
+    "eligibility": {
+      "educationQualification": "10+2 (Intermediate) or its equivalent",
+      "streamRequired": "Not specified",
+      "minimumPercentage": 0,
+      "experienceRequired": "Not specified",
+      "specialRequirements": [
+        "Must have passed 10+2 (Intermediate) or its equivalent from a recognized board or institution."
+      ]
+    },
+    "physicalStandards": {
+      "male": {
+        "height": "UR/BC-165 cm, EBC-160 cm, SC/ST- 160 cm, Gorkha Battalion- 160 cm",
+        "chest": "UR/BC/EBC-Unexpand-81, Expand-86 cm; SC/ST-Unexpand-79, Expand-84 cm",
+        "weight": "Not specified",
+        "eyesight": "Not specified"
+      },
+      "female": {
+        "height": "155 cm",
+        "weight": "Not specified",
+        "eyesight": "Not specified"
+      }
+    },
+    "physicalEfficiencyTest": {
+      "male": {
+        "distance": "1.6 km",
+        "duration": "06 Min"
+      },
+      "female": {
+        "distance": "1 km",
+        "duration": "05 Min"
+      }
+    },
+    "selectionProcess": [
+      "Written Examination",
+      "Physical Test",
+      "Document Verification"
+    ],
+    "importantLinks": {
+      "applyOnline": "https://apply-csbc.com/CSBC_CT_V1_01_2025/applicationIndex",
+      "officialNotification": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Advt-01-2025-Constables.pdf",
+      "officialWebsite": "https://csbc.bihar.gov.in/",
+      "syllabus": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Syllabus-01-2025.pdf",
+      "examPattern": "Not specified",
+      "admitCard": "https://apply-csbc.com/csbc_125_petadmitcards/searchApplication",
+      "resultLink": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/Results-01-2025-Written-Exam-for-PET.pdf",
+      "answerKey": "Not specified",
+      "documentVerificationNotice": "Not specified",
+      "faq": "Not specified",
+      "other": {
+        "petAdmitCardNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/11/CSBC-Constable-01-2025-PET-Notice.pdf",
+        "petExamDateNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/09/Notice-18-11-2025-PET.pdf",
+        "examCityDetails": "Not specified",
+        "rejectedApplicantList": "http://sarkariresult.com.cm/wp-content/uploads/2025/04/Notice-Rejected-App-06-06-2025.pdf",
+        "dateExtendNotice": "http://sarkariresult.com.cm/wp-content/uploads/2025/03/Notice-11-03-2025.pdf",
+        "shortNotice": "Not specified",
+        "sarkariResultApp": "https://play.google.com/store/apps/details?id=com.vinod.sarkarinaukri&hl=en_IN"
+      }
+    },
+    "documentation": [
+      "Identity proof",
+      "Educational certificates",
+      "Date of Birth proof"
+    ],
+    "status": "Active",
+    "sourceUrl": "https://sarkariresult.com.cm/bihar-police-csbc-constable-pet-admit-card-2025/",
+    "additionalInfo": "This recruitment is for the PET Admit Card release. The main examination dates and admit card dates are also mentioned.",
+    "content": {
+      "originalSummary": "The Central Selection Board of Constable (CSBC) has released the PET Admit Card for Bihar Police Constable Examination 2025. The application period was from March 18 to April 25, 2025. The PET exam is scheduled to commence on December 15, 2025. Candidates can download their admit cards using their registration details.",
+      "whoShouldApply": [
+        "Candidates who have successfully applied for the Bihar Police Constable Examination 2025 and are awaiting their Physical Efficiency Test (PET)."
+      ],
+      "keyHighlights": [
+        "PET Admit Card for Bihar Police Constable 2025 is now available.",
+        "Application deadline was April 25, 2025.",
+        "PET examination starts on December 15, 2025.",
+        "Total vacancies for Police Constable are 19,838.",
+        "Eligibility requires passing 10+2 (Intermediate) or equivalent."
+      ],
+      "applicationSteps": [
+        "Visit the official CSBC website.",
+        "Navigate to the 'Admit Card' or 'Latest Notification' section.",
+        "Find and click on the link for 'Constable PET Admit Card 2025'.",
+        "Enter Registration Number/Roll Number and Date of Birth on the login page.",
+        "Submit the details to download the admit card.",
+        "Print the admit card for the PET."
+      ],
+      "selectionProcessSummary": "The selection process for Bihar Police Constable involves a Written Examination, followed by a Physical Test (PET and PST), and finally Document Verification.",
+      "documentsChecklist": [
+        "PET Admit Card"
+      ],
+      "feeSummary": "Application fees vary by category: ₹675 for General/EWS/BC/EBC and ₹180 for SC/ST/OBC. Payments can be made online via Debit Card, Credit Card, Internet Banking, IMPS, or Mobile Wallet.",
+      "importantNotes": [
+        "The PET Admit Card is available from November 25, 2025.",
+        "Ensure all details on the admit card are correct.",
+        "Carry the admit card and required documents to the PET venue."
+      ],
+      "faq": [
+        {
+          "q": "When was the Bihar Police Constable PET Exam Date 2025 released?",
+          "a": "The PET Exam Date has been declared on 18 November 2025."
+        },
+        {
+          "q": "Where is the PET Admit Card available?",
+          "a": "On the official CSBC Bihar website under the PET Admit Card section."
+        },
+        {
+          "q": "In which format is the PET Admit Card published?",
+          "a": "The PET Admit Card is released in PDF format, containing roll numbers of qualified candidates."
+        },
+        {
+          "q": "How can candidates check their PET Admit Card?",
+          "a": "By downloading the PDF and searching their Roll Number / Name."
+        },
+        {
+          "q": "What is the official website for Bihar CSBC?",
+          "a": "The official website for Bihar CSBC is https://csbc.bihar.gov.in/"
+        }
+      ]
+    }
+  },
+  "sourceUrl": "https://sarkariresult.com.cm/bihar-police-csbc-constable-pet-admit-card-2025/",
+  "textHash": "9612740d94d07529567456db72ef0b5629134b5eb0acef47b0ee74f652027d42",
+  "updateSnapshot": {
+    "title": "Bihar Police CSBC Constable PET Admit Card 2025 – Out",
+    "metaDesc": "",
+    "sourceUrl": "https://sarkariresult.com.cm/bihar-police-csbc-constable-pet-admit-card-2025/",
+    "siteHost": "",
+    "advertisementNumber": "",
+    "totalPosts": "",
+    "dates": {
+      "postDate": "November 25, 2025",
+      "applicationStartDate": "18 March 2025 Online Apply Last Date",
+      "applicationLastDate": "25 April 2025 Last Date For Fee Payment",
+      "examDate": "",
+      "resultDate": ""
+    },
+    "fee": {
+      "generalObc": "675",
+      "scSt": "180"
+    },
+    "age": {
+      "min": "18",
+      "max": "30",
+      "asOn": "01 August 2024"
+    },
+    "links": {
+      "applyOnline": "",
+      "officialNotification": ""
+    },
+    "_hash": {
+      "htmlStableHash": "e9d64d7c06fdbfa7a25bfc91add47caf5d158a2b8b8e3438a55730c6f9168bd2",
+      "textHash": "9612740d94d07529567456db72ef0b5629134b5eb0acef47b0ee74f652027d42"
+    }
+  },
+  "updatedAt": {
+    "$date": "2026-02-17T18:19:25.468Z"
+  }
+}]
