@@ -28,7 +28,7 @@ const guideCards = [
   {
     title: "Why SarkariAfsar Reliability Guide",
     desc: "Editorial process, source-verification policy, and correction workflow used on job pages.",
-    href: "/guides/why-sarkariafsar",
+    href: "/guides/why-jobsaddah",
     focus: "Trust and policy",
   },
 ];

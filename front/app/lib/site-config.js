@@ -1,55 +1,32 @@
-const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://jobsaddah.com").replace(/\/$/, "");
-export const SITE_NAME = "JobsAddah";
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://sarkariafsar.com").replace(/\/$/, "");
+
+export const SITE_NAME = "SarkariAfsar";
 export const SITE_BASE_URL = new URL(SITE_URL);
-export const DEFAULT_TITLE = "JobsAddah - Sarkari Result 2026 | Latest Govt Jobs";
-export const DEFAULT_DESCRIPTION = "JobsAddah is India\'s fastest portal for verified Sarkari Naukri alerts, admit cards, results, and government job vacancies for SSC, Railways, Banks, UPSC, and state exams.";
-export const DEFAULT_IMAGE = `${SITE_URL}/og-image.png`;
+export const DEFAULT_TITLE = "SarkariAfsar - Latest Sarkari Result & Govt Jobs";
+export const DEFAULT_DESCRIPTION =
+  "SarkariAfsar brings verified Sarkari Naukri updates, admit cards, answer keys, and results for SSC, Railway, Bank, UPSC, and state government exams.";
+export const DEFAULT_IMAGE = `${SITE_URL}/app-logo.png`;
 export const DEFAULT_KEYWORDS = [
   "sarkari result",
   "govt jobs",
   "sarkari naukri",
   "latest govt jobs",
   "admit card",
+  "answer key",
   "job alerts",
   "railway jobs",
   "bank jobs",
   "ssc jobs",
   "upsc exam",
-  "mock test",
-  "online mock test",
-  "ssc mock test",
-  "bank mock test",
-  "railway mock test",
-  "govt exam preparation",
-  "exam preparation",
-  "free mock test",
-  "practice test",
-  "online test series",
-  "previous year paper",
-  "pyq",
-  "current affairs",
-  "gk quiz",
-  "reasoning practice",
-  "quant practice",
-  "english practice",
-  "cutoff",
-  "result update",
-  "answer key",
+  "state govt jobs",
+  "government exam results",
+  "sarkari exam",
+  "exam date",
   "syllabus",
   "notification",
   "vacancy",
   "application form",
   "eligibility",
-  "age limit",
-  "selection process",
-  "exam date",
-  "admit card download",
-  "govt job alerts",
-  "sarkari exam",
-  "state govt jobs",
-  "central govt jobs",
-  "daily current affairs",
-  "job result",
-  "exam tips",
-  "study plan",
 ];
+
+export const SITE_EMAIL = "support@sarkariafsar.com";

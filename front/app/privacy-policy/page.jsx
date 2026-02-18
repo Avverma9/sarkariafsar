@@ -169,7 +169,7 @@ const PrivacyPolicy = () => {
               <li><a href="https://www.youronlinechoices.com/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">European Interactive Digital Advertising Alliance</a></li>
             </ul>
             <p className="text-gray-700 leading-relaxed">
-              For more information about Google's data practices, review <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">How Google uses data when you use our partners' sites or apps</a>.
+              For more information about Google&apos;s data practices, review <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">How Google uses data when you use our partners&apos; sites or apps</a>.
             </p>
 
             <h3 className="font-semibold text-gray-800 mt-6 mb-2">4.2 Google Analytics</h3>
@@ -238,7 +238,7 @@ const PrivacyPolicy = () => {
               <ul className="list-disc pl-5 space-y-2 text-gray-600">
                 <li><strong>Right to Access:</strong> Request a copy of the personal data we hold about you</li>
                 <li><strong>Right to Rectification:</strong> Request correction of inaccurate or incomplete data</li>
-                <li><strong>Right to Erasure ("Right to be Forgotten"):</strong> Request deletion of your personal data under certain conditions</li>
+                <li><strong>Right to Erasure (&quot;Right to be Forgotten&quot;):</strong> Request deletion of your personal data under certain conditions</li>
                 <li><strong>Right to Restrict Processing:</strong> Request limitation of how we use your data</li>
                 <li><strong>Right to Data Portability:</strong> Request transfer of your data to another service provider in a machine-readable format</li>
                 <li><strong>Right to Object:</strong> Object to processing of your data for direct marketing or legitimate interests</li>
@@ -267,13 +267,13 @@ const PrivacyPolicy = () => {
             </p>
           </section>
 
-          {/* 9. Children's Privacy */}
+          {/* 9. Children&apos;s Privacy */}
           <section className="flex gap-4">
             <div className="shrink-0 mt-1 hidden sm:block">
               <AlertCircle className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900 mb-3">9. Children's Privacy</h2>
+              <h2 className="text-xl font-bold text-gray-900 mb-3">9. Children&apos;s Privacy</h2>
               <p className="text-gray-600 leading-relaxed">
                 SarkariAfsar is intended for users aged 16 and above. We do not knowingly collect personal information from children under 16. If you are a parent or guardian and believe your child has provided us with personal data, please contact us immediately at <a href="mailto:support@sarkariafsar.com" className="text-blue-600 hover:underline">support@sarkariafsar.com</a>. We will promptly delete such information from our records.
               </p>
@@ -292,7 +292,7 @@ const PrivacyPolicy = () => {
           <section>
             <h2 className="text-xl font-bold text-gray-900 mb-3">11. Do Not Track (DNT) Signals</h2>
             <p className="text-gray-600 leading-relaxed">
-              Some browsers have a "Do Not Track" (DNT) feature that signals websites you visit that you do not want your online activity tracked. Currently, there is no industry standard for how to respond to DNT signals. SarkariAfsar does not currently respond to DNT browser signals, but you can opt-out of tracking through cookie settings and Google Ads preferences.
+              Some browsers have a &quot;Do Not Track&quot; (DNT) feature that signals websites you visit that you do not want your online activity tracked. Currently, there is no industry standard for how to respond to DNT signals. SarkariAfsar does not currently respond to DNT browser signals, but you can opt-out of tracking through cookie settings and Google Ads preferences.
             </p>
           </section>
 
@@ -303,7 +303,7 @@ const PrivacyPolicy = () => {
               We may update this Privacy Policy from time to time to reflect changes in our practices, legal requirements, or service features. When we make significant changes, we will notify you by:
             </p>
             <ul className="list-disc pl-5 space-y-1 text-gray-600 mt-2 mb-3">
-              <li>Posting the updated policy on this page with a new "Last Updated" date</li>
+              <li>Posting the updated policy on this page with a new &quot;Last Updated&quot; date</li>
               <li>Sending an email notification to registered users (for material changes)</li>
             </ul>
             <p className="text-gray-600 leading-relaxed">

@@ -1,6 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+export const metadata = {
+  title: "Post Redirect Helper",
+  description: "Helper page to route users to the correct post detail URL using canonical key.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
 export default async function LegacyPostPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
   const rawCanonical = resolvedSearchParams?.canonicalKey;
