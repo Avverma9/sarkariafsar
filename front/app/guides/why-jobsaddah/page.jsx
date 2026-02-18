@@ -1,4 +1,4 @@
-import VlogSpotlight from "@/components/VlogSpotlight";
+import VlogSpotlight from "@/app/component/VlogSpotlight";
 
 export const metadata = {
   title: "Why SarkariAfsar Is Reliable | SarkariAfsar Guides",
