@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import MegaPost from "../models/megaPost.model.mjs";
 import Recruitment from "../models/recruitment.model.mjs";
 import RecruitmentEvent from "../models/recruitmentEvent.model.mjs";
+import UserWatch from "../models/userWatch.model.mjs";
 import { extractRecruitmentJsonFromContentHtml } from "./geminiExtract.service.mjs";
 import {
   buildEventSignatures,
@@ -16,6 +17,14 @@ function ensureObjectId(id, name) {
     err.statusCode = 400;
     throw err;
   }
+}
+
+function normalizeUrl(url) {
+  return String(url || "").trim().replace(/\/+$/, "");
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function extractRecruitmentMeta(aiData = {}) {
@@ -34,6 +43,90 @@ function extractRecruitmentMeta(aiData = {}) {
     },
     canonicalSourceUrl: String(r?.sourceUrl || "").trim(),
   };
+}
+
+async function findRecruitmentFallback(meta = {}, post = null) {
+  const advt = String(meta?.advertisementNumber || "").trim();
+  const orgShort = String(meta?.organization?.shortName || "").trim();
+  const orgName = String(meta?.organization?.name || "").trim();
+  const sourceUrlCandidates = [
+    normalizeUrl(meta?.canonicalSourceUrl || ""),
+    normalizeUrl(post?.originalUrl || ""),
+  ].filter(Boolean);
+
+  const or = [];
+  if (sourceUrlCandidates.length) {
+    or.push({ canonicalSourceUrl: { $in: sourceUrlCandidates } });
+  }
+
+  if (advt && (orgShort || orgName)) {
+    const orgOr = [];
+    if (orgShort) {
+      orgOr.push({ "organization.shortName": { $regex: `^${escapeRegex(orgShort)}$`, $options: "i" } });
+    }
+    if (orgName) {
+      orgOr.push({ "organization.name": { $regex: `^${escapeRegex(orgName)}$`, $options: "i" } });
+    }
+    if (orgOr.length) {
+      or.push({
+        advertisementNumber: { $regex: `^${escapeRegex(advt)}$`, $options: "i" },
+        $or: orgOr,
+      });
+    }
+  }
+
+  if (!or.length) return null;
+
+  return Recruitment.findOne({ $or: or }).sort({ updatedAt: -1 });
+}
+
+async function migrateWatchersIfRecruitmentSwitched({
+  previousRecruitmentId = "",
+  nextRecruitmentId = "",
+}) {
+  const fromId = String(previousRecruitmentId || "").trim();
+  const toId = String(nextRecruitmentId || "").trim();
+  if (!fromId || !toId || fromId === toId) {
+    return { migrated: 0, sourceWatchers: 0 };
+  }
+  if (!mongoose.Types.ObjectId.isValid(fromId) || !mongoose.Types.ObjectId.isValid(toId)) {
+    return { migrated: 0, sourceWatchers: 0 };
+  }
+
+  const sourceWatchers = await UserWatch.find({
+    recruitmentId: new mongoose.Types.ObjectId(fromId),
+  }).lean();
+  let migrated = 0;
+
+  for (const w of sourceWatchers) {
+    const email = String(w?.email || "").trim().toLowerCase();
+    if (!email) continue;
+
+    await UserWatch.findOneAndUpdate(
+      {
+        email,
+        recruitmentId: new mongoose.Types.ObjectId(toId),
+      },
+      {
+        $set: {
+          enabled: w?.enabled !== false,
+          priority: Number.isFinite(Number(w?.priority)) ? Number(w.priority) : 0,
+          channels: {
+            email: w?.channels?.email !== false,
+            whatsapp: w?.channels?.whatsapp === true,
+          },
+        },
+      },
+      {
+        upsert: true,
+        setDefaultsOnInsert: true,
+      },
+    );
+
+    migrated++;
+  }
+
+  return { migrated, sourceWatchers: sourceWatchers.length };
 }
 
 export async function processMegaPostToRecruitment(postId) {
@@ -63,31 +156,60 @@ export async function processMegaPostToRecruitment(postId) {
 
   const recruitmentKey = buildRecruitmentKey(aiData);
   const meta = extractRecruitmentMeta(aiData);
+  const previousRecruitmentId = String(post.recruitmentId || "").trim();
+  const canonicalSourceUrl = meta.canonicalSourceUrl || post.originalUrl || "";
 
-  const recruitment = await Recruitment.findOneAndUpdate(
-    { recruitmentKey },
-    {
-      $set: {
-        title: meta.title,
-        advertisementNumber: meta.advertisementNumber,
-        organization: meta.organization,
-        canonicalSourceUrl: meta.canonicalSourceUrl || post.originalUrl || "",
-      },
-      $setOnInsert: {
-        recruitmentKey,
-      },
-    },
-    {
-      upsert: true,
-      returnDocument: "after",
-      setDefaultsOnInsert: true,
-    },
-  );
+  let recruitment = null;
+  if (previousRecruitmentId && mongoose.Types.ObjectId.isValid(previousRecruitmentId)) {
+    recruitment = await Recruitment.findById(previousRecruitmentId);
+  }
 
+  const keyedRecruitment = await Recruitment.findOne({ recruitmentKey });
+  if (recruitment && keyedRecruitment) {
+    if (String(recruitment._id) !== String(keyedRecruitment._id)) {
+      recruitment = keyedRecruitment;
+    }
+  } else if (!recruitment) {
+    recruitment = keyedRecruitment;
+  }
+  if (!recruitment) {
+    recruitment = await findRecruitmentFallback(meta, post);
+  }
+
+  if (recruitment) {
+    recruitment.title = meta.title;
+    recruitment.advertisementNumber = meta.advertisementNumber;
+    recruitment.organization = meta.organization;
+    recruitment.canonicalSourceUrl = canonicalSourceUrl;
+    if (!String(recruitment.recruitmentKey || "").trim()) {
+      recruitment.recruitmentKey = recruitmentKey;
+    }
+    await recruitment.save();
+  } else {
+    recruitment = await Recruitment.create({
+      recruitmentKey,
+      title: meta.title,
+      advertisementNumber: meta.advertisementNumber,
+      organization: meta.organization,
+      canonicalSourceUrl,
+    });
+  }
+
+  const resolvedRecruitmentKey = String(recruitment?.recruitmentKey || recruitmentKey);
   post.recruitmentId = recruitment._id;
-  post.recruitmentKey = recruitmentKey;
+  post.recruitmentKey = resolvedRecruitmentKey;
   post.lastEventProcessedAt = new Date();
   await post.save();
+
+  const watchMigration = await migrateWatchersIfRecruitmentSwitched({
+    previousRecruitmentId,
+    nextRecruitmentId: String(recruitment._id),
+  });
+  if (watchMigration.migrated > 0) {
+    logger.info(
+      `Watch migration done for post=${post._id}: moved=${watchMigration.migrated}/${watchMigration.sourceWatchers} to recruitment=${recruitment._id}`,
+    );
+  }
 
   const eventCandidates = buildEventSignatures(aiData);
   const insertedEvents = [];
@@ -128,9 +250,10 @@ export async function processMegaPostToRecruitment(postId) {
 
   return {
     recruitmentId: String(recruitment._id),
-    recruitmentKey,
+    recruitmentKey: resolvedRecruitmentKey,
     insertedEvents: insertedEvents.length,
     modelName: String(modelName || ""),
     notify,
+    watchMigration,
   };
 }

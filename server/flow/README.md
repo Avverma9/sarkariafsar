@@ -7,6 +7,7 @@ This folder documents request flow for each API controller.
 - `flow/section.controller.flow.md`
 - `flow/postScrape.controller.flow.md`
 - `flow/gemini.controller.flow.md`
+- `flow/mega-sync-post-update.flow.md`
 
 ## Base Route Prefix
 All routes are mounted under `/api` in `src/app.mjs`.
