@@ -151,9 +151,19 @@ export const postListBysectionUrl = async (req, res, next) => {
     const [rows, totalRows] = await Promise.all([
       MegaPost.aggregate([
         { $match: match },
-        { $sort: { createdAt: -1 } },
-        { $skip: skip },
-        { $limit: lim },
+        {
+          $lookup: {
+            from: "postdetails",
+            localField: "_id",
+            foreignField: "megaPostId",
+            as: "postDetail",
+          },
+        },
+        {
+          $set: {
+            postDetail: { $first: "$postDetail" },
+          },
+        },
         {
           $project: {
             _id: 1,
@@ -164,22 +174,50 @@ export const postListBysectionUrl = async (req, res, next) => {
             originalUrl: 1,
             sourceSectionUrl: 1,
             postDate: "$createdAt",
+            applicationLastDate: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.importantDates.applicationLastDate",
+                "$postDetail.formattedData.recruitment.applicationLastDate",
+              ],
+            },
           },
         },
       ]),
       MegaPost.countDocuments(match),
     ]);
 
+    const sortedRows = rows
+      .map((row) => {
+        const deadline = parseFlexibleDate(row.applicationLastDate);
+        const deadlineTs = deadline ? normalizeToday(deadline).getTime() : -1;
+        const postDateTs = Number.isNaN(new Date(row.postDate).getTime())
+          ? 0
+          : new Date(row.postDate).getTime();
+        return {
+          ...row,
+          _deadlineSortTs: deadlineTs,
+          _postDateSortTs: postDateTs,
+        };
+      })
+      .sort((a, b) => {
+        if (b._deadlineSortTs !== a._deadlineSortTs) {
+          return b._deadlineSortTs - a._deadlineSortTs;
+        }
+        return b._postDateSortTs - a._postDateSortTs;
+      });
+
+    const pagedRows = sortedRows.slice(skip, skip + lim);
+
     return res.json({
       success: true,
-      count: rows.length,
+      count: pagedRows.length,
       pagination: {
         total: totalRows,
         page: pageNum,
         limit: lim,
         pages: Math.ceil(totalRows / lim),
       },
-      data: rows.map((r) => ({
+      data: pagedRows.map((r) => ({
         postId: String(r._id),
         title: r.title,
         canonicalKey: r.canonicalKey,
@@ -188,6 +226,7 @@ export const postListBysectionUrl = async (req, res, next) => {
         sourceUrl: r.originalUrl,
         sectionUrl: r.sourceSectionUrl,
         postDate: r.postDate,
+        applicationLastDate: String(r.applicationLastDate || "").trim(),
       })),
     });
   } catch (err) {
@@ -313,19 +352,40 @@ export const findMegaPostsByTitle = async (req, res, next) => {
 };
 
 function parseFlexibleDate(input) {
+  if (input instanceof Date && !Number.isNaN(input.getTime())) {
+    return input;
+  }
+
   const raw = String(input || "").trim();
   if (!raw) return null;
 
-  let m = raw.match(/^(\d{4})[-/](\d{2})[-/](\d{2})$/);
+  const buildDate = (year, month, day) => {
+    const y = Number(year);
+    const m = Number(month);
+    const d = Number(day);
+    if (!Number.isInteger(y) || !Number.isInteger(m) || !Number.isInteger(d)) return null;
+    const date = new Date(y, m - 1, d);
+    if (
+      date.getFullYear() !== y ||
+      date.getMonth() !== m - 1 ||
+      date.getDate() !== d
+    ) {
+      return null;
+    }
+    return date;
+  };
+
+  // Accept full-string and embedded date formats:
+  // yyyy-mm-dd, yyyy/mm/dd, yyyy.mm.dd
+  let m = raw.match(/(?:^|\D)(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:\D|$)/);
   if (m) {
-    const d = new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00`);
-    return Number.isNaN(d.getTime()) ? null : d;
+    return buildDate(m[1], m[2], m[3]);
   }
 
-  m = raw.match(/^(\d{2})[-/](\d{2})[-/](\d{4})$/);
+  // dd-mm-yyyy, dd/mm/yyyy, dd.mm.yyyy
+  m = raw.match(/(?:^|\D)(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})(?:\D|$)/);
   if (m) {
-    const d = new Date(`${m[3]}-${m[2]}-${m[1]}T00:00:00`);
-    return Number.isNaN(d.getTime()) ? null : d;
+    return buildDate(m[3], m[2], m[1]);
   }
 
   const direct = new Date(raw);
@@ -390,6 +450,132 @@ export const markJobFavorite = async (req, res, next) => {
   }
 };
 
+export const getFavoriteJobs = async (req, res, next) => {
+  try {
+    const megaSlug = String(req.query?.megaSlug || req.body?.megaSlug || "").trim();
+    const pageNum = Math.max(1, Number(req.query?.page || req.body?.page || 1));
+    const lim = Math.min(200, Math.max(1, Number(req.query?.limit || req.body?.limit || 20)));
+    const skip = (pageNum - 1) * lim;
+
+    const match = {
+      $or: [
+        { isFavorite: true },
+        { isFavorite: { $exists: false }, isFavourite: true },
+      ],
+    };
+    if (megaSlug) match.megaSlug = megaSlug;
+
+    const [rows, totalRows] = await Promise.all([
+      MegaPost.aggregate([
+        { $match: match },
+        { $sort: { favoriteMarkedAt: -1, updatedAt: -1, createdAt: -1 } },
+        {
+          $lookup: {
+            from: "postdetails",
+            let: {
+              megaPostId: "$_id",
+              canonicalKey: "$canonicalKey",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$megaPostId", "$$megaPostId"] },
+                      { $eq: ["$canonicalKey", "$$canonicalKey"] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { updatedAt: -1, createdAt: -1 } },
+              { $limit: 1 },
+            ],
+            as: "postDetail",
+          },
+        },
+        {
+          $set: {
+            postDetail: { $first: "$postDetail" },
+          },
+        },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            canonicalKey: 1,
+            megaSlug: 1,
+            megaTitle: 1,
+            originalUrl: 1,
+            sourceSectionUrl: 1,
+            createdAt: 1,
+            isFavorite: 1,
+            isFavourite: 1,
+            favoriteMarkedAt: 1,
+            recruitmentTitle: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.title",
+                "$title",
+              ],
+            },
+            applicationLastDate: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.importantDates.applicationLastDate",
+                "$postDetail.formattedData.recruitment.applicationLastDate",
+              ],
+            },
+            organizationShortName: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.organization.shortName",
+                "$postDetail.formattedData.recruitment.organization.shortname",
+              ],
+            },
+          },
+        },
+        { $skip: skip },
+        { $limit: lim },
+      ]),
+      MegaPost.countDocuments(match),
+    ]);
+
+    return res.json({
+      success: true,
+      count: rows.length,
+      pagination: {
+        total: totalRows,
+        page: pageNum,
+        limit: lim,
+        pages: Math.ceil(totalRows / lim),
+      },
+      data: rows.map((r) => ({
+        postId: String(r._id),
+        title: r.title,
+        canonicalKey: r.canonicalKey,
+        megaSlug: r.megaSlug,
+        megaTitle: r.megaTitle,
+        sourceUrl: r.originalUrl,
+        sectionUrl: r.sourceSectionUrl,
+        postDate: r.createdAt,
+        isFavorite:
+          r.isFavorite === true ||
+          (r.isFavorite !== false && r.isFavourite === true),
+        favoriteMarkedAt: r.favoriteMarkedAt || null,
+        recruitmentTitle: String(r.recruitmentTitle || "").trim(),
+        applicationLastDate: String(r.applicationLastDate || "").trim(),
+        organizationShortName: String(r.organizationShortName || "").trim(),
+        recruitment: {
+          title: String(r.recruitmentTitle || "").trim(),
+          organization: {
+            shortName: String(r.organizationShortName || "").trim(),
+          },
+        },
+        jobType: inferJobType(r.megaSlug, r.title),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const getDeadlineJobs = async (req, res, next) => {
   try {
     const days = Math.max(0, Number(req.query?.days || req.body?.days || 3));
@@ -424,13 +610,21 @@ export const getDeadlineJobs = async (req, res, next) => {
           },
         },
       },
+      {
+        $match: {
+          applicationLastDate: { $type: "string", $ne: "" },
+        },
+      },
     ]);
 
     const today = normalizeToday();
     const filtered = [];
 
     for (const row of rows) {
-      const deadlineDate = parseFlexibleDate(row.applicationLastDate);
+      const applicationLastDate = String(row.applicationLastDate || "").trim();
+      if (!applicationLastDate) continue;
+
+      const deadlineDate = parseFlexibleDate(applicationLastDate);
       if (!deadlineDate) continue;
 
       const d = normalizeToday(deadlineDate);

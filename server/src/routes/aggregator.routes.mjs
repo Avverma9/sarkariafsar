@@ -2,6 +2,7 @@ import express from "express";
 import {
   addSite,
   findMegaPostsByTitle,
+  getFavoriteJobs,
   getMegaPosts,
   getMegaSections,
   getSites,
@@ -29,5 +30,6 @@ router.get("/mega-posts", getMegaPosts);
 router.get("/post-list-by-section-url", postListBysectionUrl);
 router.get("/find-by-title", findMegaPostsByTitle);
 router.post("/favorite-job", markJobFavorite);
+router.get("/favorite-jobs", getFavoriteJobs);
 router.get("/deadline-jobs", getDeadlineJobs);
 export default router;

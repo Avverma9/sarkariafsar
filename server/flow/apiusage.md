@@ -76,10 +76,14 @@ Body:
 }
 ```
 
-11. `GET http://localhost:5000/api/site/deadline-jobs?days=3&page=1&limit=50`  
+11. `GET http://localhost:5000/api/site/favorite-jobs?page=1&limit=20&megaSlug=latest-gov-jobs`  
+Use: Favorite jobs list fetch karna (optional `megaSlug` filter).
+Response data includes: `canonicalKey`, `recruitmentTitle`, `applicationLastDate`, `organizationShortName`, `recruitment.organization.shortName`.
+
+12. `GET http://localhost:5000/api/site/deadline-jobs?days=3&page=1&limit=50`  
 Use: `applicationLastDate` ke basis par upcoming deadline jobs.
 
-12. `POST http://localhost:5000/api/site/deadline-jobs`  
+13. `POST http://localhost:5000/api/site/deadline-jobs`  
 Use: Same deadline filter via body.  
 Body:
 ```json
