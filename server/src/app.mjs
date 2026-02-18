@@ -22,7 +22,7 @@ app.get("/", (req, res) => {
   return res.send("Welcome to API Server");
 });
 
-app.use("/api", routes);
+app.use("/", routes);
 app.use(errorMiddleware);
 
 export default app;

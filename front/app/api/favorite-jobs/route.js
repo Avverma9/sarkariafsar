@@ -9,6 +9,17 @@ function normalizeBaseUrl(value) {
     .replace(/\/+$/, "");
 }
 
+async function parseJsonFromResponse(response) {
+  const text = await response.text().catch(() => "");
+  if (!text) return null;
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
@@ -44,12 +55,17 @@ export async function GET(request) {
       cache: "no-store",
     });
 
-    const payload = await response.json().catch(() => null);
+    const payload = await parseJsonFromResponse(response);
     if (!payload) {
       return NextResponse.json(
         {
           success: false,
           message: "Invalid response from upstream service",
+          upstream: {
+            status: response.status,
+            contentType: response.headers.get("content-type") || "unknown",
+            url: upstreamUrl,
+          },
         },
         { status: 502 },
       );
