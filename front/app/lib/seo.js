@@ -40,6 +40,38 @@ function mergeKeywords(extraKeywords = []) {
   );
 }
 
+function resolveOpenGraphType(type = "website") {
+  const normalized = cleanText(type).toLowerCase();
+
+  const supported = new Set([
+    "website",
+    "article",
+    "book",
+    "profile",
+    "music.song",
+    "music.album",
+    "music.playlist",
+    "music.radio_station",
+    "video.movie",
+    "video.episode",
+    "video.tv_show",
+    "video.other",
+  ]);
+
+  if (supported.has(normalized)) return normalized;
+
+  const alias = {
+    webpage: "website",
+    collectionpage: "website",
+    searchresultspage: "website",
+    aboutpage: "website",
+    contactpage: "website",
+    blog: "website",
+  };
+
+  return alias[normalized] || "website";
+}
+
 function resolveRobots(noIndex = false) {
   if (!noIndex) {
     return {
@@ -92,7 +124,7 @@ export function buildMetadata({
       title: normalizedTitle,
       description: normalizedDescription,
       url: canonicalUrl,
-      type,
+      type: resolveOpenGraphType(type),
       siteName: SITE_NAME,
       images: [DEFAULT_IMAGE],
     },
