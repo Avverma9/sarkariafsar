@@ -1,24 +1,10 @@
 import { baseUrl } from "@/app/lib/baseUrl";
 import { NextResponse } from "next/server";
 
-const MAX_LIMIT = 200;
-
-function normalizeBaseUrl(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/\/+$/, "");
-}
-
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
   const title = String(searchParams.get("title") || "").trim();
-  const megaSlug = String(searchParams.get("megaSlug") || "").trim();
-  const sectionUrl = String(searchParams.get("sectionUrl") || "").trim();
-  const exactRaw = String(searchParams.get("exact") || "").trim().toLowerCase();
-  const page = Math.max(1, Number(searchParams.get("page") || 1));
-  const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get("limit") || 20)));
 
   if (!title) {
     return NextResponse.json(
@@ -30,17 +16,7 @@ export async function GET(request) {
     );
   }
 
-  const upstreamParams = new URLSearchParams({
-    title,
-    page: String(page),
-    limit: String(limit),
-  });
-
-  if (megaSlug) upstreamParams.set("megaSlug", megaSlug);
-  if (sectionUrl) upstreamParams.set("sectionUrl", sectionUrl);
-  if (exactRaw) upstreamParams.set("exact", exactRaw === "true" ? "true" : "false");
-
-  const upstreamUrl = `${baseUrl}/site/find-by-title?${upstreamParams.toString()}`;
+  const upstreamUrl = `${baseUrl}/site/find-by-title${new URL(request.url).search}`;
 
   try {
     const response = await fetch(upstreamUrl, {

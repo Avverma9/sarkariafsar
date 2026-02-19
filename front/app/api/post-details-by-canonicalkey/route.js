@@ -34,10 +34,8 @@ export async function POST(request) {
   }
 
 
-  const upstreamUrl = `${baseUrl}/post/scrape`;
-
   try {
-    const response = await fetch(upstreamUrl, {
+    const response = await fetch(`${baseUrl}/post/scrape`, {
       method: "POST",
       headers: {
         Accept: "application/json",
