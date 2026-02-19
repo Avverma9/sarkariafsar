@@ -12,7 +12,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/health", (req, res) => {
   return res.status(200).json({
     success: true,
-    message: "Server is running fine",
+    message: "Server is running fine bro",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
