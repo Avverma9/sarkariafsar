@@ -3,12 +3,14 @@ import * as cheerio from "cheerio";
 import { Worker } from "node:worker_threads";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import cron from "node-cron";
 import { AggregatorSite } from "../models/aggregator.model.mjs";
 import MegaSection from "../models/megaSection.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import logger from "../utils/logger.mjs";
 import { buildDedupeKeys } from "../utils/dedupe.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
+import { compareContentSimilarityWithPerplexity } from "./perplexityDedup.service.mjs";
 import {
   acquireJobLock,
   forceReleaseJobLock,
@@ -25,10 +27,9 @@ const clean = (t) =>
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
-const DEFAULT_MEGA_SYNC_INTERVAL_MINUTES = Math.max(
-  1,
-  Number(process.env.MEGA_SYNC_INTERVAL_MINUTES || 30),
-);
+const DEFAULT_MEGA_SYNC_CRON_EXPRESSION = String(
+  process.env.MEGA_SYNC_CRON || "0 */5 * * *",
+).trim();
 const DEFAULT_MEGA_SYNC_POST_DELAY_MS = Math.max(
   0,
   Number(process.env.MEGA_SYNC_POST_DELAY_MS || 60000),
@@ -37,11 +38,16 @@ const DEFAULT_MEGA_SYNC_LOCK_TTL_MS = Math.max(
   60 * 1000,
   Number(process.env.MEGA_SYNC_LOCK_TTL_MS || 90 * 60 * 1000),
 );
+const DEFAULT_CONTENT_DUPLICATE_THRESHOLD = Math.max(
+  1,
+  Math.min(100, Number(process.env.MEGA_SYNC_CONTENT_DUP_THRESHOLD || 70)),
+);
 const MEGA_SYNC_LOCK_KEY = "mega-sync";
 const WORKER_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../workers/megaSync.worker.mjs",
 );
+let aiDedupUnavailableLogged = false;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -74,6 +80,198 @@ export function canonicalizeTitleForDedupe(title) {
   );
   t = t.replace(/\s+/g, " ").trim();
   return t;
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function splitSignificantTitleTokens(title) {
+  return canonicalizeTitleForDedupe(title)
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 3);
+}
+
+function tokenOverlapScore(baseTokens = [], candidateTokens = []) {
+  if (!baseTokens.length || !candidateTokens.length) return 0;
+  const baseSet = new Set(baseTokens);
+  let overlap = 0;
+  for (const token of candidateTokens) {
+    if (baseSet.has(token)) overlap++;
+  }
+  return overlap / Math.max(baseSet.size, 1);
+}
+
+function getTitleSimilarityMetrics(titleA = "", titleB = "") {
+  const normalizedA = canonicalizeTitleForDedupe(titleA);
+  const normalizedB = canonicalizeTitleForDedupe(titleB);
+  const tokensA = splitSignificantTitleTokens(titleA);
+  const tokensB = splitSignificantTitleTokens(titleB);
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+
+  let intersection = 0;
+  for (const token of setA) {
+    if (setB.has(token)) intersection++;
+  }
+
+  const union = new Set([...setA, ...setB]).size || 1;
+  const jaccard = intersection / union;
+  const coverageA = intersection / Math.max(setA.size, 1);
+  const coverageB = intersection / Math.max(setB.size, 1);
+  const exactNormalized =
+    !!normalizedA && normalizedA.length >= 12 && normalizedA === normalizedB;
+
+  return {
+    exactNormalized,
+    jaccard,
+    coverageA,
+    coverageB,
+    intersection,
+  };
+}
+
+function isClearTitleDuplicate(titleA = "", titleB = "") {
+  const metrics = getTitleSimilarityMetrics(titleA, titleB);
+  if (metrics.exactNormalized) return true;
+  if (
+    metrics.intersection >= 4 &&
+    metrics.coverageA >= 0.9 &&
+    metrics.coverageB >= 0.9
+  ) {
+    return true;
+  }
+  if (metrics.intersection >= 5 && metrics.jaccard >= 0.82) {
+    return true;
+  }
+  return false;
+}
+
+async function findTitleDuplicateCandidate({ title = "", originalUrl = "" }) {
+  const tokens = splitSignificantTitleTokens(title);
+  if (!tokens.length) return null;
+
+  const titleTerms = [...new Set(tokens)].slice(0, 4);
+  if (!titleTerms.length) return null;
+
+  const query = {
+    $or: titleTerms.map((term) => ({
+      title: { $regex: new RegExp(`\\b${escapeRegex(term)}`, "i") },
+    })),
+  };
+  const normalizedUrl = String(originalUrl || "").trim();
+  if (normalizedUrl) {
+    query.originalUrl = { $ne: normalizedUrl };
+  }
+
+  const rows = await MegaPost.find(query)
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(16)
+    .select("_id title originalUrl updatedAt")
+    .lean();
+
+  const ranked = rows
+    .map((row) => {
+      const rowTokens = splitSignificantTitleTokens(row.title);
+      return {
+        row,
+        score: tokenOverlapScore(tokens, rowTokens),
+      };
+    })
+    .filter((entry) => entry.score >= 0.5)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.row.updatedAt || 0).getTime() - new Date(a.row.updatedAt || 0).getTime();
+    });
+
+  const clear = ranked.find((entry) => isClearTitleDuplicate(title, entry.row.title));
+  if (!clear) return null;
+  return {
+    post: clear.row,
+    similarity: 100,
+    matchType: "title-clear",
+  };
+}
+
+async function findAiDuplicateCandidate({
+  title = "",
+  contentText = "",
+  originalUrl = "",
+  threshold = DEFAULT_CONTENT_DUPLICATE_THRESHOLD,
+}) {
+  const normalizedContent = String(contentText || "").trim();
+  if (!normalizedContent) return null;
+
+  const tokens = splitSignificantTitleTokens(title);
+  if (!tokens.length) return null;
+
+  const titleTerms = [...new Set(tokens)].slice(0, 4);
+  if (!titleTerms.length) return null;
+
+  const query = {
+    contentText: { $exists: true, $ne: "" },
+    $or: titleTerms.map((term) => ({
+      title: { $regex: new RegExp(`\\b${escapeRegex(term)}`, "i") },
+    })),
+  };
+  const normalizedUrl = String(originalUrl || "").trim();
+  if (normalizedUrl) {
+    query.originalUrl = { $ne: normalizedUrl };
+  }
+
+  const rows = await MegaPost.find(query)
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .limit(12)
+    .select("_id title contentText originalUrl updatedAt")
+    .lean();
+
+  const ranked = rows
+    .map((row) => {
+      const rowTokens = splitSignificantTitleTokens(row.title);
+      return {
+        row,
+        score: tokenOverlapScore(tokens, rowTokens),
+      };
+    })
+    .filter((entry) => entry.score >= 0.34)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      return new Date(b.row.updatedAt || 0).getTime() - new Date(a.row.updatedAt || 0).getTime();
+    })
+    .slice(0, 2);
+
+  for (const entry of ranked) {
+    try {
+      const compare = await compareContentSimilarityWithPerplexity({
+        titleA: title,
+        contentA: normalizedContent,
+        titleB: entry.row.title,
+        contentB: entry.row.contentText,
+        threshold,
+      });
+      if (!compare.available) {
+        if (!aiDedupUnavailableLogged) {
+          aiDedupUnavailableLogged = true;
+          logger.warn(
+            `AI duplicate check unavailable (${compare.reason || "unknown"}). Skipping AI dedupe.`,
+          );
+        }
+        return null;
+      }
+      if (compare.isDuplicate) {
+        return {
+          post: entry.row,
+          similarity: compare.similarity,
+          matchType: "content-ai",
+        };
+      }
+    } catch (err) {
+      logger.warn(`Perplexity duplicate check failed: ${err.message}`);
+    }
+  }
+
+  return null;
 }
 
 /* ------------------ YOUR EXISTING SECTION SCRAPER ------------------ */
@@ -270,13 +468,18 @@ export async function scrapePostsFromSection(sectionUrl, siteBaseUrl) {
 /* ------------------ DB SYNC: MEGA SECTIONS + MEGA POSTS ------------------ */
 
 export async function syncMegaSectionsAndPosts(options = {}) {
+  const reason = String(options.reason || "manual");
+  const aiDedupEnabled = String(process.env.MEGA_SYNC_AI_DEDUP_ENABLED || "true")
+    .trim()
+    .toLowerCase() !== "false";
+  const shouldRunAiDedup = aiDedupEnabled && reason.includes("sync-now");
   const postDelayMs = Math.max(
     0,
     Number(options.postDelayMs ?? DEFAULT_MEGA_SYNC_POST_DELAY_MS),
   );
   const sites = await AggregatorSite.find({ status: "active" }).lean();
   if (!sites.length) {
-    return { megaSaved: 0, postsInserted: 0, report: [] };
+    return { megaSaved: 0, postsInserted: 0, postsPatched: 0, report: [] };
   }
 
   const results = await Promise.allSettled(
@@ -314,6 +517,7 @@ export async function syncMegaSectionsAndPosts(options = {}) {
   }
 
   let postsInserted = 0;
+  let postsPatched = 0;
   const report = [];
 
   for (const m of megaSections) {
@@ -332,6 +536,7 @@ export async function syncMegaSectionsAndPosts(options = {}) {
 
     for (const src of m.sources) {
       let insertedForThisSource = 0;
+      let patchedForThisSource = 0;
 
       try {
         const posts = await scrapePostsFromSection(src.sectionUrl, src.siteUrl);
@@ -439,6 +644,56 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             continue;
           }
 
+          const basePatchFields = {
+            megaSlug: m.slug,
+            megaTitle: m.title,
+            title: p.title,
+            canonicalKey,
+            originalUrl: p.postUrl,
+            altIdKey: altKeys.idKey || "",
+            altTokenKey: altKeys.tokenKey || "",
+            altUrlKey: altKeys.urlKey || "",
+            sourceSiteId: src.siteId,
+            sourceSiteName: src.siteName,
+            sourceSectionUrl: src.sectionUrl,
+          };
+
+          let patchedByDuplicate = false;
+
+          if (shouldRunAiDedup) {
+            const titleDuplicateCandidate = await findTitleDuplicateCandidate({
+              title: p.title,
+              originalUrl: p.postUrl,
+            });
+
+            if (titleDuplicateCandidate?.post?._id) {
+              try {
+                await MegaPost.updateOne(
+                  { _id: titleDuplicateCandidate.post._id },
+                  { $set: basePatchFields },
+                );
+                patchedByDuplicate = true;
+                patchedForThisSource++;
+                postsPatched++;
+                logger.info(
+                  `Title dedupe patched MegaPost ${titleDuplicateCandidate.post._id} reason=${reason}`,
+                );
+              } catch (err) {
+                if (err?.code === 11000) {
+                  logger.warn(
+                    `Title dedupe patch duplicate-key for ${p.postUrl}; falling back to deep check`,
+                  );
+                } else {
+                  throw err;
+                }
+              }
+            }
+          }
+
+          if (patchedByDuplicate) {
+            continue;
+          }
+
           let contentHtml = "";
           let contentText = "";
           try {
@@ -457,21 +712,54 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             }
           }
 
+          if (shouldRunAiDedup && contentText) {
+            const duplicateCandidate = await findAiDuplicateCandidate({
+              title: p.title,
+              contentText,
+              originalUrl: p.postUrl,
+            });
+
+            if (duplicateCandidate?.post?._id) {
+              const patchFields = {
+                ...basePatchFields,
+                contentHtml,
+                contentText,
+                aiScraped: false,
+                aiScrapedAt: null,
+                lastEventProcessedAt: null,
+              };
+              try {
+                await MegaPost.updateOne(
+                  { _id: duplicateCandidate.post._id },
+                  { $set: patchFields },
+                );
+                patchedByDuplicate = true;
+                patchedForThisSource++;
+                postsPatched++;
+                logger.info(
+                  `Content dedupe patched MegaPost ${duplicateCandidate.post._id} similarity=${duplicateCandidate.similarity} reason=${reason}`,
+                );
+              } catch (err) {
+                if (err?.code === 11000) {
+                  logger.warn(
+                    `Content dedupe patch duplicate-key for ${p.postUrl}; falling back to upsert`,
+                  );
+                } else {
+                  throw err;
+                }
+              }
+            }
+          }
+
+          if (patchedByDuplicate) {
+            continue;
+          }
+
           await MegaPost.updateOne(
             { megaSlug: m.slug, canonicalKey },
             {
               $setOnInsert: {
-                megaSlug: m.slug,
-                megaTitle: m.title,
-                title: p.title,
-                canonicalKey,
-                originalUrl: p.postUrl,
-                altIdKey: altKeys.idKey || "",
-                altTokenKey: altKeys.tokenKey || "",
-                altUrlKey: altKeys.urlKey || "",
-                sourceSiteId: src.siteId,
-                sourceSiteName: src.siteName,
-                sourceSectionUrl: src.sectionUrl,
+                ...basePatchFields,
                 contentHtml,
                 contentText,
                 aiScraped: false,
@@ -492,6 +780,7 @@ export async function syncMegaSectionsAndPosts(options = {}) {
           section: src.sectionTitle,
           sectionUrl: src.sectionUrl,
           inserted: insertedForThisSource,
+          patched: patchedForThisSource,
         });
       } catch (err) {
         logger.error(`Post scrape failed (${m.slug} / ${src.siteName}): ${err.message}`);
@@ -506,14 +795,14 @@ export async function syncMegaSectionsAndPosts(options = {}) {
     { $set: { lastChecked: new Date() } },
   );
 
-  return { megaSaved, postsInserted, report };
+  return { megaSaved, postsInserted, postsPatched, report };
 }
 
 let megaSyncSchedulerTask = null;
 let megaSyncWorker = null;
 let megaSyncLockOwner = "";
 let megaSyncHeartbeatTimer = null;
-let megaSyncIntervalTimer = null;
+let megaSyncCronTask = null;
 
 function stopMegaSyncHeartbeat() {
   if (megaSyncHeartbeatTimer) {
@@ -571,7 +860,7 @@ export async function triggerMegaSyncRun(options = {}) {
   worker.on("message", (msg) => {
     if (msg?.ok) {
       logger.info(
-        `Mega sync worker completed. reason=${reason}, megaSaved=${msg.result?.megaSaved || 0}, postsInserted=${msg.result?.postsInserted || 0}`,
+        `Mega sync worker completed. reason=${reason}, megaSaved=${msg.result?.megaSaved || 0}, postsInserted=${msg.result?.postsInserted || 0}, postsPatched=${msg.result?.postsPatched || 0}`,
       );
       return;
     }
@@ -642,7 +931,7 @@ export async function runMegaSyncImmediately(options = {}) {
       }
     }, 60 * 1000);
 
-    const result = await syncMegaSectionsAndPosts({ postDelayMs });
+    const result = await syncMegaSectionsAndPosts({ postDelayMs, reason });
     return { accepted: true, reason, result };
   } finally {
     if (heartbeatTimer) {
@@ -673,7 +962,7 @@ export function startMegaSyncScheduler() {
     try {
       const result = await triggerMegaSyncRun({
         postDelayMs: DEFAULT_MEGA_SYNC_POST_DELAY_MS,
-        reason: "scheduler",
+        reason: "cron-sync-now",
       });
       if (!result.accepted) {
         logger.info(`Mega sync scheduler skipped: ${result.reason}`);
@@ -683,22 +972,29 @@ export function startMegaSyncScheduler() {
     }
   };
 
-  const intervalMs = DEFAULT_MEGA_SYNC_INTERVAL_MINUTES * 60 * 1000;
-  megaSyncIntervalTimer = setInterval(() => {
-    runSweep().catch((err) => logger.error(`Mega sync interval run failed: ${err.message}`));
-  }, intervalMs);
+  if (!cron.validate(DEFAULT_MEGA_SYNC_CRON_EXPRESSION)) {
+    logger.error(`Invalid MEGA_SYNC_CRON expression: ${DEFAULT_MEGA_SYNC_CRON_EXPRESSION}`);
+    return null;
+  }
+
+  megaSyncCronTask = cron.schedule(DEFAULT_MEGA_SYNC_CRON_EXPRESSION, () => {
+    runSweep().catch((err) => logger.error(`Mega sync cron run failed: ${err.message}`));
+  });
   megaSyncSchedulerTask = {
     stop: () => {
-      if (megaSyncIntervalTimer) {
-        clearInterval(megaSyncIntervalTimer);
-        megaSyncIntervalTimer = null;
+      if (megaSyncCronTask) {
+        megaSyncCronTask.stop();
+        if (typeof megaSyncCronTask.destroy === "function") {
+          megaSyncCronTask.destroy();
+        }
+        megaSyncCronTask = null;
       }
       megaSyncSchedulerTask = null;
     },
   };
 
   logger.info(
-    `Mega sync scheduler started. every=${DEFAULT_MEGA_SYNC_INTERVAL_MINUTES}m, postDelayMs=${DEFAULT_MEGA_SYNC_POST_DELAY_MS}`,
+    `Mega sync scheduler started. cron=${DEFAULT_MEGA_SYNC_CRON_EXPRESSION}, postDelayMs=${DEFAULT_MEGA_SYNC_POST_DELAY_MS}`,
   );
 
   runSweep().catch((err) => logger.error(`Initial mega sync sweep failed: ${err.message}`));
