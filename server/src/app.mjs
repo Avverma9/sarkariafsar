@@ -9,10 +9,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get("/health", (req, res) => {
+// Health check (single)
+app.get("/api/health", (req, res) => {
   return res.status(200).json({
     success: true,
-    message: "Server is running fine bro",
+    message: "OK",
     uptime: process.uptime(),
     timestamp: new Date().toISOString(),
   });
@@ -23,6 +24,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api", routes);
+
+// error middleware LAST
 app.use(errorMiddleware);
 
 export default app;
