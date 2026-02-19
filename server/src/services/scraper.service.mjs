@@ -11,6 +11,7 @@ import { buildDedupeKeys } from "../utils/dedupe.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
 import {
   acquireJobLock,
+  forceReleaseJobLock,
   releaseJobLock,
   renewJobLock,
 } from "./jobLock.service.mjs";
@@ -598,6 +599,60 @@ export async function triggerMegaSyncRun(options = {}) {
     reason,
     workerThreadId: worker.threadId,
   };
+}
+
+export async function runMegaSyncImmediately(options = {}) {
+  const postDelayMs = Math.max(
+    0,
+    Number(options.postDelayMs ?? 0),
+  );
+  const reason = String(options.reason || "api-sync-now");
+  const forceTakeover = options.forceTakeover === true;
+
+  if (megaSyncWorker) {
+    return { accepted: false, reason: "already-running-local" };
+  }
+
+  if (forceTakeover) {
+    await forceReleaseJobLock({ key: MEGA_SYNC_LOCK_KEY });
+  }
+
+  const owner = `pid:${process.pid}:${Date.now()}:sync-now`;
+  const lockResult = await acquireJobLock({
+    key: MEGA_SYNC_LOCK_KEY,
+    owner,
+    ttlMs: DEFAULT_MEGA_SYNC_LOCK_TTL_MS,
+  });
+
+  if (!lockResult.acquired) {
+    return { accepted: false, reason: "already-running-distributed" };
+  }
+
+  let heartbeatTimer = null;
+  try {
+    heartbeatTimer = setInterval(async () => {
+      try {
+        await renewJobLock({
+          key: MEGA_SYNC_LOCK_KEY,
+          owner,
+          ttlMs: DEFAULT_MEGA_SYNC_LOCK_TTL_MS,
+        });
+      } catch (err) {
+        logger.warn(`Immediate mega sync lock renew failed: ${err.message}`);
+      }
+    }, 60 * 1000);
+
+    const result = await syncMegaSectionsAndPosts({ postDelayMs });
+    return { accepted: true, reason, result };
+  } finally {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+    }
+    await releaseJobLock({
+      key: MEGA_SYNC_LOCK_KEY,
+      owner,
+    });
+  }
 }
 
 export function startMegaSyncScheduler() {

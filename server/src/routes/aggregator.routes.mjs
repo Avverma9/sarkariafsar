@@ -9,6 +9,7 @@ import {
   getDeadlineJobs,
   markJobFavorite,
   postListBysectionUrl,
+  runMegaSyncNow,
   runMegaSync,
   updateStatus,
 } from "../controllers/aggregator.controller.mjs";
@@ -20,6 +21,8 @@ router.get("/sites", getSites);
 router.put("/site/:id/status", updateStatus);
 // POST /api/aggregator/sync
 router.post("/sync", runMegaSync);
+// POST /api/aggregator/sync-now
+router.post("/sync-now", runMegaSyncNow);
 
 // GET /api/aggregator/mega-sections
 router.get("/mega-sections", getMegaSections);

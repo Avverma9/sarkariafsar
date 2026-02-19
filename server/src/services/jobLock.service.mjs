@@ -51,3 +51,15 @@ export async function releaseJobLock({ key, owner }) {
     { $set: { lockedUntil: new Date(0) } },
   );
 }
+
+export async function forceReleaseJobLock({ key }) {
+  await JobLock.updateOne(
+    { key },
+    {
+      $set: {
+        lockedUntil: new Date(0),
+        owner: "",
+      },
+    },
+  );
+}
