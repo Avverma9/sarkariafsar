@@ -8,9 +8,9 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
+        disallow: ["/api/", "/search"],
       },
     ],
     sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
   };
 }

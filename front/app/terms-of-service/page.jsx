@@ -1,11 +1,15 @@
 import React from 'react';
 import { Scale, FileText, AlertTriangle, ExternalLink, ShieldCheck, Gavel, MapPin } from 'lucide-react';
+import { buildMetadata } from "../lib/seo";
 
-export const metadata = {
-  title: "Terms and Conditions | SarkariAfsar - User Agreement & Liability Disclaimer",
+export const metadata = buildMetadata({
+  title: "Terms and Conditions",
   description:
-    "Read the Terms and Conditions of SarkariAfsar. Understand our non-government status, liability limitations regarding Sarkari Naukri updates, and user responsibilities.",
-};
+    "Read SarkariAfsar terms, non-government disclaimer, liability scope, and user responsibilities.",
+  path: "/terms-of-service",
+  type: "WebPage",
+  keywords: ["terms and conditions", "user agreement", "non government disclaimer"],
+});
 
 const TermsPage = () => {
   const currentYear = new Date().getFullYear();

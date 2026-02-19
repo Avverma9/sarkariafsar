@@ -1,11 +1,15 @@
 // app/guides/interview-tips/page.jsx
 import Link from "next/link";
+import { buildMetadata } from "../../lib/seo";
 
-export const metadata = {
-  title: "Interview Tips | SarkariAfsar Guides",
+export const metadata = buildMetadata({
+  title: "Interview Tips for Government Jobs",
   description:
-    "Interview preparation tips for government job recruitment stages: HR + technical + document verification readiness.",
-};
+    "Practical interview preparation tips with document-verification checklist and question practice framework.",
+  path: "/guides/interview-tips",
+  type: "Article",
+  keywords: ["government job interview tips", "document verification checklist", "interview questions"],
+});
 
 function Badge({ children }) {
   return (

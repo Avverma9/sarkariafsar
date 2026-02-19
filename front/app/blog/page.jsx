@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { blogPosts } from "../lib/blog-posts";
+import { buildMetadata } from "../lib/seo";
 
-export const metadata = {
-  title: "Blog | SarkariAfsar",
+export const metadata = buildMetadata({
+  title: "Exam and Application Blog",
   description:
-    "Preparation strategy, application accuracy, and exam workflow articles for government job aspirants.",
-};
+    "Read practical guides on preparation strategy, form accuracy, and interview readiness for government job aspirants.",
+  path: "/blog",
+  type: "Blog",
+  keywords: ["government exam blog", "application strategy", "sarkari preparation guide"],
+});
 
 const estimateReadTime = (text) => {
   const words = String(text || "")

@@ -1,5 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { buildMetadata } from "../lib/seo";
+
+export const metadata = buildMetadata({
+  title: "Post Redirect",
+  description: "Legacy route used for redirecting to canonical post URLs.",
+  path: "/post",
+  noIndex: true,
+});
 
 export default async function LegacyPostPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;

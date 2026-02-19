@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { buildMetadata } from "../lib/seo";
 
-export const metadata = {
-  title: "Guides and Exam Strategy | SarkariAfsar",
+export const metadata = buildMetadata({
+  title: "Guides and Exam Strategy",
   description:
-    "In-depth guides for job notifications, interview prep, salary structure, and application mistakes. Built for serious exam aspirants.",
-};
+    "Actionable guides for notifications, interview preparation, salary understanding, and form accuracy.",
+  path: "/guides",
+  type: "CollectionPage",
+  keywords: ["exam strategy guide", "notification reading guide", "sarkari preparation guides"],
+});
 
 const guideCards = [
   {
@@ -28,7 +32,7 @@ const guideCards = [
   {
     title: "Why SarkariAfsar Reliability Guide",
     desc: "Editorial process, source-verification policy, and correction workflow used on job pages.",
-    href: "/guides/why-sarkariafsar",
+    href: "/guides/why-jobsaddah",
     focus: "Trust and policy",
   },
 ];

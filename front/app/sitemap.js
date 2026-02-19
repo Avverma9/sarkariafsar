@@ -9,6 +9,20 @@ export const revalidate = 3600;
 const siteUrl = SITE_BASE_URL.toString().replace(/\/$/, "");
 const appDir = path.join(process.cwd(), "app");
 const pageFilePattern = /^page\.(js|jsx|ts|tsx)$/;
+const EXCLUDED_STATIC_ROUTES = new Set([
+  "/post",
+  "/search",
+  "/terms-and-condition",
+]);
+const ROUTE_PRIORITY = new Map([
+  ["/", { changeFrequency: "hourly", priority: 1 }],
+  ["/latest-jobs", { changeFrequency: "hourly", priority: 0.95 }],
+  ["/results", { changeFrequency: "hourly", priority: 0.9 }],
+  ["/admit-card", { changeFrequency: "hourly", priority: 0.9 }],
+  ["/answer-key", { changeFrequency: "hourly", priority: 0.9 }],
+  ["/blog", { changeFrequency: "daily", priority: 0.85 }],
+  ["/guides", { changeFrequency: "weekly", priority: 0.8 }],
+]);
 
 function isNonDynamicSegment(segment) {
   return (
@@ -135,12 +149,17 @@ export default async function sitemap() {
   const now = new Date();
 
   const staticRoutes = await collectStaticRoutes().catch(() => ["/"]);
-  const staticEntries = Array.from(new Set(staticRoutes)).map((route) => ({
-    url: `${siteUrl}${route === "/" ? "" : route}`,
-    lastModified: now,
-    changeFrequency: route === "/" ? "hourly" : "weekly",
-    priority: route === "/" ? 1 : 0.8,
-  }));
+  const staticEntries = Array.from(new Set(staticRoutes))
+    .filter((route) => !EXCLUDED_STATIC_ROUTES.has(route))
+    .map((route) => {
+      const routeMeta = ROUTE_PRIORITY.get(route) || {};
+      return {
+        url: `${siteUrl}${route === "/" ? "" : route}`,
+        lastModified: now,
+        changeFrequency: routeMeta.changeFrequency || "weekly",
+        priority: Number(routeMeta.priority || 0.8),
+      };
+    });
 
   const blogEntries = blogPosts.map((post) => ({
     url: `${siteUrl}/blog/${post.slug}`,

@@ -1,8 +1,13 @@
-export const metadata = {
-  title: "Salary & Pay Scale | SarkariAfsar Guides",
+import { buildMetadata } from "../../lib/seo";
+
+export const metadata = buildMetadata({
+  title: "Salary and Pay Scale Guide",
   description:
-    "Understand government job pay levels, allowances, and take-home salary basics.",
-};
+    "Understand pay levels, allowances, deductions, and in-hand salary basics for government jobs.",
+  path: "/guides/salary-info",
+  type: "Article",
+  keywords: ["pay scale guide", "government salary", "in hand salary calculation"],
+});
 
 export default function SalaryInfo() {
   return (
