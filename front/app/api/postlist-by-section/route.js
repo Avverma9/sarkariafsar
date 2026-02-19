@@ -1,3 +1,4 @@
+import { baseUrl } from "@/app/lib/baseUrl";
 import { NextResponse } from "next/server";
 
 const MAX_LIMIT = 200;
@@ -23,17 +24,6 @@ export async function GET(request) {
         message: "megaTitle is required",
       },
       { status: 400 },
-    );
-  }
-
-  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
-  if (!baseUrl) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "NEXT_PUBLIC_BASE_URL is not configured",
-      },
-      { status: 500 },
     );
   }
 
