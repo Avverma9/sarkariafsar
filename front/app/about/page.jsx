@@ -1,10 +1,14 @@
 import React from 'react';
+import { buildMetadata } from "../lib/seo";
 
-export const metadata = {
-  title: "About SarkariAfsar | India's Trusted Employment News & Sarkari Result Portal",
+export const metadata = buildMetadata({
+  title: "About SarkariAfsar",
   description:
-    "SarkariAfsar is a premier job portal for Sarkari Naukri, Competitive Exams, Admit Cards, and Private Vacancies. Learn about our verification process and mission to help Indian job seekers.",
-};
+    "Learn how SarkariAfsar verifies recruitment data, tracks official sources, and helps candidates with accurate job updates.",
+  path: "/about",
+  type: "AboutPage",
+  keywords: ["about sarkariafsar", "job update verification process", "sarkari portal about"],
+});
 
 const AboutPage = () => {
   return (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { SITE_BASE_URL, SITE_NAME } from "@/app/lib/site-config";
+import { SITE_NAME } from "@/app/lib/site-config";
+import { buildBreadcrumbSchema, buildMetadata, toAbsoluteUrl } from "@/app/lib/seo";
 import { blogPosts,getBlogPostBySlug } from "@/app/lib/blog-posts";
 
 const splitDescription = (text) =>
@@ -42,28 +43,25 @@ export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const post = getBlogPostBySlug(resolvedParams.slug);
   if (!post) {
-    return {
-      title: `Blog | ${SITE_NAME}`,
-      description: "Blog article",
-    };
+    return buildMetadata({
+      title: "Blog Article",
+      description: "Blog article page.",
+      path: "/blog",
+      noIndex: true,
+    });
   }
 
-  const canonical = new URL(`/blog/${post.slug}`, SITE_BASE_URL).toString();
-  const title = `${post.title} | ${SITE_NAME}`;
+  const path = `/blog/${post.slug}`;
+  const title = post.title;
   const description = getDescriptionPreview(post.desc);
 
-  return {
-    title: title.slice(0, 60),
-    description: description.slice(0, 160),
-    alternates: { canonical },
-    openGraph: {
-      title,
-      description,
-      type: "article",
-      url: canonical,
-    },
-    robots: "index,follow",
-  };
+  return buildMetadata({
+    title,
+    description,
+    path,
+    type: "article",
+    keywords: [...(Array.isArray(post.tags) ? post.tags : []), post.category, "exam blog"],
+  });
 }
 
 export default async function BlogDetailPage({ params }) {
@@ -84,8 +82,37 @@ export default async function BlogDetailPage({ params }) {
     ).values(),
   ).slice(0, 3);
 
+  const articlePath = `/blog/${post.slug}`;
+  const breadcrumbSchema = buildBreadcrumbSchema([
+    { name: "Home", path: "/" },
+    { name: "Blog", path: "/blog" },
+    { name: post.title, path: articlePath },
+  ]);
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    headline: post.title,
+    description: descriptionPreview,
+    articleSection: post.category,
+    keywords: Array.isArray(post.tags) ? post.tags.join(", ") : "",
+    url: toAbsoluteUrl(articlePath),
+    publisher: {
+      "@type": "Organization",
+      name: SITE_NAME,
+      url: toAbsoluteUrl("/"),
+    },
+  };
+
   return (
     <article className="min-h-screen bg-slate-50 py-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       <div className="max-w-4xl mx-auto px-4 space-y-10">
         <nav className="text-sm text-slate-500">
           <Link href="/blog" className="text-indigo-600 hover:text-indigo-700">

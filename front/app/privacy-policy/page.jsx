@@ -1,11 +1,16 @@
+/* eslint-disable react/no-unescaped-entities */
 import React from 'react';
 import { Shield, Lock, Eye, Server, Cookie, Globe, Mail, UserCheck, Database, AlertCircle } from 'lucide-react';
+import { buildMetadata } from "../lib/seo";
 
-export const metadata = {
-  title: "Privacy Policy | SarkariAfsar - Data Protection & Cookie Policy",
+export const metadata = buildMetadata({
+  title: "Privacy Policy",
   description:
-    "Read the Privacy Policy of SarkariAfsar. Understand how we handle your data, use cookies for AdSense, and protect your privacy while you search for Sarkari Naukri.",
-};
+    "Read SarkariAfsar privacy policy, cookie usage, advertising disclosures, and data protection details.",
+  path: "/privacy-policy",
+  type: "WebPage",
+  keywords: ["privacy policy", "cookie policy", "adsense privacy disclosure"],
+});
 
 const PrivacyPolicy = () => {
   const currentYear = new Date().getFullYear();

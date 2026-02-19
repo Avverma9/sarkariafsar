@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { baseUrl } from "../lib/baseUrl";
+import { buildMetadata } from "../lib/seo";
 
 function parseSearchQuery(searchParams) {
   const rawQuery = searchParams?.q;
@@ -43,6 +44,26 @@ async function fetchSearchResults(query) {
       message: "Unable to search right now.",
     };
   }
+}
+
+export async function generateMetadata({ searchParams }) {
+  const resolvedSearchParams = await searchParams;
+  const query = parseSearchQuery(resolvedSearchParams);
+  const title = query
+    ? `Search: ${query}`
+    : "Search Government Jobs and Results";
+  const description = query
+    ? `Search results for "${query}" across job posts, admit cards, answer keys, and results.`
+    : "Search verified job posts, admit cards, answer keys, and results.";
+
+  return buildMetadata({
+    title,
+    description,
+    path: "/search",
+    type: "SearchResultsPage",
+    noIndex: true,
+    keywords: ["search jobs", "search sarkari result", "find government post"],
+  });
 }
 
 export default async function SearchPage({ searchParams }) {

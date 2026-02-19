@@ -1,10 +1,14 @@
 import VlogSpotlight from "@/app/component/VlogSpotlight";
+import { buildMetadata } from "../../lib/seo";
 
-export const metadata = {
-  title: "Why SarkariAfsar Is Reliable | SarkariAfsar Guides",
+export const metadata = buildMetadata({
+  title: "Why SarkariAfsar Is Reliable",
   description:
-    "Understand SarkariAfsar editorial workflow: source checks, correction policy, and indexing quality gates.",
-};
+    "Understand editorial workflow, source checks, correction policy, and quality gates used in SarkariAfsar publishing.",
+  path: "/guides/why-jobsaddah",
+  type: "Article",
+  keywords: ["editorial policy", "source verification", "content reliability"],
+});
 
 const commitments = [
   "No page is treated final without official source links.",

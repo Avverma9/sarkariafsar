@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { buildMetadata } from "../../lib/seo";
 
-export const metadata = {
-  title: "How to Read a Job Notification Properly | SarkariAfsar Guide",
+export const metadata = buildMetadata({
+  title: "How to Read Job Notification Properly",
   description:
-    "Step-by-step guide to read official job notifications: eligibility, age, dates, fee, selection process, and final submission checklist.",
-};
+    "Step-by-step method to read official job notifications and verify eligibility, age, fee, dates, and required documents.",
+  path: "/guides/notification-reading",
+  type: "Article",
+  keywords: ["job notification guide", "eligibility check", "application checklist"],
+});
 
 const checklist = [
   "Read the official notification PDF first, then any summary page.",
