@@ -27,12 +27,12 @@ export async function GET(request) {
   const limit = Math.min(MAX_LIMIT, Math.max(1, Number(searchParams.get("limit") || 20)));
   const megaSlug = String(searchParams.get("megaSlug") || "latest-gov-jobs").trim();
 
-  const baseUrl = normalizeBaseUrl(process.env.BASE_URL);
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
   if (!baseUrl) {
     return NextResponse.json(
       {
         success: false,
-        message: "BASE_URL is not configured",
+        message: "NEXT_PUBLIC_BASE_URL is not configured",
       },
       { status: 500 },
     );

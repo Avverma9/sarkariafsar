@@ -44,10 +44,10 @@ export async function POST(request) {
 }
 
 async function fetchDeadlineJobs(body) {
-  const baseUrl = normalizeBaseUrl(process.env.BASE_URL);
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
   if (!baseUrl) {
     return NextResponse.json(
-      { success: false, message: "BASE_URL is not configured" },
+      { success: false, message: "NEXT_PUBLIC_BASE_URL is not configured" },
       { status: 500 },
     );
   }

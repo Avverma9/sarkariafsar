@@ -73,12 +73,12 @@ export async function POST(request) {
     );
   }
 
-  const baseUrl = normalizeBaseUrl(process.env.BASE_URL);
+  const baseUrl = normalizeBaseUrl(process.env.NEXT_PUBLIC_BASE_URL);
   if (!baseUrl) {
     return NextResponse.json(
       {
         success: false,
-        message: "BASE_URL is not configured",
+        message: "NEXT_PUBLIC_BASE_URL is not configured",
       },
       { status: 500 },
     );
