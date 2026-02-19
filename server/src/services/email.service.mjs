@@ -13,6 +13,14 @@ function isEmailConfigured() {
   );
 }
 
+function isSmtpConfigured() {
+  return Boolean(
+    process.env.SMTP_HOST &&
+      process.env.SMTP_USER &&
+      process.env.SMTP_PASS,
+  );
+}
+
 function getTransporter() {
   if (transporter) return transporter;
 
@@ -27,6 +35,10 @@ function getTransporter() {
   });
 
   return transporter;
+}
+
+function getFromAddress() {
+  return process.env.EMAIL_FROM || process.env.SMTP_USER;
 }
 
 function formatChanges(changes = []) {
@@ -54,7 +66,7 @@ export async function sendPostUpdateNotification({
     return { sent: false, reason: "email-not-configured" };
   }
 
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const from = getFromAddress();
   const to = process.env.EMAIL_TO;
   const subject = `[Post Update] ${title || "Recruitment post updated"}`;
 
@@ -81,5 +93,47 @@ export async function sendPostUpdateNotification({
   });
 
   return { sent: true };
+}
+
+export async function sendAdminPasswordResetOtpEmail({
+  to,
+  name,
+  otp,
+  expiresInMinutes,
+}) {
+  if (!isSmtpConfigured()) {
+    throw new Error("SMTP is not configured for sending OTP emails");
+  }
+
+  const safeName = String(name || "Admin").trim();
+  const safeOtp = String(otp || "").trim();
+  const ttl = Math.max(1, Number(expiresInMinutes) || 10);
+
+  const subject = "Admin Password Reset OTP";
+  const text = [
+    `Hello ${safeName},`,
+    "",
+    "Use the OTP below to reset your admin password:",
+    safeOtp,
+    "",
+    `This OTP expires in ${ttl} minutes.`,
+    "If you did not request this, you can ignore this email.",
+  ].join("\n");
+
+  const html = [
+    `<p>Hello ${safeName},</p>`,
+    "<p>Use the OTP below to reset your admin password:</p>",
+    `<p><strong style=\"font-size:20px;letter-spacing:3px;\">${safeOtp}</strong></p>`,
+    `<p>This OTP expires in <strong>${ttl} minutes</strong>.</p>`,
+    "<p>If you did not request this, you can ignore this email.</p>",
+  ].join("");
+
+  await getTransporter().sendMail({
+    from: getFromAddress(),
+    to,
+    subject,
+    text,
+    html,
+  });
 }
 

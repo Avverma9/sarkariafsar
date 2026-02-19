@@ -52,7 +52,10 @@ export const updateStatus = async (req, res, next) => {
 import MegaSection from "../models/megaSection.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
-import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
+import {
+  runMegaSyncImmediately,
+  triggerMegaSyncRun,
+} from "../services/scraper.service.mjs";
 
 export const runMegaSync = async (req, res, next) => {
   try {
@@ -70,6 +73,43 @@ export const runMegaSync = async (req, res, next) => {
       queued: true,
       message: "Sync started in background worker",
       workerThreadId: data.workerThreadId,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const runMegaSyncNow = async (req, res, next) => {
+  try {
+    const force =
+      req.body?.force === true ||
+      String(req.query?.force || "").trim().toLowerCase() === "true";
+    const postDelayMsRaw = req.body?.postDelayMs ?? req.query?.postDelayMs;
+    const postDelayMs =
+      postDelayMsRaw === undefined
+        ? 0
+        : Math.max(0, Number(postDelayMsRaw) || 0);
+
+    const result = await runMegaSyncImmediately({
+      reason: "api-sync-now",
+      forceTakeover: force,
+      postDelayMs,
+    });
+
+    if (!result.accepted) {
+      return res.status(409).json({
+        success: false,
+        message: `Immediate sync could not start: ${result.reason}`,
+        reason: result.reason,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Immediate mega sync completed",
+      force,
+      postDelayMs,
+      data: result.result,
     });
   } catch (err) {
     next(err);

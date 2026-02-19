@@ -6,6 +6,7 @@ import geminiRoutes from "./gemini.routes.mjs";
 import watchRoutes from "./watch.routes.mjs";
 import recruitmentRoutes from "./recruitment.routes.mjs";
 import cronRoutes from "./cron.routes.mjs";
+import adminRoutes from "./admin.routes.mjs";
 
 const router = express.Router();
 
@@ -16,4 +17,5 @@ router.use("/gemini", geminiRoutes);
 router.use("/watch", watchRoutes);
 router.use("/recruitment", recruitmentRoutes);
 router.use("/cron", cronRoutes);
+router.use("/admin", adminRoutes);
 export default router;
