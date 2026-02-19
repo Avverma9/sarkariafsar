@@ -1,3 +1,5 @@
+"use client";
+
 import {
   BriefcaseBusiness,
   Circle,
@@ -8,8 +10,8 @@ import {
   Search,
   Zap,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { useMemo, useSyncExternalStore } from "react";
 
 const FALLBACK_UPDATES = [
   "RRB Group D 2026 Notification Out",
@@ -19,10 +21,20 @@ const FALLBACK_UPDATES = [
 ];
 
 export default function Header({ initialTickerUpdates = [] }) {
-  const tickerUpdates =
-    Array.isArray(initialTickerUpdates) && initialTickerUpdates.length > 0
+  const isHydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  const tickerUpdates = useMemo(() => {
+    // Keep server HTML and first client render identical to avoid hydration mismatch.
+    if (!isHydrated) return FALLBACK_UPDATES;
+
+    return Array.isArray(initialTickerUpdates) && initialTickerUpdates.length > 0
       ? initialTickerUpdates
       : FALLBACK_UPDATES;
+  }, [initialTickerUpdates, isHydrated]);
 
   return (
     <>
@@ -30,15 +42,22 @@ export default function Header({ initialTickerUpdates = [] }) {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="relative flex h-auto flex-col items-center justify-between gap-2 py-2 md:h-16 md:flex-row md:gap-0 md:py-0">
             <div className="flex min-w-max items-center">
-              <Link href="/" aria-label="Go to home page">
-                <Image
-                  src="/app-logo.png"
-                  alt="SarkariAfsar logo"
-                  width={140}
-                  height={115}
-                  className="h-[115px] w-[140px] object-contain"
-                  priority
-                />
+              <Link
+                href="/"
+                aria-label="Go to home page"
+                className="inline-flex items-center gap-3"
+              >
+                <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 text-lg font-extrabold text-white shadow-md shadow-indigo-200">
+                  SA
+                </span>
+                <span className="leading-tight">
+                  <span className="block text-xl font-extrabold tracking-tight text-slate-900">
+                    Sarkari<span className="text-indigo-600">Afsar</span>
+                  </span>
+                  <span className="block text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Place for govt jobs and works
+                  </span>
+                </span>
               </Link>
             </div>
 
