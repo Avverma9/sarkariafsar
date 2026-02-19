@@ -1,16 +1,25 @@
 import PostListBySectionPage from "../component/post/PostListBySectionPage";
+import { omitSearchParams, toQueryString } from "../lib/searchParams";
+import { fetchPostListInitialState } from "../lib/server-post-data";
+import { redirect } from "next/navigation";
 
 export default async function LatestJobsPage({ searchParams }) {
   const resolvedSearchParams = await searchParams;
-  const rawMegaTitle = resolvedSearchParams?.megaTitle;
-  const requestedMegaTitle = String(Array.isArray(rawMegaTitle) ? rawMegaTitle[0] : rawMegaTitle || "").trim();
-  const megaTitle = requestedMegaTitle || "Latest Gov Jobs";
+  const { cleaned, hadOmittedKey } = omitSearchParams(resolvedSearchParams, ["megaTitle"]);
+  if (hadOmittedKey) {
+    const queryString = toQueryString(cleaned);
+    redirect(`/latest-jobs${queryString ? `?${queryString}` : ""}`);
+  }
+
+  const megaTitle = "Latest Gov Jobs";
+  const initialState = await fetchPostListInitialState(cleaned, megaTitle);
 
   return (
     <PostListBySectionPage
-      heading={requestedMegaTitle ? megaTitle : "Latest Government Jobs"}
+      heading="Latest Government Jobs"
       description={`Showing post list for section: ${megaTitle}`}
       megaTitle={megaTitle}
+      initialState={initialState}
     />
   );
 }

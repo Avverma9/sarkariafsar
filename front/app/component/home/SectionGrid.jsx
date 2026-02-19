@@ -12,8 +12,8 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { SectionGridSkeleton } from "./HomeSkeletons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { normalizeSectionsData } from "@/app/lib/sections";
 
 const STYLE_VARIANTS = [
   {
@@ -73,7 +73,6 @@ const STYLE_VARIANTS = [
 ];
 
 const INITIAL_VISIBLE_ITEMS = 12;
-const FULL_LIST_LIMIT = 100;
 const ORDER_STORAGE_KEY = "section-grid-order-v1";
 const TOUCH_HOLD_MS = 280;
 const dateFormatter = new Intl.DateTimeFormat("en-IN", {
@@ -152,13 +151,15 @@ function applySavedOrder(cards, savedOrder) {
 function mapSectionsToCards(sections, postsByMegaTitle) {
   return sections.map((section, index) => {
     const variant = STYLE_VARIANTS[index % STYLE_VARIANTS.length];
-    const megaTitle = String(section?.title || "").trim();
-    const posts = Array.isArray(postsByMegaTitle[megaTitle]) ? postsByMegaTitle[megaTitle] : [];
+    const megaTitle = String(section?.megaTitle || section?.title || "").trim();
+    const displayTitle = String(section?.title || section?.megaTitle || section?.slug || "Section").trim();
+    const rawPosts = Array.isArray(postsByMegaTitle[megaTitle]) ? postsByMegaTitle[megaTitle] : [];
+    const posts = rawPosts.filter((post) => !isHiddenPostTitle(post?.title));
 
     return {
-      id: String(section?._id || section?.slug || index),
+      id: String(section?._id || section?.slug || megaTitle || index),
       megaTitle,
-      title: megaTitle || String(section?.slug || "Section"),
+      title: displayTitle || "Section",
       items: posts,
       initialItems: posts.slice(0, INITIAL_VISIBLE_ITEMS),
       ...variant,
@@ -259,9 +260,16 @@ function SectionModal({ section, onClose }) {
   );
 }
 
-export default function SectionGrid() {
-  const [cards, setCards] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export default function SectionGrid({ initialSections = [], initialPostsByMegaTitle = {} }) {
+  const normalizedSections = useMemo(
+    () => normalizeSectionsData(initialSections),
+    [initialSections],
+  );
+  const initialCards = useMemo(
+    () => mapSectionsToCards(normalizedSections, initialPostsByMegaTitle),
+    [normalizedSections, initialPostsByMegaTitle],
+  );
+  const [cards, setCards] = useState(() => applySavedOrder(initialCards, parseSavedOrder()));
   const [activeSectionId, setActiveSectionId] = useState("");
   const [draggingId, setDraggingId] = useState("");
   const touchHoldTimerRef = useRef(null);
@@ -333,68 +341,7 @@ export default function SectionGrid() {
   };
 
   useEffect(() => {
-    let isMounted = true;
-
-    const loadGridData = async () => {
-      if (isMounted) setIsLoading(true);
-      try {
-        const sectionsResponse = await fetch("/api/section-list", {
-          method: "GET",
-          cache: "no-store",
-        });
-        const sectionsPayload = await sectionsResponse.json().catch(() => null);
-
-        if (!sectionsResponse.ok || !sectionsPayload?.success || !Array.isArray(sectionsPayload.data)) {
-          if (isMounted) setCards([]);
-          return;
-        }
-
-        const sections = sectionsPayload.data;
-        const postListResponses = await Promise.all(
-          sections.map(async (section) => {
-            const megaTitle = String(section?.title || "").trim();
-            if (!megaTitle) return [megaTitle, []];
-
-            const params = new URLSearchParams({
-              megaTitle,
-              page: "1",
-              limit: String(FULL_LIST_LIMIT),
-            });
-
-            try {
-              const response = await fetch(`/api/postlist-by-section?${params.toString()}`, {
-                method: "GET",
-                cache: "no-store",
-              });
-              const payload = await response.json().catch(() => null);
-              if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
-                return [megaTitle, []];
-              }
-              const filteredPosts = payload.data.filter((post) => !isHiddenPostTitle(post?.title));
-              return [megaTitle, filteredPosts];
-            } catch {
-              return [megaTitle, []];
-            }
-          }),
-        );
-
-        const postsByMegaTitle = Object.fromEntries(postListResponses);
-        const mappedCards = mapSectionsToCards(sections, postsByMegaTitle);
-
-        if (isMounted) {
-          const savedOrder = parseSavedOrder();
-          setCards(applySavedOrder(mappedCards, savedOrder));
-        }
-      } catch {
-        if (isMounted) setCards([]);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    loadGridData();
     return () => {
-      isMounted = false;
       clearTouchHold();
     };
   }, []);
@@ -407,8 +354,14 @@ export default function SectionGrid() {
 
   const activeSection = cards.find((card) => card.id === activeSectionId) || null;
 
-  if (isLoading) {
-    return <SectionGridSkeleton />;
+  if (cards.length === 0) {
+    return (
+      <section className="py-10">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+          No sections available right now.
+        </div>
+      </section>
+    );
   }
 
   return (

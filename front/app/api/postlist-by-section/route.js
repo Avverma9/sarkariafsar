@@ -3,13 +3,6 @@ import { NextResponse } from "next/server";
 
 const MAX_LIMIT = 200;
 
-function normalizeBaseUrl(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/\/+$/, "");
-}
-
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
 
@@ -27,11 +20,10 @@ export async function GET(request) {
     );
   }
 
-  const upstreamParams = new URLSearchParams({
-    megaTitle,
-    page: String(page),
-    limit: String(limit),
-  });
+  const upstreamParams = new URLSearchParams(searchParams);
+  upstreamParams.set("megaTitle", megaTitle);
+  upstreamParams.set("page", String(page));
+  upstreamParams.set("limit", String(limit));
 
   const upstreamUrl = `${baseUrl}/site/post-list-by-section-url?${upstreamParams.toString()}`;
 

@@ -1,39 +1,160 @@
+import path from "node:path";
+import { readdir } from "node:fs/promises";
+import { baseUrl } from "./lib/baseUrl";
 import { SITE_BASE_URL } from "./lib/site-config";
 import { blogPosts } from "./lib/blog-posts";
 
+export const revalidate = 3600;
+
 const siteUrl = SITE_BASE_URL.toString().replace(/\/$/, "");
+const appDir = path.join(process.cwd(), "app");
+const pageFilePattern = /^page\.(js|jsx|ts|tsx)$/;
 
-const staticRoutes = [
-  "",
-  "/latest-jobs",
-  "/admit-card",
-  "/results",
-  "/answer-key",
-  "/mock-test",
-  "/blog",
-  "/guides",
-  "/about",
-  "/contact",
-  "/privacy-policy",
-  "/terms-of-service",
-];
+function isNonDynamicSegment(segment) {
+  return (
+    segment &&
+    !segment.startsWith("[") &&
+    !segment.startsWith("(") &&
+    !segment.startsWith("@")
+  );
+}
 
-export default function sitemap() {
+function toValidDate(value, fallbackDate) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallbackDate : date;
+}
+
+async function collectStaticRoutes(relativeDir = "") {
+  const absoluteDir = path.join(appDir, relativeDir);
+  const entries = await readdir(absoluteDir, { withFileTypes: true });
+  const routes = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      if (entry.name === "api" || entry.name.startsWith("_")) continue;
+      const nestedRoutes = await collectStaticRoutes(path.join(relativeDir, entry.name));
+      routes.push(...nestedRoutes);
+      continue;
+    }
+
+    if (!entry.isFile() || !pageFilePattern.test(entry.name)) continue;
+
+    const routeSegments = relativeDir
+      .split(path.sep)
+      .map((segment) => segment.trim())
+      .filter(Boolean);
+
+    if (routeSegments.some((segment) => !isNonDynamicSegment(segment))) continue;
+
+    const routePath = routeSegments.length === 0 ? "/" : `/${routeSegments.join("/")}`;
+    routes.push(routePath);
+  }
+
+  return routes;
+}
+
+async function fetchJson(url) {
+  const response = await fetch(url, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+    signal: AbortSignal.timeout(15000),
+  });
+
+  if (!response.ok) return null;
+  return response.json().catch(() => null);
+}
+
+function parseMegaTitles(payload) {
+  const data = Array.isArray(payload?.data) ? payload.data : [];
+  return Array.from(
+    new Set(
+      data
+        .map((item) => String(item?.title || "").trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+async function fetchSectionTitles() {
+  try {
+    const payload = await fetchJson(`${baseUrl}/site/mega-sections`);
+    return parseMegaTitles(payload);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchPostPage(megaTitle, page, limit) {
+  const params = new URLSearchParams({
+    megaTitle: String(megaTitle || "").trim(),
+    page: String(page),
+    limit: String(limit),
+  });
+  return fetchJson(`${baseUrl}/site/post-list-by-section-url?${params.toString()}`);
+}
+
+async function fetchAllPostEntries(now) {
+  const sectionTitles = await fetchSectionTitles();
+  if (sectionTitles.length === 0) return [];
+
+  const postByCanonical = new Map();
+  const perPageLimit = 200;
+
+  for (const megaTitle of sectionTitles) {
+    const firstPage = await fetchPostPage(megaTitle, 1, perPageLimit).catch(() => null);
+    if (!firstPage) continue;
+
+    const totalPages = Math.max(1, Number(firstPage?.pagination?.pages || 1));
+    const allRows = Array.isArray(firstPage?.data) ? [...firstPage.data] : [];
+
+    for (let page = 2; page <= totalPages; page += 1) {
+      const pagePayload = await fetchPostPage(megaTitle, page, perPageLimit).catch(() => null);
+      if (!pagePayload) continue;
+      const rows = Array.isArray(pagePayload?.data) ? pagePayload.data : [];
+      allRows.push(...rows);
+    }
+
+    for (const row of allRows) {
+      const canonicalKey = String(row?.canonicalKey || row?.canonical || "").trim();
+      if (!canonicalKey || postByCanonical.has(canonicalKey)) continue;
+
+      postByCanonical.set(canonicalKey, {
+        url: `${siteUrl}/post/${encodeURIComponent(canonicalKey)}`,
+        lastModified: toValidDate(row?.postDate || row?.updatedAt, now),
+        changeFrequency: "daily",
+        priority: 0.7,
+      });
+    }
+  }
+
+  return Array.from(postByCanonical.values());
+}
+
+export default async function sitemap() {
   const now = new Date();
 
-  const staticEntries = staticRoutes.map((route) => ({
-    url: `${siteUrl}${route}`,
+  const staticRoutes = await collectStaticRoutes().catch(() => ["/"]);
+  const staticEntries = Array.from(new Set(staticRoutes)).map((route) => ({
+    url: `${siteUrl}${route === "/" ? "" : route}`,
     lastModified: now,
-    changeFrequency: route === "" ? "hourly" : "daily",
-    priority: route === "" ? 1 : 0.8,
+    changeFrequency: route === "/" ? "hourly" : "weekly",
+    priority: route === "/" ? 1 : 0.8,
   }));
 
   const blogEntries = blogPosts.map((post) => ({
     url: `${siteUrl}/blog/${post.slug}`,
     lastModified: now,
     changeFrequency: "weekly",
-    priority: 0.7,
+    priority: 0.75,
   }));
 
-  return [...staticEntries, ...blogEntries];
+  const postEntries = await fetchAllPostEntries(now);
+
+  const uniqueByUrl = new Map();
+  for (const entry of [...staticEntries, ...blogEntries, ...postEntries]) {
+    uniqueByUrl.set(entry.url, entry);
+  }
+
+  return Array.from(uniqueByUrl.values());
 }
