@@ -1,14 +1,5 @@
-"use client";
-
 import { Flame, GraduationCap, PenLine, ShieldUser, TrainFront } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-
-const DEFAULT_QUERY = {
-  page: 1,
-  limit: 20,
-  megaSlug: "latest-gov-jobs",
-};
 
 const ICONS = [TrainFront, ShieldUser, GraduationCap, PenLine];
 
@@ -63,48 +54,8 @@ function toCardItem(item, index) {
   };
 }
 
-export default function TrendingCard() {
-  const [items, setItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    let mounted = true;
-
-    const loadTrendingJobs = async () => {
-      if (mounted) setIsLoading(true);
-      try {
-        const params = new URLSearchParams({
-          page: String(DEFAULT_QUERY.page),
-          limit: String(DEFAULT_QUERY.limit),
-          megaSlug: DEFAULT_QUERY.megaSlug,
-        });
-
-        const response = await fetch(`/api/favorite-jobs?${params.toString()}`, {
-          method: "GET",
-          cache: "no-store",
-        });
-        const payload = await response.json().catch(() => null);
-        const data = Array.isArray(payload?.data)
-          ? payload.data
-          : Array.isArray(payload?.result)
-            ? payload.result
-            : [];
-
-        if (mounted) setItems(data.map(toCardItem).filter((item) => item.title));
-      } catch {
-        if (mounted) setItems([]);
-      } finally {
-        if (mounted) setIsLoading(false);
-      }
-    };
-
-    loadTrendingJobs();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const visibleItems = useMemo(() => items.slice(0, 4), [items]);
+export default function TrendingCard({ items = [] }) {
+  const visibleItems = items.map(toCardItem).filter((item) => item.title).slice(0, 4);
 
   return (
     <section>
@@ -116,57 +67,44 @@ export default function TrendingCard() {
       </h2>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {isLoading &&
-          Array.from({ length: 4 }).map((_, index) => (
-            <div key={`trending-loading-${index}`} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="mb-3 flex items-start justify-between gap-3">
-                <div className="skeleton-shimmer h-5 w-16 rounded" aria-hidden="true" />
-                <div className="skeleton-shimmer h-5 w-5 rounded-full" aria-hidden="true" />
-              </div>
-              <div className="skeleton-shimmer mb-2 h-4 w-5/6 rounded-md" aria-hidden="true" />
-              <div className="skeleton-shimmer h-3 w-2/3 rounded-md" aria-hidden="true" />
-            </div>
-          ))}
-
-        {!isLoading && visibleItems.length === 0 && (
+        {visibleItems.length === 0 && (
           <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm md:col-span-2 lg:col-span-4">
             No trending jobs available right now.
           </div>
         )}
 
-        {!isLoading &&
-          visibleItems.map((item) => {
-            const Icon = item.icon;
-            const cardClass =
-              "hover-accent-card group block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/30";
+        {visibleItems.map((item) => {
+          const Icon = item.icon;
+          const cardClass =
+            "hover-accent-card group block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-indigo-300 hover:bg-indigo-50/30";
 
-            const cardBody = (
-              <>
-                <div className="mb-2 flex items-start justify-between">
-                  <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${item.tagClass}`}>
-                    {item.tag}
-                  </span>
-                  <Icon className="h-5 w-5 text-indigo-500 transition group-hover:scale-110" aria-hidden="true" />
-                </div>
-                <h3 className="mb-1 text-sm font-bold text-slate-800 group-hover:text-indigo-700">{item.title}</h3>
-                <p className="text-xs text-slate-500">{item.subtitle}</p>
-              </>
-            );
+          const cardBody = (
+            <>
+              <div className="mb-2 flex items-start justify-between">
+                <span className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${item.tagClass}`}>
+                  {item.tag}
+                </span>
+                <Icon className="h-5 w-5 text-indigo-500 transition group-hover:scale-110" aria-hidden="true" />
+              </div>
+              <h3 className="mb-1 text-sm font-bold text-slate-800 group-hover:text-indigo-700">{item.title}</h3>
+              <p className="text-xs text-slate-500">{item.subtitle}</p>
+            </>
+          );
 
-            if (!item.href) {
-              return (
-                <div key={item.id} className={cardClass} style={{ "--hover-accent": item.accentColor }}>
-                  {cardBody}
-                </div>
-              );
-            }
-
+          if (!item.href) {
             return (
-              <Link key={item.id} href={item.href} className={cardClass} style={{ "--hover-accent": item.accentColor }}>
+              <div key={item.id} className={cardClass} style={{ "--hover-accent": item.accentColor }}>
                 {cardBody}
-              </Link>
+              </div>
             );
-          })}
+          }
+
+          return (
+            <Link key={item.id} href={item.href} className={cardClass} style={{ "--hover-accent": item.accentColor }}>
+                {cardBody}
+            </Link>
+          );
+        })}
       </div>
     </section>
   );

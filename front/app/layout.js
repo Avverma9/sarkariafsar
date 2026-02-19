@@ -1,8 +1,10 @@
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import Breadcrumbs from "./component/layout/Breadcrumbs";
 import ExternalLinkGuard from "./component/layout/ExternalLinkGuard";
 import Footer from "./component/layout/Footer";
 import Header from "./component/layout/Header";
+import { getTickerUpdates } from "./lib/server-home-data";
 import {
   DEFAULT_DESCRIPTION,
   DEFAULT_IMAGE,
@@ -13,6 +15,10 @@ import {
   SITE_NAME,
 } from "./lib/site-config";
 import "./globals.css";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,6 +31,8 @@ const geistMono = Geist_Mono({
 });
 
 const siteUrl = SITE_BASE_URL.toString();
+const adsenseClient = String(process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "").trim();
+const hasAdsenseClient = adsenseClient.startsWith("ca-pub-");
 
 export const metadata = {
   metadataBase: SITE_BASE_URL,
@@ -89,18 +97,29 @@ const organizationSchema = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const tickerUpdates = await getTickerUpdates();
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        {hasAdsenseClient ? (
+          <Script
+            id="adsense-auto-ads"
+            async
+            strategy="afterInteractive"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
+            crossOrigin="anonymous"
+          />
+        ) : null}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
         />
         <ExternalLinkGuard />
-        <Header />
+        <Header initialTickerUpdates={tickerUpdates} />
         <Breadcrumbs />
         {children}
         <Footer />

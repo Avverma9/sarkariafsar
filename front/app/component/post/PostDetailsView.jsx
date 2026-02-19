@@ -137,35 +137,6 @@ const LINK_CONFIG = {
 };
 const WATCHED_POSTS_STORAGE_KEY = "watched-posts-v1";
 
-function readMaybeJson(value) {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-function normalizePostDetails(payload) {
-  let base = payload?.data ?? payload?.result ?? payload?.response ?? payload?.post ?? payload;
-  if (Array.isArray(base)) base = base[0] || {};
-  const parsedBase = readMaybeJson(base) || base || {};
-  const parsedFormatted = readMaybeJson(parsedBase?.formattedData) || parsedBase?.formattedData;
-
-  const recruitment =
-    parsedBase?.recruitment ||
-    parsedFormatted?.recruitment ||
-    parsedBase?.content?.recruitment ||
-    (parsedBase?.importantDates ? parsedBase : null) ||
-    {};
-
-  return { raw: parsedBase, recruitment };
-}
-
 function normalizeText(value) {
   return String(value || "")
     .replace(/â‚¹/g, "Rs.")
@@ -502,10 +473,14 @@ function ErrorState({ message }) {
   return <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{message || "Unable to load post details."}</div>;
 }
 
-export default function PostDetailsView({ canonicalKey = "" }) {
+export default function PostDetailsView({
+  canonicalKey = "",
+  initialDetails = null,
+  initialErrorMessage = "",
+}) {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [details, setDetails] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(initialErrorMessage);
+  const [details, setDetails] = useState(initialDetails);
   const [watchModalOpen, setWatchModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [watchEmail, setWatchEmail] = useState("");
@@ -514,52 +489,10 @@ export default function PostDetailsView({ canonicalKey = "" }) {
   const [watchEnabledForPost, setWatchEnabledForPost] = useState(false);
 
   useEffect(() => {
-    if (!canonicalKey) {
-      debugPostDetails("Skipped fetch: canonicalKey missing");
-      return;
-    }
-    let isMounted = true;
-    const controller = new AbortController();
-
-    const fetchDetails = async () => {
-      setIsLoading(true);
-      setErrorMessage("");
-      setDetails(null);
-      debugPostDetails("Fetching details for canonicalKey:", canonicalKey);
-      try {
-        const response = await fetch("/api/post-details-by-canonicalkey", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ canonicalKey }),
-          signal: controller.signal,
-          cache: "no-store",
-        });
-        debugPostDetails("Fetch status:", response.status, response.statusText);
-
-        const payload = await response.json().catch(() => null);
-        debugPostDetails("Raw payload:", payload);
-
-        if (!response.ok || !payload) throw new Error(payload?.message || "Unable to load post details");
-        const normalized = normalizePostDetails(payload);
-        debugPostDetails("Normalized details:", normalized);
-
-        if (isMounted) setDetails(normalized);
-      } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("[PostDetailsView] Fetch failed:", error);
-          if (isMounted) setErrorMessage(error.message || "Unable to load post details");
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    fetchDetails();
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
-  }, [canonicalKey]);
+    setDetails(initialDetails);
+    setErrorMessage(initialErrorMessage);
+    setIsLoading(false);
+  }, [initialDetails, initialErrorMessage, canonicalKey]);
   
   useEffect(() => {
     debugPostDetails("State details changed:", details);

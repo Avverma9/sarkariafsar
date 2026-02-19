@@ -38,10 +38,6 @@ const SectionCard = ({ title, paragraphs = [], list = [] }) => (
   </section>
 );
 
-export async function generateStaticParams() {
-  return blogPosts.map((post) => ({ slug: post.slug }));
-}
-
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const post = getBlogPostBySlug(resolvedParams.slug);

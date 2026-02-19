@@ -24,24 +24,27 @@ export function resolveSectionRoute(sectionTitle) {
   if (normalized.includes("admit card")) {
     return {
       basePath: "/admit-card",
-      megaTitle: cleanedTitle || "Admit Card",
+      megaTitle: "Admit Cards",
       label: labelFromInput || "Admit Card",
+      useQuery: false,
     };
   }
 
   if (normalized.includes("answer key")) {
     return {
       basePath: "/answer-key",
-      megaTitle: cleanedTitle || "Answer Key",
+      megaTitle: "Answer Keys",
       label: labelFromInput || "Answer Key",
+      useQuery: false,
     };
   }
 
   if (normalized.includes("result")) {
     return {
       basePath: "/results",
-      megaTitle: cleanedTitle || "Recent Results",
+      megaTitle: "Recent Results",
       label: labelFromInput || "Recent Results",
+      useQuery: false,
     };
   }
 
@@ -52,8 +55,9 @@ export function resolveSectionRoute(sectionTitle) {
   ) {
     return {
       basePath: "/latest-jobs",
-      megaTitle: cleanedTitle || "Latest Gov Jobs",
+      megaTitle: "Latest Gov Jobs",
       label: labelFromInput || "Latest Gov Jobs",
+      useQuery: false,
     };
   }
 
@@ -61,11 +65,14 @@ export function resolveSectionRoute(sectionTitle) {
     basePath: "/latest-jobs",
     megaTitle: cleanedTitle || "Latest Gov Jobs",
     label: cleanedTitle ? humanize(cleanedTitle) : "Latest Gov Jobs",
+    useQuery: Boolean(cleanedTitle),
   };
 }
 
 export function buildSectionHref(sectionTitle) {
   const resolved = resolveSectionRoute(sectionTitle);
+  if (!resolved.useQuery) return resolved.basePath;
+  if (!resolved.megaTitle) return resolved.basePath;
   const params = new URLSearchParams({
     megaTitle: resolved.megaTitle,
   });
