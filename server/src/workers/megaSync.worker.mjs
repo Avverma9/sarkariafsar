@@ -7,7 +7,7 @@ async function run() {
     await connectDB();
     const postDelayMs = Number(workerData?.postDelayMs || 0);
     const reason = String(workerData?.reason || "manual");
-    const result = await syncMegaSectionsAndPosts({ postDelayMs });
+    const result = await syncMegaSectionsAndPosts({ postDelayMs, reason });
     parentPort?.postMessage({
       ok: true,
       reason,

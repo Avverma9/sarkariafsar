@@ -52,64 +52,36 @@ export const updateStatus = async (req, res, next) => {
 import MegaSection from "../models/megaSection.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
-import {
-  runMegaSyncImmediately,
-  triggerMegaSyncRun,
-} from "../services/scraper.service.mjs";
-
-export const runMegaSync = async (req, res, next) => {
-  try {
-    const data = await triggerMegaSyncRun({ reason: "api" });
-    if (!data.accepted) {
-      return res.status(202).json({
-        success: true,
-        queued: false,
-        message: `Sync skipped: ${data.reason}`,
-      });
-    }
-
-    return res.status(202).json({
-      success: true,
-      queued: true,
-      message: "Sync started in background worker",
-      workerThreadId: data.workerThreadId,
-    });
-  } catch (err) {
-    next(err);
-  }
-};
+import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
 
 export const runMegaSyncNow = async (req, res, next) => {
   try {
-    const force =
-      req.body?.force === true ||
-      String(req.query?.force || "").trim().toLowerCase() === "true";
     const postDelayMsRaw = req.body?.postDelayMs ?? req.query?.postDelayMs;
     const postDelayMs =
       postDelayMsRaw === undefined
         ? 0
         : Math.max(0, Number(postDelayMsRaw) || 0);
 
-    const result = await runMegaSyncImmediately({
+    const result = await triggerMegaSyncRun({
       reason: "api-sync-now",
-      forceTakeover: force,
       postDelayMs,
     });
 
     if (!result.accepted) {
-      return res.status(409).json({
-        success: false,
-        message: `Immediate sync could not start: ${result.reason}`,
+      return res.status(202).json({
+        success: true,
+        queued: false,
+        message: `Sync skipped: ${result.reason}`,
         reason: result.reason,
       });
     }
 
-    return res.status(200).json({
+    return res.status(202).json({
       success: true,
-      message: "Immediate mega sync completed",
-      force,
+      queued: true,
+      message: "Sync-now started in background worker",
       postDelayMs,
-      data: result.result,
+      workerThreadId: result.workerThreadId,
     });
   } catch (err) {
     next(err);
@@ -150,6 +122,51 @@ export const getMegaPosts = async (req, res, next) => {
         pages: Math.ceil(total / lim),
       },
       data: items,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const deleteMegaPostsBySourceSiteName = async (req, res, next) => {
+  try {
+    const sourceSiteName = String(
+      req.body?.sourceSiteName || req.query?.sourceSiteName || "",
+    ).trim();
+
+    if (!sourceSiteName) {
+      return res.status(400).json({
+        success: false,
+        message: "sourceSiteName is required",
+      });
+    }
+
+    const postIds = await MegaPost.find({ sourceSiteName })
+      .select("_id")
+      .lean();
+
+    if (!postIds.length) {
+      return res.status(200).json({
+        success: true,
+        sourceSiteName,
+        deletedMegaPosts: 0,
+        deletedPostDetails: 0,
+        message: "No MegaPosts found for this sourceSiteName",
+      });
+    }
+
+    const megaPostIdList = postIds.map((row) => row._id);
+
+    const [megaDeleteResult, detailDeleteResult] = await Promise.all([
+      MegaPost.deleteMany({ _id: { $in: megaPostIdList } }),
+      PostDetail.deleteMany({ megaPostId: { $in: megaPostIdList } }),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      sourceSiteName,
+      deletedMegaPosts: megaDeleteResult.deletedCount || 0,
+      deletedPostDetails: detailDeleteResult.deletedCount || 0,
     });
   } catch (err) {
     next(err);
