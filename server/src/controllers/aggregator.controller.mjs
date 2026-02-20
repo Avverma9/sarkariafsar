@@ -53,6 +53,7 @@ import MegaSection from "../models/megaSection.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
 import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 export const runMegaSyncNow = async (req, res, next) => {
   try {
@@ -161,6 +162,8 @@ export const deleteMegaPostsBySourceSiteName = async (req, res, next) => {
       MegaPost.deleteMany({ _id: { $in: megaPostIdList } }),
       PostDetail.deleteMany({ megaPostId: { $in: megaPostIdList } }),
     ]);
+
+    void clearFrontApiCacheBestEffort({ reason: "mega-post-delete-by-source-site" });
 
     return res.status(200).json({
       success: true,
@@ -488,6 +491,10 @@ export const markJobFavorite = async (req, res, next) => {
         returnDocument: "after",
       },
     ).select("_id canonicalKey megaSlug megaTitle title isFavorite favoriteMarkedAt");
+
+    void clearFrontApiCacheBestEffort({
+      reason: isFavorite ? "favorite-marked" : "favorite-unmarked",
+    });
 
     return res.json({
       success: true,

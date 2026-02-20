@@ -1,5 +1,9 @@
 import { baseUrl } from "@/app/lib/baseUrl";
+import { withApiJsonCache } from "@/app/lib/apiCache";
 import { NextResponse } from "next/server";
+
+const CACHE_NAMESPACE = "favorite-jobs";
+const CACHE_TTL_MS = 60 * 1000;
 
 async function parseJsonFromResponse(response) {
   const text = await response.text().catch(() => "");
@@ -13,41 +17,54 @@ async function parseJsonFromResponse(response) {
 }
 
 export async function GET(request) {
-  const upstreamUrl = `${baseUrl}/site/favorite-jobs${new URL(request.url).search}`;
+  const search = new URL(request.url).search;
+  const upstreamUrl = `${baseUrl}/site/favorite-jobs${search}`;
 
-  try {
-    const response = await fetch(upstreamUrl, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-
-    const payload = await parseJsonFromResponse(response);
-    if (!payload) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid response from upstream service",
-          upstream: {
-            status: response.status,
-            contentType: response.headers.get("content-type") || "unknown",
-            url: upstreamUrl,
+  return withApiJsonCache({
+    namespace: CACHE_NAMESPACE,
+    keyParts: { search },
+    ttlMs: CACHE_TTL_MS,
+    loader: async () => {
+      try {
+        const response = await fetch(upstreamUrl, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
           },
-        },
-        { status: 502 },
-      );
-    }
+          cache: "no-store",
+        });
 
-    return NextResponse.json(payload, { status: response.status });
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to connect to upstream service",
-      },
-      { status: 502 },
-    );
-  }
+        const payload = await parseJsonFromResponse(response);
+        if (!payload) {
+          return {
+            status: 502,
+            cacheable: false,
+            payload: {
+              success: false,
+              message: "Invalid response from upstream service",
+              upstream: {
+                status: response.status,
+                contentType: response.headers.get("content-type") || "unknown",
+                url: upstreamUrl,
+              },
+            },
+          };
+        }
+
+        return {
+          status: response.status,
+          payload,
+        };
+      } catch {
+        return {
+          status: 502,
+          cacheable: false,
+          payload: {
+            success: false,
+            message: "Failed to connect to upstream service",
+          },
+        };
+      }
+    },
+  });
 }

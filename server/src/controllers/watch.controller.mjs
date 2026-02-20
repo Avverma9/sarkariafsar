@@ -3,6 +3,7 @@ import UserWatch from "../models/userWatch.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import { processMegaPostToRecruitment } from "../services/recruitmentLinker.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 function ensureObjectId(id, name) {
   if (!mongoose.Types.ObjectId.isValid(String(id || ""))) {
@@ -137,6 +138,7 @@ export const createOrUpdateWatch = async (req, res, next) => {
     });
 
     const processed = await processMegaPostToRecruitment(target.megaPostId);
+    void clearFrontApiCacheBestEffort({ reason: "watch-create-or-update" });
 
     const watch = await UserWatch.findOneAndUpdate(
       {

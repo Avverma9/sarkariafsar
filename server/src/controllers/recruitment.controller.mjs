@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { processMegaPostToRecruitment } from "../services/recruitmentLinker.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 function ensureObjectId(id, name) {
   if (!mongoose.Types.ObjectId.isValid(String(id || ""))) {
@@ -15,6 +16,7 @@ export const processRecruitmentPost = async (req, res, next) => {
     ensureObjectId(postId, "postId");
 
     const data = await processMegaPostToRecruitment(postId);
+    void clearFrontApiCacheBestEffort({ reason: "recruitment-process-post" });
     return res.json({ success: true, ...data });
   } catch (err) {
     next(err);

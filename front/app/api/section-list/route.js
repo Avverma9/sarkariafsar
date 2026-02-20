@@ -1,5 +1,8 @@
 import { baseUrl } from "@/app/lib/baseUrl";
-import { NextResponse } from "next/server";
+import { withApiJsonCache } from "@/app/lib/apiCache";
+
+const CACHE_NAMESPACE = "section-list";
+const CACHE_TTL_MS = 2 * 60 * 1000;
 
 const SECTION_TO_MEGA_TITLE = {
   "latest job": "Latest Gov Jobs",
@@ -83,47 +86,56 @@ export async function GET() {
   const primaryUrl = `${baseUrl}/site/mega-sections`;
   const fallbackUrl = `${baseUrl}/sections/get-sections`;
 
-  try {
-    const primary = await fetchJson(primaryUrl);
-    const primarySections = normalizeSectionsPayload(primary.payload);
-    if (primary.payload && primarySections.length > 0) {
-      return NextResponse.json(
-        {
-          ...primary.payload,
-          count: primarySections.length,
-          data: primarySections,
-        },
-        { status: primary.response.status },
-      );
-    }
+  return withApiJsonCache({
+    namespace: CACHE_NAMESPACE,
+    keyParts: { route: "section-list" },
+    ttlMs: CACHE_TTL_MS,
+    loader: async () => {
+      try {
+        const primary = await fetchJson(primaryUrl);
+        const primarySections = normalizeSectionsPayload(primary.payload);
+        if (primary.payload && primarySections.length > 0) {
+          return {
+            status: primary.response.status,
+            payload: {
+              ...primary.payload,
+              count: primarySections.length,
+              data: primarySections,
+            },
+          };
+        }
 
-    const fallback = await fetchJson(fallbackUrl);
-    const fallbackSections = normalizeSectionsPayload(fallback.payload);
-    if (fallback.payload && fallbackSections.length > 0) {
-      return NextResponse.json(
-        {
-          ...fallback.payload,
-          count: fallbackSections.length,
-          data: fallbackSections,
-        },
-        { status: fallback.response.status },
-      );
-    }
+        const fallback = await fetchJson(fallbackUrl);
+        const fallbackSections = normalizeSectionsPayload(fallback.payload);
+        if (fallback.payload && fallbackSections.length > 0) {
+          return {
+            status: fallback.response.status,
+            payload: {
+              ...fallback.payload,
+              count: fallbackSections.length,
+              data: fallbackSections,
+            },
+          };
+        }
 
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Invalid response from upstream service",
-      },
-      { status: 502 },
-    );
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to connect to upstream service",
-      },
-      { status: 502 },
-    );
-  }
+        return {
+          status: 502,
+          cacheable: false,
+          payload: {
+            success: false,
+            message: "Invalid response from upstream service",
+          },
+        };
+      } catch {
+        return {
+          status: 502,
+          cacheable: false,
+          payload: {
+            success: false,
+            message: "Failed to connect to upstream service",
+          },
+        };
+      }
+    },
+  });
 }

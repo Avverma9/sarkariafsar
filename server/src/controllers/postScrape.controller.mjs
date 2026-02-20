@@ -16,6 +16,7 @@ import {
 } from "../utils/postHtmlTransform.mjs";
 import { refinePreparedHtmlWithGemini } from "../services/geminiHtmlRefine.service.mjs";
 import { extractRecruitmentJsonFromContentHtml } from "../services/geminiExtract.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 function isValidObjectId(id) {
   return !!id && mongoose.Types.ObjectId.isValid(id);
@@ -201,6 +202,8 @@ export const patchPostDetail = async (req, res, next) => {
         message: "PostDetail not found for provided MegaPost",
       });
     }
+
+    void clearFrontApiCacheBestEffort({ reason: "post-detail-patch" });
 
     return res.json({
       success: true,
@@ -446,6 +449,8 @@ export const scrapePost = async (req, res, next) => {
       },
     );
 
+    void clearFrontApiCacheBestEffort({ reason: "post-scrape" });
+
     return res.json({
       success: true,
       cached: false,
@@ -494,12 +499,14 @@ export const postUpdate = async (req, res, next) => {
       }
 
       const result = await updateSinglePostById(postId, options);
+      void clearFrontApiCacheBestEffort({ reason: "post-update-single" });
       return res.json({ success: true, mode: "single", ...result });
     }
 
     // Batch
     const limit = Math.max(1, Math.min(200, Number(req.body?.limit || 20)));
     const batch = await runPostUpdateBatch({ ...options, limit });
+    void clearFrontApiCacheBestEffort({ reason: "post-update-batch" });
 
     return res.json({ success: true, mode: "batch", ...batch });
   } catch (err) {

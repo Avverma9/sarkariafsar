@@ -11,6 +11,7 @@ import logger from "../utils/logger.mjs";
 import { buildDedupeKeys } from "../utils/dedupe.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
 import { compareContentSimilarityWithPerplexity } from "./perplexityDedup.service.mjs";
+import { clearFrontApiCacheBestEffort } from "./frontCache.service.mjs";
 import {
   acquireJobLock,
   forceReleaseJobLock,
@@ -862,6 +863,7 @@ export async function triggerMegaSyncRun(options = {}) {
       logger.info(
         `Mega sync worker completed. reason=${reason}, megaSaved=${msg.result?.megaSaved || 0}, postsInserted=${msg.result?.postsInserted || 0}, postsPatched=${msg.result?.postsPatched || 0}`,
       );
+      void clearFrontApiCacheBestEffort({ reason: `mega-sync-worker:${reason}` });
       return;
     }
     logger.error(`Mega sync worker failed: ${msg?.error || "unknown error"}`);
@@ -932,6 +934,7 @@ export async function runMegaSyncImmediately(options = {}) {
     }, 60 * 1000);
 
     const result = await syncMegaSectionsAndPosts({ postDelayMs, reason });
+    await clearFrontApiCacheBestEffort({ reason: `mega-sync-immediate:${reason}` });
     return { accepted: true, reason, result };
   } finally {
     if (heartbeatTimer) {
