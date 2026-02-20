@@ -67,7 +67,7 @@ async function getActiveModels() {
 }
 
 async function getActiveKeys() {
-  const keys = await ApiKey.find({ provider: "gemini", status: "ACTIVE" })
+  const keys = await ApiKey.find({ provider: "gemini", status: { $ne: "INACTIVE" } })
     .sort({ priority: -1, updatedAt: -1, createdAt: -1 })
     .lean();
 

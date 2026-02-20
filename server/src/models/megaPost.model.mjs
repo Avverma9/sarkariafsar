@@ -26,6 +26,7 @@ const megaPostSchema = new mongoose.Schema(
     // Raw content for AI extraction
     contentHtml: { type: String, default: "" },
     contentText: { type: String, default: "" },
+    newHtml: { type: String, default: "" },
 
     // AI scraping ke liye future fields
     aiScraped: { type: Boolean, default: false },

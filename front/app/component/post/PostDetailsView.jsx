@@ -21,7 +21,7 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildSectionHref, resolveSectionRoute } from "../../lib/sectionRouting";
 import PostDetailsSkeleton from "./PostDetailsSkeleton";
 
@@ -175,6 +175,94 @@ function formatDisplayValue(value) {
 function toMeaningfulList(value) {
   if (!Array.isArray(value)) return [];
   return value.map((item) => formatDisplayValue(item)).filter((item) => isMeaningfulValue(item));
+}
+
+function resolveNewHtml(details) {
+  const raw = details?.raw || {};
+  const recruitment = details?.recruitment || {};
+  const candidates = [
+    raw?.newHtml,
+    raw?.postDetails?.newHtml,
+    raw?.postDetail?.newHtml,
+    raw?.data?.newHtml,
+    raw?.data?.postDetails?.newHtml,
+    raw?.data?.postDetail?.newHtml,
+    recruitment?.newHtml,
+    recruitment?.content?.newHtml,
+  ];
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return "";
+}
+
+const NEW_HTML_READABILITY_OVERRIDES = `
+<style id="new-html-readable-overrides">
+  :root, html, body {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  body *, body *::before, body *::after {
+    color: #111111 !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+    -webkit-text-fill-color: #111111 !important;
+    opacity: 1 !important;
+  }
+  a, a:visited {
+    color: #111111 !important;
+  }
+  table, tr, td, th, section, article, div, p, span, li, ul, ol, h1, h2, h3, h4, h5, h6 {
+    background: #ffffff !important;
+    color: #111111 !important;
+  }
+  .sa-pdf-btn {
+    background: #ffffff !important;
+    border: 1px solid #d1d5db !important;
+    color: #111111 !important;
+  }
+</style>
+`;
+
+function applyNewHtmlReadabilityOverrides(html) {
+  const source = String(html || "").trim();
+  if (!source) return "";
+
+  if (/<\/head>/i.test(source)) {
+    return source.replace(/<\/head>/i, `${NEW_HTML_READABILITY_OVERRIDES}\n</head>`);
+  }
+  return `${NEW_HTML_READABILITY_OVERRIDES}\n${source}`;
+}
+
+function enforceReadableIframeDocument(doc) {
+  if (!doc || !doc.body) return;
+  if (doc.body.dataset.saReadableApplied === "1") return;
+
+  if (doc.documentElement?.style) {
+    doc.documentElement.style.setProperty("background", "#ffffff", "important");
+    doc.documentElement.style.setProperty("color", "#111111", "important");
+  }
+  doc.body.style.setProperty("background", "#ffffff", "important");
+  doc.body.style.setProperty("color", "#111111", "important");
+
+  const nodes = doc.querySelectorAll("body, body *");
+  for (const node of nodes) {
+    if (!node?.style) continue;
+    node.style.setProperty("color", "#111111", "important");
+    node.style.setProperty("background", "#ffffff", "important");
+    node.style.setProperty("background-color", "#ffffff", "important");
+    node.style.setProperty("background-image", "none", "important");
+    node.style.setProperty("text-shadow", "none", "important");
+    node.style.setProperty("-webkit-text-fill-color", "#111111", "important");
+    node.style.setProperty("opacity", "1", "important");
+  }
+
+  doc.body.dataset.saReadableApplied = "1";
 }
 
 function rowsFromObject(obj) {
@@ -487,6 +575,9 @@ export default function PostDetailsView({
   const [watchSubmitting, setWatchSubmitting] = useState(false);
   const [watchFeedback, setWatchFeedback] = useState({ type: "", text: "" });
   const [watchEnabledForPost, setWatchEnabledForPost] = useState(false);
+  const [htmlFrameHeight, setHtmlFrameHeight] = useState(1200);
+  const [iframeSrcDoc, setIframeSrcDoc] = useState("");
+  const htmlFrameRef = useRef(null);
 
   useEffect(() => {
     setDetails(initialDetails);
@@ -540,6 +631,17 @@ export default function PostDetailsView({
   const selectionProcessSummary = isMeaningfulValue(content.selectionProcessSummary) ? formatDisplayValue(content.selectionProcessSummary) : "";
   const feeSummary = isMeaningfulValue(content.feeSummary) ? formatDisplayValue(content.feeSummary) : "";
   const additionalInfo = isMeaningfulValue(recruitment.additionalInfo) ? formatDisplayValue(recruitment.additionalInfo) : "";
+  const newHtmlContent = resolveNewHtml(details);
+  const shouldRenderNewHtml = Boolean(newHtmlContent);
+  const newHtmlFrameDoc = shouldRenderNewHtml ? applyNewHtmlReadabilityOverrides(newHtmlContent) : "";
+
+  useEffect(() => {
+    if (!shouldRenderNewHtml) {
+      setIframeSrcDoc("");
+      return;
+    }
+    setIframeSrcDoc(newHtmlFrameDoc);
+  }, [newHtmlFrameDoc, shouldRenderNewHtml]);
 
   const metadataRows = [
     { label: "Advertisement Number", value: recruitment.advertisementNumber },
@@ -722,6 +824,38 @@ export default function PostDetailsView({
   });
 
   useEffect(() => {
+    if (!shouldRenderNewHtml) return;
+    if (!iframeSrcDoc) return;
+    setHtmlFrameHeight(1200);
+
+    const updateFrameHeight = () => {
+      const frame = htmlFrameRef.current;
+      if (!frame) return;
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        enforceReadableIframeDocument(doc);
+        const nextHeight = Math.max(
+          doc.body?.scrollHeight || 0,
+          doc.documentElement?.scrollHeight || 0,
+          1200,
+        );
+        setHtmlFrameHeight((prev) => (Math.abs(prev - nextHeight) > 4 ? nextHeight : prev));
+      } catch {
+        // Ignore height sync failures; iframe still renders with fallback height.
+      }
+    };
+
+    const timerId = window.setTimeout(updateFrameHeight, 50);
+    const intervalId = window.setInterval(updateFrameHeight, 800);
+
+    return () => {
+      window.clearTimeout(timerId);
+      window.clearInterval(intervalId);
+    };
+  }, [canonicalKey, iframeSrcDoc, shouldRenderNewHtml]);
+
+  useEffect(() => {
     if (!watchLocalKey) {
       setWatchEnabledForPost(false);
       return;
@@ -857,7 +991,36 @@ export default function PostDetailsView({
         {errorMessage && <ErrorState message={errorMessage} />}
 
         {!errorMessage && details && (
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          shouldRenderNewHtml ? (
+            <div className="mx-auto w-full max-w-[1120px]">
+              <iframe
+                ref={htmlFrameRef}
+                title={`${displayTitle} HTML`}
+                srcDoc={iframeSrcDoc}
+                sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-downloads allow-forms"
+                className="block w-full border-0 bg-white"
+                style={{ height: `${htmlFrameHeight}px` }}
+                onLoad={() => {
+                  const frame = htmlFrameRef.current;
+                  if (!frame) return;
+                  try {
+                    const doc = frame.contentDocument;
+                    if (!doc) return;
+                    enforceReadableIframeDocument(doc);
+                    const nextHeight = Math.max(
+                      doc.body?.scrollHeight || 0,
+                      doc.documentElement?.scrollHeight || 0,
+                      1200,
+                    );
+                    setHtmlFrameHeight(nextHeight);
+                  } catch {
+                    // Ignore height sync failures; interval hook will retry.
+                  }
+                }}
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className={`${SECTION_CARD_CLASS} border-t-4 border-indigo-600 p-6`}>
                 <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
@@ -1420,7 +1583,8 @@ export default function PostDetailsView({
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          )
         )}
       </div>
 
