@@ -1,5 +1,5 @@
 import { baseUrl } from "@/app/lib/baseUrl";
-import { NextResponse } from "next/server";
+import { withApiJsonCache } from "@/app/lib/apiCache";
 import http from "node:http";
 import https from "node:https";
 
@@ -7,6 +7,8 @@ const DEFAULT_DAYS = 5;
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
+const CACHE_NAMESPACE = "deadline-jobs";
+const CACHE_TTL_MS = 60 * 1000;
 
 function normalizeBaseUrl(value) {
   return String(value || "")
@@ -47,23 +49,41 @@ export async function POST(request) {
 async function fetchDeadlineJobs(body) {
   const upstreamUrl = `${baseUrl}/site/deadline-jobs`;
 
-  try {
-    const response = await sendGetWithBody(upstreamUrl, body);
-    const payload = JSON.parse(response.bodyText || "null");
-    if (!payload) {
-      return NextResponse.json(
-        { success: false, message: "Invalid response from upstream service" },
-        { status: 502 },
-      );
-    }
+  return withApiJsonCache({
+    namespace: CACHE_NAMESPACE,
+    keyParts: body,
+    ttlMs: CACHE_TTL_MS,
+    loader: async () => {
+      try {
+        const response = await sendGetWithBody(upstreamUrl, body);
+        const payload = JSON.parse(response.bodyText || "null");
+        if (!payload) {
+          return {
+            status: 502,
+            cacheable: false,
+            payload: {
+              success: false,
+              message: "Invalid response from upstream service",
+            },
+          };
+        }
 
-    return NextResponse.json(payload, { status: response.statusCode });
-  } catch {
-    return NextResponse.json(
-      { success: false, message: "Failed to connect to upstream service" },
-      { status: 502 },
-    );
-  }
+        return {
+          status: response.statusCode,
+          payload,
+        };
+      } catch {
+        return {
+          status: 502,
+          cacheable: false,
+          payload: {
+            success: false,
+            message: "Failed to connect to upstream service",
+          },
+        };
+      }
+    },
+  });
 }
 
 function sendGetWithBody(urlString, body) {

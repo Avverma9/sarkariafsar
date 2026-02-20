@@ -1,10 +1,14 @@
 import { baseUrl } from "@/app/lib/baseUrl";
+import { withApiJsonCache } from "@/app/lib/apiCache";
 import { NextResponse } from "next/server";
 
 const MAX_LIMIT = 200;
+const CACHE_NAMESPACE = "postlist-by-section";
+const CACHE_TTL_MS = 60 * 1000;
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
+  const search = new URL(request.url).search;
 
   const megaTitle = String(searchParams.get("megaTitle") || "").trim();
   const page = Math.max(1, Number(searchParams.get("page") || 1));
@@ -27,34 +31,46 @@ export async function GET(request) {
 
   const upstreamUrl = `${baseUrl}/site/post-list-by-section-url?${upstreamParams.toString()}`;
 
-  try {
-    const response = await fetch(upstreamUrl, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
+  return withApiJsonCache({
+    namespace: CACHE_NAMESPACE,
+    keyParts: { search },
+    ttlMs: CACHE_TTL_MS,
+    loader: async () => {
+      try {
+        const response = await fetch(upstreamUrl, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
 
-    const payload = await response.json().catch(() => null);
-    if (!payload) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid response from upstream service",
-        },
-        { status: 502 },
-      );
-    }
+        const payload = await response.json().catch(() => null);
+        if (!payload) {
+          return {
+            status: 502,
+            cacheable: false,
+            payload: {
+              success: false,
+              message: "Invalid response from upstream service",
+            },
+          };
+        }
 
-    return NextResponse.json(payload, { status: response.status });
-  } catch {
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to connect to upstream service",
-      },
-      { status: 502 },
-    );
-  }
+        return {
+          status: response.status,
+          payload,
+        };
+      } catch {
+        return {
+          status: 502,
+          cacheable: false,
+          payload: {
+            success: false,
+            message: "Failed to connect to upstream service",
+          },
+        };
+      }
+    },
+  });
 }

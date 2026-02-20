@@ -1,6 +1,7 @@
 import MegaPost from "../models/megaPost.model.mjs";
 import UserWatch from "../models/userWatch.model.mjs";
 import { processMegaPostToRecruitment } from "../services/recruitmentLinker.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 export const processNewPostsCron = async (req, res, next) => {
   try {
@@ -31,6 +32,10 @@ export const processNewPostsCron = async (req, res, next) => {
           error: err.message,
         });
       }
+    }
+
+    if (processed > 0) {
+      void clearFrontApiCacheBestEffort({ reason: "cron-process-new-posts" });
     }
 
     return res.json({
@@ -97,6 +102,10 @@ export const watchSweepCron = async (req, res, next) => {
           error: err.message,
         });
       }
+    }
+
+    if (processed > 0) {
+      void clearFrontApiCacheBestEffort({ reason: "cron-watch-sweep" });
     }
 
     return res.json({

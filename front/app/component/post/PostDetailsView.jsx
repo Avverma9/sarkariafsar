@@ -539,7 +539,14 @@ export default function PostDetailsView({ canonicalKey = "" }) {
         const payload = await response.json().catch(() => null);
         debugPostDetails("Raw payload:", payload);
 
-        if (!response.ok || !payload) throw new Error(payload?.message || "Unable to load post details");
+        if (!response.ok || !payload || payload?.success === false) {
+          const upstreamStatus = payload?.upstream?.status;
+          const upstreamType = payload?.upstream?.contentType;
+          const upstreamMeta = upstreamStatus
+            ? ` (upstream ${upstreamStatus}${upstreamType ? `, ${upstreamType}` : ""})`
+            : "";
+          throw new Error(`${payload?.message || "Unable to load post details"}${upstreamMeta}`);
+        }
         const normalized = normalizePostDetails(payload);
         debugPostDetails("Normalized details:", normalized);
 
@@ -619,7 +626,11 @@ export default function PostDetailsView({ canonicalKey = "" }) {
           ? String(organization.website).trim()
           : "",
     },
-  ].filter((row) => isMeaningfulValue(row.value));
+  ].filter((row) => {
+    if (!isMeaningfulValue(row.value)) return false;
+    if (isLikelyUrl(row.value) && shouldBlockExternalUrl(row.value)) return false;
+    return true;
+  });
 
   const knownDateKeySet = new Set(DATE_LABELS.map(([key]) => key));
   const dateRows = [
@@ -712,10 +723,12 @@ export default function PostDetailsView({ canonicalKey = "" }) {
 
   const linkDisplayText = (rawText, resolvedUrl) => {
     if (resolvedUrl) return "";
-    if (isLikelyUrl(rawText) && isBlockedExternalUrl(rawText)) return "Link hidden";
     if (isGenericLinkText(rawText)) return "Direct URL not provided";
     return rawText || "Not available";
   };
+
+  const shouldSkipHiddenLinkEntry = (rawText, resolvedUrl) =>
+    !resolvedUrl && isLikelyUrl(rawText) && shouldBlockExternalUrl(rawText);
 
   const allLinkEntries = [
     ...Object.keys(LINK_CONFIG)
@@ -724,6 +737,7 @@ export default function PostDetailsView({ canonicalKey = "" }) {
         const cfg = LINK_CONFIG[key];
         const rawText = formatDisplayValue(importantLinks[key]);
         const resolvedUrl = resolveNavigableUrl(rawText, fallbackUrlsForLink(key));
+        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
         return {
           key,
           label: cfg.label,
@@ -732,12 +746,14 @@ export default function PostDetailsView({ canonicalKey = "" }) {
           icon: cfg.icon,
           className: cfg.className,
         };
-      }),
+      })
+      .filter(Boolean),
     ...Object.entries(importantLinks)
       .filter(([key, value]) => key !== "other" && !knownLinkKeys.has(key) && isMeaningfulValue(value))
       .map(([key, value]) => {
         const rawText = formatDisplayValue(value);
         const resolvedUrl = resolveNavigableUrl(rawText, []);
+        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
         return {
           key: `extra-${key}`,
           label: humanLabel(key),
@@ -746,12 +762,14 @@ export default function PostDetailsView({ canonicalKey = "" }) {
           icon: Link2,
           className: defaultLinkClass,
         };
-      }),
+      })
+      .filter(Boolean),
     ...Object.entries(importantLinks.other || {})
       .filter(([, value]) => isMeaningfulValue(value))
       .map(([key, value]) => {
         const rawText = formatDisplayValue(value);
         const resolvedUrl = resolveNavigableUrl(rawText, []);
+        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
         return {
           key: `other-${key}`,
           label: humanLabel(key),
@@ -760,12 +778,11 @@ export default function PostDetailsView({ canonicalKey = "" }) {
           icon: Link2,
           className: defaultLinkClass,
         };
-      }),
+      })
+      .filter(Boolean),
   ];
 
-  const visibleLinkEntries = allLinkEntries.filter((item) => !shouldHideLinkEntry(item));
-  const clickableLinks = visibleLinkEntries.filter((item) => item.url);
-  const textOnlyLinks = visibleLinkEntries.filter((item) => !item.url);
+  const clickableLinks = allLinkEntries.filter((item) => item?.url && !shouldHideLinkEntry(item));
   const hasGuidanceSection = Boolean(
     whoShouldApply.length || applicationSteps.length || importantNotes.length || selectionProcessSummary || feeSummary || additionalInfo,
   );
@@ -985,10 +1002,6 @@ export default function PostDetailsView({ canonicalKey = "" }) {
                       <div key={row.label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                         {(() => {
                           const displayValue = formatDisplayValue(row.value);
-                          const safeValue =
-                            isLikelyUrl(displayValue) && isBlockedExternalUrl(displayValue)
-                              ? "Link hidden"
-                              : displayValue;
                           return (
                             <>
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{row.label}</p>
@@ -998,11 +1011,11 @@ export default function PostDetailsView({ canonicalKey = "" }) {
                                   onClick={() => handleImportantLinkClick({ label: row.label, url: row.url })}
                                   className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 hover:underline"
                                 >
-                                  {safeValue}
+                                  {displayValue}
                                   <ExternalLink className="h-3.5 w-3.5" />
                                 </button>
                               ) : (
-                                <p className="mt-1 text-sm font-semibold text-slate-700">{safeValue}</p>
+                                <p className="mt-1 text-sm font-semibold text-slate-700">{displayValue}</p>
                               )}
                             </>
                           );
@@ -1420,7 +1433,7 @@ export default function PostDetailsView({ canonicalKey = "" }) {
                     Important Links
                   </div>
                   <div className="space-y-3 p-4">
-                    {clickableLinks.length === 0 && textOnlyLinks.length === 0 && (
+                    {clickableLinks.length === 0 && (
                       <p className="text-sm text-slate-500">No important links available.</p>
                     )}
 
@@ -1444,17 +1457,6 @@ export default function PostDetailsView({ canonicalKey = "" }) {
                       );
                     })}
 
-                    {textOnlyLinks.length > 0 && (
-                      <div className="space-y-2 border-t border-slate-100 pt-3">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Additional Link Data</p>
-                        {textOnlyLinks.map((item) => (
-                          <div key={item.key} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{item.label}</p>
-                            <p className="mt-1 text-sm text-slate-700">{item.value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 
