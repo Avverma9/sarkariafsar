@@ -11,6 +11,12 @@ import {
   diffSnapshotFields,
 } from "../utils/postSnapshot.mjs";
 import { buildContentHashes } from "../utils/contentHash.mjs";
+import {
+  buildPreparedHtmlChanges,
+  buildReadyPostHtml,
+  diffPreparedHtml,
+} from "../utils/postHtmlTransform.mjs";
+import { refinePreparedHtmlWithGemini } from "./geminiHtmlRefine.service.mjs";
 import { scrapePostsFromSection } from "./scraper.service.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
 import { sendPostUpdateNotification } from "./email.service.mjs";
@@ -19,7 +25,16 @@ import { acquireJobLock, releaseJobLock } from "./jobLock.service.mjs";
 const DEFAULT_MATCH_THRESHOLD = Number(process.env.POST_UPDATE_MATCH_THRESHOLD || 0.8);
 const DEFAULT_MAX_CANDIDATES = Number(process.env.POST_UPDATE_MAX_CANDIDATES || 5);
 const DEFAULT_BATCH_SIZE = Number(process.env.POST_UPDATE_BATCH_SIZE || 20);
-const DEFAULT_CRON_EXPRESSION = String(process.env.POST_UPDATE_CRON || "0 */2 * * *");
+const DEFAULT_CRON_EXPRESSION = String(process.env.POST_UPDATE_CRON || "0 * * * *");
+const DEFAULT_PER_POST_DELAY_MS = Math.max(
+  0,
+  Number(process.env.POST_UPDATE_PER_POST_DELAY_MS || 5 * 60 * 1000),
+);
+const DEFAULT_RESYNC_ALL_POSTDETAILS = String(
+  process.env.POST_UPDATE_RESYNC_ALL_POSTDETAILS || "true",
+)
+  .trim()
+  .toLowerCase() !== "false";
 const DEFAULT_POST_UPDATE_LOCK_TTL_MS = Math.max(
   60 * 1000,
   Number(process.env.POST_UPDATE_LOCK_TTL_MS || 3 * 60 * 60 * 1000),
@@ -31,6 +46,12 @@ function makeError(message, statusCode = 500) {
   const err = new Error(message);
   err.statusCode = statusCode;
   return err;
+}
+
+function sleep(ms = 0) {
+  const delay = Math.max(0, Number(ms) || 0);
+  if (!delay) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
 function cleanText(value) {
@@ -209,7 +230,7 @@ export async function updateSinglePostById(postId, options = {}) {
   const post = await MegaPost.findById(postId);
   if (!post) throw makeError("MegaPost not found", 404);
   const postDetail = await PostDetail.findOne({ megaPostId: post._id })
-    .select("_id formattedData")
+    .select("_id formattedData newHtml htmlStableHash textHash")
     .lean();
   if (!postDetail) {
     return {
@@ -225,9 +246,28 @@ export async function updateSinglePostById(postId, options = {}) {
   const now = new Date();
   const oldUrl = String(post.originalUrl || "");
   const oldHash = String(post.pageHash || "");
+  const previousNewHtml = String(post.newHtml || postDetail?.newHtml || "").trim();
+  const hasPreviousReadyHtml = Boolean(previousNewHtml);
+  const previousPreparedHashes = previousNewHtml
+    ? buildContentHashes({ contentHtml: previousNewHtml })
+    : { htmlStableHash: "", textHash: "" };
 
   const matchResult = await findBestMatchingCandidate(post, options);
   const best = matchResult.best;
+  const prepared = buildReadyPostHtml({
+    title: String(best.raw.title || best.candidate.title || post.title || "").trim(),
+    sourceUrl: String(best.candidate.postUrl || post.originalUrl || "").trim(),
+    contentHtml: String(best.raw.contentHtml || "").trim(),
+  });
+  const localNewHtml = String(prepared.newHtml || "").trim();
+  const aiRefine = await refinePreparedHtmlWithGemini({
+    html: localNewHtml,
+    title: String(best.raw.title || best.candidate.title || post.title || "").trim(),
+    sourceUrl: String(best.candidate.postUrl || post.originalUrl || "").trim(),
+  });
+  const nextNewHtml = String(aiRefine.html || localNewHtml).trim();
+  const preparedHashes = buildContentHashes({ contentHtml: nextNewHtml });
+  const htmlDiff = diffPreparedHtml(previousNewHtml, nextNewHtml, { limit: 20 });
 
   post.lastPostUpdateCheckAt = now;
   post.lastPostMatchScore = best.overallScore;
@@ -247,19 +287,20 @@ export async function updateSinglePostById(postId, options = {}) {
     };
   }
 
+  const oldHtmlHash = String(postDetail?.htmlStableHash || previousPreparedHashes.htmlStableHash || "").trim();
+  const oldTextHash = String(postDetail?.textHash || previousPreparedHashes.textHash || "").trim();
+  const newHtmlHash = String(preparedHashes?.htmlStableHash || "").trim();
+  const newTextHash = String(preparedHashes?.textHash || "").trim();
   const previousSnapshot = matchResult.baseSnapshot;
-  const previousHash = oldHash || matchResult.baseHashInfo.pageHash;
-  const nextHash = best.hashInfo.pageHash;
+  const previousHash = oldHash || oldHtmlHash || matchResult.baseHashInfo.pageHash;
+  const nextHash = newHtmlHash || best.hashInfo.pageHash;
   const fieldChanges = diffSnapshotFields(previousSnapshot, best.snapshot);
-  const oldHtmlHash = String(post.updateSnapshot?._hash?.htmlStableHash || "").trim();
-  const oldTextHash = String(post.updateSnapshot?._hash?.textHash || "").trim();
-  const newHtmlHash = String(best.contentHashes?.htmlStableHash || "").trim();
-  const newTextHash = String(best.contentHashes?.textHash || "").trim();
   const htmlChanged = !!oldHtmlHash && !!newHtmlHash && oldHtmlHash !== newHtmlHash;
   const textChanged = !!oldTextHash && !!newTextHash && oldTextHash !== newTextHash;
   const urlChanged = normalizeUrl(oldUrl) !== normalizeUrl(best.candidate.postUrl);
   const contentMissingBefore = !String(post.contentHtml || "").trim();
-  const hashChanged = previousHash !== nextHash;
+  const newHtmlMissingBefore = !String(previousNewHtml || "").trim();
+  const hashChanged = !!previousHash && !!nextHash && previousHash !== nextHash;
   const contentHashChanged = htmlChanged || textChanged;
 
   const shouldUpdate =
@@ -267,13 +308,15 @@ export async function updateSinglePostById(postId, options = {}) {
     hashChanged ||
     fieldChanges.length > 0 ||
     contentMissingBefore ||
-    contentHashChanged;
+    contentHashChanged ||
+    newHtmlMissingBefore;
 
   if (shouldUpdate) {
     post.originalUrl = best.candidate.postUrl;
     post.title = String(best.raw.title || best.candidate.title || post.title).trim();
     post.contentHtml = String(best.raw.contentHtml || "").trim();
     post.contentText = String(best.raw.contentText || "").trim();
+    post.newHtml = nextNewHtml;
     post.updateSnapshot = {
       ...best.snapshot,
       _hash: {
@@ -298,6 +341,9 @@ export async function updateSinglePostById(postId, options = {}) {
         },
       };
     }
+    if (!String(post.newHtml || "").trim()) {
+      post.newHtml = nextNewHtml;
+    }
     if (!post.pageHash) post.pageHash = previousHash;
   }
 
@@ -313,6 +359,13 @@ export async function updateSinglePostById(postId, options = {}) {
           htmlStableHash: String(post.updateSnapshot?._hash?.htmlStableHash || newHtmlHash || "").trim(),
           textHash: String(post.updateSnapshot?._hash?.textHash || newTextHash || "").trim(),
           updateSnapshot: post.updateSnapshot || null,
+          newHtml: String(post.newHtml || nextNewHtml || "").trim(),
+          htmlDiff,
+          linkTransformReport: prepared.report,
+          geminiRefineMeta: aiRefine?.meta || null,
+          modelUsed: aiRefine?.meta?.usedGemini
+            ? "html-transform-v1+gemini-refine"
+            : "html-transform-v1",
           lastScrapedAt: new Date(),
         },
       },
@@ -336,9 +389,11 @@ export async function updateSinglePostById(postId, options = {}) {
       newValue: newTextHash,
     });
   }
+  const htmlValueChanges = buildPreparedHtmlChanges(htmlDiff, 10);
+  notifyChanges.push(...htmlValueChanges);
 
   let emailStatus = { sent: false, reason: "not-updated" };
-  if (shouldUpdate) {
+  if (shouldUpdate && hasPreviousReadyHtml) {
     try {
       emailStatus = await sendPostUpdateNotification({
         postId: String(post._id),
@@ -359,6 +414,8 @@ export async function updateSinglePostById(postId, options = {}) {
       logger.error(`Update email failed for post=${post._id}: ${err.message}`);
       emailStatus = { sent: false, reason: err.message };
     }
+  } else if (shouldUpdate && !hasPreviousReadyHtml) {
+    emailStatus = { sent: false, reason: "initial-ready-html-build" };
   }
 
   return {
@@ -372,7 +429,9 @@ export async function updateSinglePostById(postId, options = {}) {
     hashChanged,
     htmlChanged,
     textChanged,
+    htmlValueDiff: htmlDiff,
     fieldChanges: notifyChanges,
+    aiRefine: aiRefine?.meta || { enabled: false, usedGemini: false },
     email: emailStatus,
   };
 }
@@ -395,9 +454,14 @@ function buildBatchQuery({ force = false } = {}) {
 export async function runPostUpdateBatch(options = {}) {
   const limit = Math.max(1, Number(options.limit || DEFAULT_BATCH_SIZE));
   const force = options.force === true;
+  const allWithPostDetail = options.allWithPostDetail === true;
+  const perPostDelayMs = Math.max(
+    0,
+    Number(options.perPostDelayMs ?? options.postDelayMs ?? 0) || 0,
+  );
   const query = buildBatchQuery({ force });
 
-  const posts = await MegaPost.aggregate([
+  const pipeline = [
     { $match: query },
     {
       $lookup: {
@@ -409,9 +473,13 @@ export async function runPostUpdateBatch(options = {}) {
     },
     { $match: { "postDetail.0": { $exists: true } } },
     { $sort: { lastPostUpdateCheckAt: 1, updatedAt: 1 } },
-    { $limit: limit },
     { $project: { _id: 1 } },
-  ]);
+  ];
+  if (!allWithPostDetail) {
+    pipeline.splice(pipeline.length - 1, 0, { $limit: limit });
+  }
+
+  const posts = await MegaPost.aggregate(pipeline);
 
   const report = [];
   let matchedCount = 0;
@@ -420,7 +488,8 @@ export async function runPostUpdateBatch(options = {}) {
   let notifiedCount = 0;
   let skippedCount = 0;
 
-  for (const post of posts) {
+  for (let idx = 0; idx < posts.length; idx++) {
+    const post = posts[idx];
     try {
       const result = await updateSinglePostById(post._id, options);
       if (result.matched) matchedCount++;
@@ -438,15 +507,21 @@ export async function runPostUpdateBatch(options = {}) {
       });
       logger.error(`Post update failed for ${post._id}: ${err.message}`);
     }
+
+    if (perPostDelayMs > 0 && idx < posts.length - 1) {
+      await sleep(perPostDelayMs);
+    }
   }
 
   return {
+    mode: allWithPostDetail ? "all-with-postdetail" : "batch",
     scanned: posts.length,
     matched: matchedCount,
     updated: updatedCount,
     skipped: skippedCount,
     notified: notifiedCount,
     failed: failedCount,
+    perPostDelayMs,
     report,
   };
 }
@@ -489,10 +564,12 @@ export function startPostUpdateScheduler() {
 
       const result = await runPostUpdateBatch({
         limit: DEFAULT_BATCH_SIZE,
-        force: false,
+        force: DEFAULT_RESYNC_ALL_POSTDETAILS,
+        allWithPostDetail: DEFAULT_RESYNC_ALL_POSTDETAILS,
+        perPostDelayMs: DEFAULT_PER_POST_DELAY_MS,
       });
       logger.info(
-        `Post update sweep done. scanned=${result.scanned}, matched=${result.matched}, updated=${result.updated}, notified=${result.notified}, failed=${result.failed}`,
+        `Post update sweep done. mode=${result.mode}, scanned=${result.scanned}, matched=${result.matched}, updated=${result.updated}, notified=${result.notified}, failed=${result.failed}, perPostDelayMs=${result.perPostDelayMs}`,
       );
     } catch (err) {
       logger.error(`Post update sweep failed: ${err.message}`);
@@ -515,7 +592,7 @@ export function startPostUpdateScheduler() {
   });
 
   logger.info(
-    `Post update scheduler started. cron=${DEFAULT_CRON_EXPRESSION}, batchSize=${DEFAULT_BATCH_SIZE}`,
+    `Post update scheduler started. cron=${DEFAULT_CRON_EXPRESSION}, batchSize=${DEFAULT_BATCH_SIZE}, resyncAllPostDetails=${DEFAULT_RESYNC_ALL_POSTDETAILS}, perPostDelayMs=${DEFAULT_PER_POST_DELAY_MS}`,
   );
 
   runSweep().catch((err) => logger.error(`Initial post update sweep failed: ${err.message}`));
