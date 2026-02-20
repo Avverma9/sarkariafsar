@@ -137,6 +137,11 @@ export function buildRecruitmentExtractionPrompt(scrapedData) {
     '    "status": "Active|Closed|Upcoming",\n' +
     '    "sourceUrl": "URL where data was scraped",\n' +
     '    "additionalInfo": "Any special notes or important information",\n' +
+    '    "extraFields": {\n' +
+    '      "unmappedKeyValues": {},\n' +
+    '      "links": [],\n' +
+    '      "keyValues": []\n' +
+    "    },\n" +
     '    "content": {\n' +
     '      "originalSummary": "60-90 words, original wording only, no copied sentences",\n' +
     '      "whoShouldApply": ["Who this recruitment is suited for, in your own words"],\n' +
@@ -193,8 +198,31 @@ export function buildRecruitmentExtractionPrompt(scrapedData) {
     "    - Base content ONLY on scraped data; do not invent details\n" +
     "    - If data is missing, use 'Not specified' or empty arrays\n" +
     "    - Avoid repetition across summary, highlights, and notes\n\n" +
+    "12. NON-FITTING DATA:\n" +
+    "    - If any source value does not fit fixed schema fields, keep it under recruitment.extraFields\n" +
+    "    - Preserve key/value meaning in extraFields.unmappedKeyValues\n\n" +
     "SCRAPED DATA:\n" +
     sd +
     "\n\nRETURN VALID JSON ONLY - NO MARKDOWN, NO EXTRA TEXT."
+  );
+}
+
+export function buildRecruitmentVerificationPrompt(draftJson) {
+  const rawDraft = typeof draftJson === "string" ? draftJson : JSON.stringify(draftJson || {}, null, 2);
+
+  return (
+    "TASK: Read the draft recruitment JSON and convert it into fully formatted final JSON using the full schema.\n\n" +
+    "CONSTRAINTS:\n" +
+    "1. Keep root structure exactly: { \"recruitment\": { ... } }\n" +
+    "2. Follow the full schema keys from prompt template. Every key must be present in output.\n" +
+    "3. Map draft values to correct fields and types (dates/number/arrays/objects).\n" +
+    "4. Preserve factual values from draft; if missing, keep safe defaults (\"\", 0, [], {}).\n" +
+    "5. Keep unknown/unmapped values inside extraFields.\n" +
+    "6. CONTENT fields are mandatory: write original content for summary/highlights/steps/notes/faq from available draft data.\n" +
+    "7. Content must be unique wording (not copied lines), non-promotional, factual.\n" +
+    "8. Return ONLY valid JSON (no markdown, no explanation).\n\n" +
+    "DRAFT JSON:\n" +
+    rawDraft +
+    "\n\nRETURN VALID JSON ONLY."
   );
 }

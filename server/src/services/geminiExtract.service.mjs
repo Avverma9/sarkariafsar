@@ -1,20 +1,14 @@
 import axios from "axios";
 import ApiKey from "../models/apikey.model.mjs";
 import GeminiModel from "../models/gemini.model.mjs";
-import { buildRecruitmentExtractionPrompt } from "../utils/prompt.mjs";
+import { buildRecruitmentVerificationPrompt } from "../utils/prompt.mjs";
+import { buildReadyPostHtml } from "../utils/postHtmlTransform.mjs";
+import { buildDraftRecruitmentFromHtml } from "../utils/recruitmentDraft.util.mjs";
 import logger from "../utils/logger.mjs";
 
 const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
-const DEFAULT_MODEL = "gemini-1.5-flash";
-const MAX_PROMPT_CHARS = 120000;
-
-function normalizeRawForPrompt(contentHtml) {
-  const raw = String(contentHtml || "").trim();
-  if (!raw) return "";
-
-  if (raw.length <= MAX_PROMPT_CHARS) return raw;
-  return `${raw.slice(0, MAX_PROMPT_CHARS)}\n\n[TRUNCATED_FOR_MODEL_LIMIT]`;
-}
+const DEFAULT_MODEL = "gemini-2.5-flash-lite";
+const MAX_VERIFY_DRAFT_CHARS = 45000;
 
 function unwrapJsonText(text) {
   let raw = String(text || "").trim();
@@ -34,21 +28,216 @@ function unwrapJsonText(text) {
   }
 }
 
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function getRecruitmentDefaults(sourceUrl = "") {
+  return {
+    title: "",
+    advertisementNumber: "",
+    organization: {
+      name: "",
+      shortName: "",
+      website: "",
+      type: "Other",
+    },
+    importantDates: {
+      notificationDate: "",
+      postDate: "",
+      applicationStartDate: "",
+      applicationLastDate: "",
+      feePaymentLastDate: "",
+      correctionDate: "",
+      preExamDate: "",
+      mainsExamDate: "",
+      examDate: "",
+      admitCardDate: "",
+      resultDate: "",
+      answerKeyReleaseDate: "",
+      finalAnswerKeyDate: "",
+      documentVerificationDate: "",
+      counsellingDate: "",
+      meritListDate: "",
+    },
+    vacancyDetails: {
+      totalPosts: 0,
+      positions: [],
+      categoryWise: {
+        general: 0,
+        obc: 0,
+        sc: 0,
+        st: 0,
+        ewsExemption: 0,
+        ph: 0,
+        other: {},
+      },
+      districtWise: [],
+    },
+    applicationFee: {
+      general: 0,
+      ewsObc: 0,
+      scSt: 0,
+      female: 0,
+      ph: 0,
+      correctionCharge: 0,
+      currency: "INR",
+      paymentMode: [],
+      exemptions: "",
+    },
+    ageLimit: {
+      minimumAge: 0,
+      maximumAge: 0,
+      asOn: "",
+      ageRelaxation: {
+        scSt: 0,
+        obc: 0,
+        ph: 0,
+        exServicemen: 0,
+        other: {},
+      },
+      categoryWise: {
+        ur: { male: 0, female: 0 },
+        obc: { male: 0, female: 0 },
+        sc: { male: 0, female: 0 },
+        st: { male: 0, female: 0 },
+      },
+    },
+    eligibility: {
+      educationQualification: "",
+      streamRequired: "",
+      minimumPercentage: 0,
+      experienceRequired: "",
+      specialRequirements: [],
+    },
+    physicalStandards: {
+      male: { height: "", chest: "", weight: "", eyesight: "" },
+      female: { height: "", weight: "", eyesight: "" },
+    },
+    physicalEfficiencyTest: {
+      male: { distance: "", duration: "" },
+      female: { distance: "", duration: "" },
+    },
+    selectionProcess: [],
+    importantLinks: {
+      applyOnline: "",
+      officialNotification: "",
+      officialWebsite: "",
+      syllabus: "",
+      examPattern: "",
+      admitCard: "",
+      resultLink: "",
+      answerKey: "",
+      documentVerificationNotice: "",
+      faq: "",
+      other: {},
+    },
+    documentation: [],
+    status: "Active",
+    sourceUrl: String(sourceUrl || "").trim(),
+    additionalInfo: "",
+    extraFields: {
+      unmappedKeyValues: {},
+      links: [],
+      keyValues: [],
+    },
+    content: {
+      originalSummary: "",
+      whoShouldApply: [],
+      keyHighlights: [],
+      applicationSteps: [],
+      selectionProcessSummary: "",
+      documentsChecklist: [],
+      feeSummary: "",
+      importantNotes: [],
+      faq: [],
+    },
+  };
+}
+
+function mergeDefaults(defaultValue, value) {
+  if (Array.isArray(defaultValue)) {
+    return Array.isArray(value) ? value : defaultValue;
+  }
+  if (isPlainObject(defaultValue)) {
+    const src = isPlainObject(value) ? value : {};
+    const out = {};
+    for (const key of Object.keys(defaultValue)) {
+      out[key] = mergeDefaults(defaultValue[key], src[key]);
+    }
+    for (const key of Object.keys(src)) {
+      if (!(key in out)) out[key] = src[key];
+    }
+    return out;
+  }
+  if (value === null || value === undefined) return defaultValue;
+  return value;
+}
+
 function ensureRecruitmentRoot(parsed, sourceUrl = "") {
-  if (!parsed || typeof parsed !== "object") {
+  if (!isPlainObject(parsed)) {
     throw new Error("Parsed response is not an object");
   }
 
-  const root =
-    parsed.recruitment && typeof parsed.recruitment === "object"
-      ? parsed
-      : { recruitment: parsed };
+  const hasRecruitmentField = Object.prototype.hasOwnProperty.call(parsed, "recruitment");
+  const root = hasRecruitmentField ? { ...parsed } : {};
+  const recruitment = isPlainObject(parsed.recruitment)
+    ? { ...parsed.recruitment }
+    : hasRecruitmentField
+      ? {}
+      : { ...parsed };
 
-  if (!root.recruitment.sourceUrl) {
-    root.recruitment.sourceUrl = sourceUrl;
+  const merged = mergeDefaults(getRecruitmentDefaults(sourceUrl), recruitment);
+  merged.title = String(merged.title || parsed.title || "").trim();
+  merged.sourceUrl = String(merged.sourceUrl || sourceUrl || "").trim();
+  root.recruitment = merged;
+  return root;
+}
+
+function compactDraftForPrompt(draft = {}) {
+  const clone = JSON.parse(JSON.stringify(draft || {}));
+  const rec = clone?.recruitment || {};
+
+  if (typeof rec?.content?.originalSummary === "string" && rec.content.originalSummary.length > 700) {
+    rec.content.originalSummary = rec.content.originalSummary.slice(0, 700);
   }
 
-  return root;
+  if (rec.extraFields && typeof rec.extraFields === "object") {
+    if (Array.isArray(rec.extraFields.links) && rec.extraFields.links.length > 80) {
+      rec.extraFields.links = rec.extraFields.links.slice(0, 80);
+    }
+    if (Array.isArray(rec.extraFields.keyValues) && rec.extraFields.keyValues.length > 120) {
+      rec.extraFields.keyValues = rec.extraFields.keyValues.slice(0, 120);
+    }
+    const unmapped = rec.extraFields.unmappedKeyValues || {};
+    const unmappedKeys = Object.keys(unmapped);
+    if (unmappedKeys.length > 120) {
+      rec.extraFields.unmappedKeyValues = Object.fromEntries(
+        unmappedKeys.slice(0, 120).map((k) => [k, unmapped[k]]),
+      );
+    }
+  }
+
+  let raw = JSON.stringify(clone);
+  if (raw.length <= MAX_VERIFY_DRAFT_CHARS) return clone;
+
+  if (rec.extraFields) {
+    rec.extraFields.keyValues = [];
+    rec.extraFields.links = [];
+    rec.extraFields.unmappedKeyValues = {};
+  }
+
+  raw = JSON.stringify(clone);
+  if (raw.length <= MAX_VERIFY_DRAFT_CHARS) return clone;
+
+  if (rec.content) {
+    rec.content.originalSummary = "";
+    rec.content.keyHighlights = Array.isArray(rec.content.keyHighlights)
+      ? rec.content.keyHighlights.slice(0, 4)
+      : [];
+  }
+
+  return clone;
 }
 
 async function getActiveModels() {
@@ -118,7 +307,7 @@ async function callGemini({ apiKey, modelName, prompt }) {
     {
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       generationConfig: {
-        temperature: 0.1,
+        temperature: 0.05,
         responseMimeType: "application/json",
       },
     },
@@ -143,24 +332,59 @@ async function callGemini({ apiKey, modelName, prompt }) {
   return text;
 }
 
+function buildDraft({ contentHtml = "", newHtml = "", title = "", sourceUrl = "" }) {
+  const incomingNewHtml = String(newHtml || "").trim();
+  const incomingContentHtml = String(contentHtml || "").trim();
+
+  if (!incomingNewHtml && !incomingContentHtml) {
+    throw new Error("contentHtml/newHtml is empty");
+  }
+
+  const htmlForParse = incomingNewHtml || buildReadyPostHtml({
+    title,
+    sourceUrl,
+    contentHtml: incomingContentHtml,
+  }).newHtml;
+
+  return buildDraftRecruitmentFromHtml({
+    html: String(htmlForParse || "").trim(),
+    title,
+    sourceUrl,
+  });
+}
+
 export async function extractRecruitmentJsonFromContentHtml({
   contentHtml,
   sourceUrl = "",
+  title = "",
+  newHtml = "",
 }) {
-  const normalized = normalizeRawForPrompt(contentHtml);
-  if (!normalized) {
-    throw new Error("contentHtml is empty");
+  const draft = buildDraft({ contentHtml, newHtml, title, sourceUrl });
+  const promptPayload = compactDraftForPrompt(draft);
+  const prompt = buildRecruitmentVerificationPrompt(promptPayload);
+
+  let models = [];
+  let keysData = { keyList: [], keyMap: new Map() };
+
+  try {
+    [models, keysData] = await Promise.all([getActiveModels(), getActiveKeys()]);
+  } catch (err) {
+    logger.warn(`Gemini verification setup failed, using rule draft only: ${err.message}`);
+    return {
+      data: ensureRecruitmentRoot(draft, sourceUrl),
+      modelName: "rule-draft-v1",
+      meta: { usedGemini: false, reason: "setup-failed" },
+    };
   }
 
-  const prompt = buildRecruitmentExtractionPrompt(normalized);
-  const [models, keysData] = await Promise.all([getActiveModels(), getActiveKeys()]);
-  const keyList = keysData.keyList;
-
+  const keyList = keysData.keyList || [];
   if (!keyList.length) {
-    throw new Error("No active Gemini API key found");
+    return {
+      data: ensureRecruitmentRoot(draft, sourceUrl),
+      modelName: "rule-draft-v1",
+      meta: { usedGemini: false, reason: "no-active-key" },
+    };
   }
-
-  const failures = [];
 
   for (const modelName of models) {
     for (const apiKey of keyList) {
@@ -178,18 +402,22 @@ export async function extractRecruitmentJsonFromContentHtml({
           ),
         ]);
 
-        return { data: payload, modelName };
+        return {
+          data: payload,
+          modelName: `${modelName}+json-verify-v1`,
+          meta: { usedGemini: true },
+        };
       } catch (err) {
         const msg = err?.response?.data?.error?.message || err.message || "Unknown Gemini error";
-        failures.push(`${modelName}: ${msg}`);
-
         await markKeyFailure(keyId, msg);
-        logger.error(`Gemini extraction failed for model=${modelName}: ${msg}`);
+        logger.error(`Gemini verification failed for model=${modelName}: ${msg}`);
       }
     }
   }
 
-  throw new Error(
-    `Gemini extraction failed after trying all active models/keys. ${failures.slice(0, 3).join(" | ")}`,
-  );
+  return {
+    data: ensureRecruitmentRoot(draft, sourceUrl),
+    modelName: "rule-draft-v1",
+    meta: { usedGemini: false, reason: "all-models-failed" },
+  };
 }

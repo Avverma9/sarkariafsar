@@ -146,6 +146,8 @@ export async function processMegaPostToRecruitment(postId) {
 
   const { data: aiData, modelName } = await extractRecruitmentJsonFromContentHtml({
     contentHtml: post.contentHtml,
+    newHtml: post.newHtml || "",
+    title: post.title || "",
     sourceUrl: post.originalUrl || "",
   });
 
