@@ -2,6 +2,11 @@ import mongoose from "mongoose";
 import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
 import { buildContentHashes } from "../utils/contentHash.mjs";
+import { buildCompactAiInput } from "../utils/aiInputFormatter.mjs";
+import {
+  buildPageHashFromSnapshot,
+  buildPostSnapshotFromRaw,
+} from "../utils/postSnapshot.mjs";
 import { sendPostUpdateNotification } from "../services/email.service.mjs";
 import { runPostUpdateBatch, updateSinglePostById } from "../services/postUpdate.service.mjs";
 import {
@@ -10,6 +15,7 @@ import {
   diffPreparedHtml,
 } from "../utils/postHtmlTransform.mjs";
 import { refinePreparedHtmlWithGemini } from "../services/geminiHtmlRefine.service.mjs";
+import { extractRecruitmentJsonFromContentHtml } from "../services/geminiExtract.service.mjs";
 
 function isValidObjectId(id) {
   return !!id && mongoose.Types.ObjectId.isValid(id);
@@ -17,6 +23,41 @@ function isValidObjectId(id) {
 
 function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function ensureRecruitmentPayload(payload, { title = "", sourceUrl = "" } = {}) {
+  const root = isPlainObject(payload) ? { ...payload } : {};
+  const recruitment = isPlainObject(root.recruitment) ? { ...root.recruitment } : {};
+
+  recruitment.title = String(recruitment.title || title || "").trim();
+  recruitment.sourceUrl = String(recruitment.sourceUrl || sourceUrl || "").trim();
+
+  if (!isPlainObject(recruitment.organization)) recruitment.organization = {};
+  if (!isPlainObject(recruitment.importantDates)) recruitment.importantDates = {};
+  if (!isPlainObject(recruitment.vacancyDetails)) recruitment.vacancyDetails = {};
+  if (!isPlainObject(recruitment.applicationFee)) recruitment.applicationFee = {};
+  if (!isPlainObject(recruitment.ageLimit)) recruitment.ageLimit = {};
+  if (!isPlainObject(recruitment.eligibility)) recruitment.eligibility = {};
+  if (!isPlainObject(recruitment.physicalStandards)) recruitment.physicalStandards = {};
+  if (!isPlainObject(recruitment.physicalEfficiencyTest)) recruitment.physicalEfficiencyTest = {};
+  if (!Array.isArray(recruitment.selectionProcess)) recruitment.selectionProcess = [];
+  if (!isPlainObject(recruitment.importantLinks)) recruitment.importantLinks = {};
+  if (!isPlainObject(recruitment.importantLinks.other)) recruitment.importantLinks.other = {};
+  if (!Array.isArray(recruitment.documentation)) recruitment.documentation = [];
+  if (!isPlainObject(recruitment.content)) recruitment.content = {};
+  if (!isPlainObject(recruitment.extraFields)) recruitment.extraFields = {};
+  if (!isPlainObject(recruitment.extraFields.unmappedKeyValues)) {
+    recruitment.extraFields.unmappedKeyValues = {};
+  }
+  if (!Array.isArray(recruitment.extraFields.links)) recruitment.extraFields.links = [];
+  if (!Array.isArray(recruitment.extraFields.keyValues)) recruitment.extraFields.keyValues = [];
+
+  root.recruitment = recruitment;
+  return root;
 }
 
 async function findPostAndDetailByAggregation({ postId = "", canonicalKey = "", megaSlug = "" }) {
@@ -301,6 +342,23 @@ export const scrapePost = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "MegaPost not found" });
     }
 
+    // Cache hit: return directly without AI call.
+    if (row.postDetail?.formattedData && typeof row.postDetail.formattedData === "object") {
+      return res.json({
+        success: true,
+        cached: true,
+        message: "PostDetail already exists. Returned cached formatted data without AI call.",
+        data: row.postDetail.formattedData,
+        meta: {
+          postId: String(row._id),
+          postDetailId: String(row.postDetail._id),
+          canonicalKey: row.canonicalKey || "",
+          megaSlug: row.megaSlug || "",
+          sourceUrl: row.originalUrl || "",
+        },
+      });
+    }
+
     const post = await MegaPost.findById(row._id);
     if (!post) {
       return res.status(404).json({ success: false, message: "MegaPost not found" });
@@ -314,51 +372,53 @@ export const scrapePost = async (req, res, next) => {
       });
     }
 
-    const previousHtml = String(post.newHtml || row.postDetail?.newHtml || "").trim();
-    const prepared = buildReadyPostHtml({
+    const compactInput = buildCompactAiInput({
       title: post.title,
-      sourceUrl: post.originalUrl || "",
+      sourceUrl: post.originalUrl,
       contentHtml: post.contentHtml || "",
+      fallbackText: post.contentText || "",
     });
-    const localHtml = String(prepared.newHtml || "").trim();
-    if (!localHtml) {
-      return res.status(422).json({
-        success: false,
-        message: "Unable to build ready HTML from post content",
-      });
-    }
-    const aiRefine = await refinePreparedHtmlWithGemini({
-      html: localHtml,
+
+    const { data, modelName } = await extractRecruitmentJsonFromContentHtml({
+      contentHtml: compactInput,
+      sourceUrl: post.originalUrl || "",
+      // optional: postTitle: post.title
+    });
+
+    const normalizedData = ensureRecruitmentPayload(data, {
       title: post.title,
       sourceUrl: post.originalUrl || "",
     });
-    const newHtml = String(aiRefine.html || localHtml).trim();
 
-    const newHashes = buildContentHashes({ contentHtml: newHtml });
-    const hasPrevious = Boolean(previousHtml);
-    const oldHashes = previousHtml
-      ? buildContentHashes({ contentHtml: previousHtml })
-      : { htmlStableHash: "", textHash: "" };
-    const htmlChanged = !hasPrevious || oldHashes.htmlStableHash !== newHashes.htmlStableHash;
-    const textChanged = !hasPrevious || oldHashes.textHash !== newHashes.textHash;
+    // Build snapshot for hash (from existing content)
+    const snapshot = buildPostSnapshotFromRaw({
+      title: post.title,
+      metaDesc: post.metaDesc || "",
+      sourceUrl: post.originalUrl || "",
+      siteHost: post.siteHost || "",
+      contentText: post.contentText || "",
+      contentHtml: post.contentHtml || "",
+      applyLinks: post.applyLinks || [],
+      importantLinks: post.importantLinks || [],
+      dates: post.dates || {},
+    });
 
-    const diff = diffPreparedHtml(previousHtml, newHtml, { limit: 20 });
-    const changeEntries = buildPreparedHtmlChanges(diff, 10);
-    const now = new Date();
+    const hashInfo = buildPageHashFromSnapshot(snapshot);
+    const contentHashes = buildContentHashes({ contentHtml: post.contentHtml || "" });
 
-    post.newHtml = newHtml;
-    post.pageHash = newHashes.htmlStableHash;
-    post.lastPostFingerprintHash = newHashes.htmlStableHash;
-    post.lastPostUpdateCheckAt = now;
+    // Save
+    post.aiData = normalizedData;
     post.updateSnapshot = {
-      ...(post.updateSnapshot && typeof post.updateSnapshot === "object" ? post.updateSnapshot : {}),
-      title: String(post.title || ""),
-      sourceUrl: String(post.originalUrl || ""),
+      ...snapshot,
       _hash: {
-        htmlStableHash: newHashes.htmlStableHash,
-        textHash: newHashes.textHash,
+        htmlStableHash: contentHashes.htmlStableHash,
+        textHash: contentHashes.textHash,
       },
     };
+    post.pageHash = hashInfo.pageHash;
+    post.aiScraped = true;
+    post.aiModel = String(modelName || "").trim();
+    post.aiScrapedAt = new Date();
 
     await post.save();
 
@@ -369,18 +429,14 @@ export const scrapePost = async (req, res, next) => {
           megaPostId: post._id,
           postTitle: post.title || "",
           sourceUrl: post.originalUrl || "",
-          pageHash: newHashes.htmlStableHash,
-          htmlStableHash: newHashes.htmlStableHash,
-          textHash: newHashes.textHash,
-          modelUsed: aiRefine?.meta?.usedGemini
-            ? "html-transform-v1+gemini-refine"
-            : "html-transform-v1",
-          lastScrapedAt: now,
-          newHtml,
-          htmlDiff: diff,
-          linkTransformReport: prepared.report,
-          geminiRefineMeta: aiRefine?.meta || null,
+          pageHash: hashInfo.pageHash,
+          htmlStableHash: contentHashes.htmlStableHash,
+          textHash: contentHashes.textHash,
+          modelUsed: post.aiModel,
+          lastScrapedAt: new Date(),
+          formattedData: normalizedData,
           updateSnapshot: post.updateSnapshot,
+          recruitment: normalizedData?.recruitment || normalizedData,
         },
       },
       {
@@ -390,54 +446,26 @@ export const scrapePost = async (req, res, next) => {
       },
     );
 
-    let notify = { sent: false, reason: "not-updated" };
-    if (hasPrevious && (htmlChanged || textChanged) && changeEntries.length) {
-      try {
-        notify = await sendPostUpdateNotification({
-          postId: String(post._id),
-          title: String(post.title || ""),
-          oldUrl: String(post.originalUrl || ""),
-          newUrl: String(post.originalUrl || ""),
-          pageHashOld: oldHashes.htmlStableHash,
-          pageHashNew: newHashes.htmlStableHash,
-          score: 1,
-          changes: changeEntries,
-        });
-      } catch (err) {
-        notify = { sent: false, reason: err.message || "notify-failed" };
-      }
-    }
-
     return res.json({
       success: true,
-      message: "Ready-to-use branded HTML generated and saved",
-      changed: {
-        htmlChanged,
-        textChanged,
-        addedValues: diff.addedCount,
-        removedValues: diff.removedCount,
-      },
-      hashes: {
-        pageHash: newHashes.htmlStableHash,
-        htmlStableHash: newHashes.htmlStableHash,
-        textHash: newHashes.textHash,
-      },
-      report: prepared.report,
-      aiRefine: aiRefine?.meta || { enabled: false, usedGemini: false },
-      notify,
+      cached: false,
+      message: "Recruitment data extracted with Gemini and saved to db.megaposts",
+      data: normalizedData,
       meta: {
         postId: String(post._id),
         postDetailId: String(postDetail?._id || ""),
-        canonicalKey: String(post.canonicalKey || ""),
-        megaSlug: String(post.megaSlug || ""),
-        sourceUrl: String(post.originalUrl || ""),
+        model: post.aiModel,
+        pageHash: hashInfo.pageHash,
+        comparableFields: hashInfo.comparableCount,
+        htmlStableHash: contentHashes.htmlStableHash,
+        textHash: contentHashes.textHash,
       },
-      newHtml,
     });
   } catch (err) {
     next(err);
   }
 };
+
 
 export const postUpdate = async (req, res, next) => {
   try {
@@ -448,19 +476,11 @@ export const postUpdate = async (req, res, next) => {
 
     const matchThreshold = Number(req.body?.matchThreshold);
     const maxCandidates = Number(req.body?.maxCandidates);
-    const perPostDelayMsRaw = req.body?.perPostDelayMs ?? req.body?.postDelayMs ?? req.query?.perPostDelayMs ?? req.query?.postDelayMs;
-    const perPostDelayMs =
-      perPostDelayMsRaw === undefined ? undefined : Math.max(0, Number(perPostDelayMsRaw) || 0);
-    const allWithPostDetail =
-      req.body?.allWithPostDetail === true ||
-      String(req.query?.allWithPostDetail || "").trim().toLowerCase() === "true";
 
     const options = {
       force,
       ...(Number.isFinite(matchThreshold) ? { matchThreshold } : {}),
       ...(Number.isFinite(maxCandidates) ? { maxCandidates } : {}),
-      ...(perPostDelayMs !== undefined ? { perPostDelayMs } : {}),
-      ...(allWithPostDetail ? { allWithPostDetail: true } : {}),
       ...(req.body?.sourceSectionUrl
         ? { sourceSectionUrl: String(req.body.sourceSectionUrl).trim() }
         : {}),

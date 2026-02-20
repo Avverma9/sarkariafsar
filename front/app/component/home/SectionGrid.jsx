@@ -12,7 +12,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { normalizeSectionsData } from "@/app/lib/sections";
 
 const STYLE_VARIANTS = [
@@ -128,15 +128,31 @@ function reorderCards(list, sourceId, targetId) {
   return next;
 }
 
-function parseSavedOrder() {
-  if (typeof window === "undefined") return [];
+function parseSavedOrderRaw(raw) {
   try {
-    const raw = window.localStorage.getItem(ORDER_STORAGE_KEY);
     const parsed = JSON.parse(raw || "[]");
     return Array.isArray(parsed) ? parsed.map((item) => String(item)) : [];
   } catch {
     return [];
   }
+}
+
+function subscribeSavedOrder(callback) {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (event) => {
+    if (event.key === ORDER_STORAGE_KEY) callback();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
+}
+
+function getSavedOrderSnapshot() {
+  if (typeof window === "undefined") return "[]";
+  return window.localStorage.getItem(ORDER_STORAGE_KEY) || "[]";
+}
+
+function getSavedOrderServerSnapshot() {
+  return "[]";
 }
 
 function applySavedOrder(cards, savedOrder) {
@@ -269,11 +285,19 @@ export default function SectionGrid({ initialSections = [], initialPostsByMegaTi
     () => mapSectionsToCards(normalizedSections, initialPostsByMegaTitle),
     [normalizedSections, initialPostsByMegaTitle],
   );
-  const [cards, setCards] = useState(() => applySavedOrder(initialCards, parseSavedOrder()));
+  const savedOrder = useSyncExternalStore(
+    subscribeSavedOrder,
+    getSavedOrderSnapshot,
+    getSavedOrderServerSnapshot,
+  );
+  const parsedSavedOrder = useMemo(() => parseSavedOrderRaw(savedOrder), [savedOrder]);
+  const [manualOrderIds, setManualOrderIds] = useState([]);
   const [activeSectionId, setActiveSectionId] = useState("");
   const [draggingId, setDraggingId] = useState("");
   const touchHoldTimerRef = useRef(null);
   const lastTouchTargetIdRef = useRef("");
+  const orderIds = manualOrderIds.length > 0 ? manualOrderIds : parsedSavedOrder;
+  const cards = useMemo(() => applySavedOrder(initialCards, orderIds), [initialCards, orderIds]);
 
   const clearTouchHold = () => {
     if (touchHoldTimerRef.current) {
@@ -283,7 +307,16 @@ export default function SectionGrid({ initialSections = [], initialPostsByMegaTi
   };
 
   const updateOrder = (sourceId, targetId) => {
-    setCards((prev) => reorderCards(prev, sourceId, targetId));
+    setManualOrderIds((prevOrder) => {
+      const baseOrder = prevOrder.length > 0 ? prevOrder : savedOrder;
+      const baseCards = applySavedOrder(initialCards, baseOrder);
+      const nextCards = reorderCards(baseCards, sourceId, targetId);
+      const nextOrder = nextCards.map((card) => card.id);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(nextOrder));
+      }
+      return nextOrder;
+    });
   };
 
   const handleDragStart = (event, sourceId) => {
@@ -345,12 +378,6 @@ export default function SectionGrid({ initialSections = [], initialPostsByMegaTi
       clearTouchHold();
     };
   }, []);
-
-  useEffect(() => {
-    if (cards.length === 0 || typeof window === "undefined") return;
-    const ids = cards.map((card) => card.id);
-    window.localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(ids));
-  }, [cards]);
 
   const activeSection = cards.find((card) => card.id === activeSectionId) || null;
 
