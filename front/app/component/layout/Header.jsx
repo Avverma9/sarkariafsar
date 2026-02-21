@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { buildPublicApiUrl, fetchJsonWithFallback } from "@/app/lib/clientApi";
 
 const FALLBACK_UPDATES = [
   "RRB Group D 2026 Notification Out",
@@ -84,14 +85,18 @@ export default function Header({ initialTickerUpdates = [] }) {
           page: "1",
           limit: "8",
         });
-        const response = await fetch(`/api/find-by-title?${params.toString()}`, {
-          method: "GET",
-          headers: { Accept: "application/json" },
-          cache: "no-store",
-          signal: controller.signal,
+        const localEndpoint = `/api/find-by-title?${params.toString()}`;
+        const fallbackEndpoint = buildPublicApiUrl(`/site/find-by-title?${params.toString()}`);
+        const { response, payload } = await fetchJsonWithFallback({
+          localUrl: localEndpoint,
+          fallbackUrl: fallbackEndpoint,
+          init: {
+            method: "GET",
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+            signal: controller.signal,
+          },
         });
-
-        const payload = await response.json().catch(() => null);
         if (isCancelled) return;
 
         if (!response.ok) {
