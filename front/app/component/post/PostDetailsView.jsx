@@ -24,6 +24,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { buildSectionHref, resolveSectionRoute } from "../../lib/sectionRouting";
 import PostDetailsSkeleton from "./PostDetailsSkeleton";
+import { buildPublicApiUrl, fetchJsonWithFallback } from "@/app/lib/clientApi";
 
 const SECTION_CARD_CLASS =
   "mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm";
@@ -902,26 +903,31 @@ export default function PostDetailsView({
     setWatchFeedback({ type: "", text: "" });
 
     try {
-      const response = await fetch("/api/watch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          ...(postWatchId ? { postId: postWatchId } : {}),
-          ...(postDetailWatchId ? { postDetailId: postDetailWatchId } : {}),
-          ...(megaPostWatchId ? { megaPostId: megaPostWatchId } : {}),
-          ...(canonicalWatchKey ? { canonicalKey: canonicalWatchKey } : {}),
-          ...(megaSlugForWatch ? { megaSlug: megaSlugForWatch } : {}),
-          enabled: true,
-          priority: 10,
-          channels: {
-            email: true,
-            whatsapp: false,
-          },
-        }),
+      const body = JSON.stringify({
+        email,
+        ...(postWatchId ? { postId: postWatchId } : {}),
+        ...(postDetailWatchId ? { postDetailId: postDetailWatchId } : {}),
+        ...(megaPostWatchId ? { megaPostId: megaPostWatchId } : {}),
+        ...(canonicalWatchKey ? { canonicalKey: canonicalWatchKey } : {}),
+        ...(megaSlugForWatch ? { megaSlug: megaSlugForWatch } : {}),
+        enabled: true,
+        priority: 10,
+        channels: {
+          email: true,
+          whatsapp: false,
+        },
+      });
+      const { response, payload } = await fetchJsonWithFallback({
+        localUrl: "/api/watch",
+        fallbackUrl: buildPublicApiUrl("/watch"),
+        init: {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          cache: "no-store",
+        },
       });
 
-      const payload = await response.json().catch(() => null);
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.message || "Unable to enable notification for this post.");
       }
