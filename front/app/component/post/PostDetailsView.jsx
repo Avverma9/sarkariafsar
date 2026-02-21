@@ -502,10 +502,14 @@ function ErrorState({ message }) {
   return <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{message || "Unable to load post details."}</div>;
 }
 
-export default function PostDetailsView({ canonicalKey = "" }) {
+export default function PostDetailsView({
+  canonicalKey = "",
+  initialDetails = null,
+  initialErrorMessage = "",
+}) {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [details, setDetails] = useState(null);
+  const [errorMessage, setErrorMessage] = useState(initialErrorMessage || "");
+  const [details, setDetails] = useState(initialDetails || null);
   const [watchModalOpen, setWatchModalOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
   const [watchEmail, setWatchEmail] = useState("");
@@ -524,20 +528,47 @@ export default function PostDetailsView({ canonicalKey = "" }) {
     const fetchDetails = async () => {
       setIsLoading(true);
       setErrorMessage("");
-      setDetails(null);
       debugPostDetails("Fetching details for canonicalKey:", canonicalKey);
       try {
-        const response = await fetch("/api/post-details-by-canonicalkey", {
+        const localEndpoint = "/api/post-details-by-canonicalkey";
+        const publicBaseUrl = String(process.env.NEXT_PUBLIC_BASE_URL || "")
+          .trim()
+          .replace(/\/+$/, "");
+        const upstreamFallbackEndpoint = publicBaseUrl ? `${publicBaseUrl}/post/scrape` : "";
+
+        let response = await fetch(localEndpoint, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ canonicalKey }),
           signal: controller.signal,
           cache: "no-store",
         });
-        debugPostDetails("Fetch status:", response.status, response.statusText);
+        let payload = await response.json().catch(() => null);
 
-        const payload = await response.json().catch(() => null);
+        const shouldTryUpstreamFallback =
+          Boolean(upstreamFallbackEndpoint) &&
+          (
+            response.status === 404 ||
+            !response.ok ||
+            !payload ||
+            payload?.success === false
+          );
+
+        // Some deployments proxy /api/* to backend service, so this app route may not resolve in production.
+        if (shouldTryUpstreamFallback) {
+          debugPostDetails("Local route returned 404, retrying upstream:", upstreamFallbackEndpoint);
+          response = await fetch(upstreamFallbackEndpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ canonicalKey }),
+            signal: controller.signal,
+            cache: "no-store",
+          });
+          payload = await response.json().catch(() => null);
+        }
+
         debugPostDetails("Raw payload:", payload);
+        debugPostDetails("Fetch status:", response.status, response.statusText);
 
         if (!response.ok || !payload || payload?.success === false) {
           const upstreamStatus = payload?.upstream?.status;
@@ -919,7 +950,7 @@ export default function PostDetailsView({ canonicalKey = "" }) {
   };
 
   if (!canonicalKey) return <EmptyCanonicalKey />;
-  if (isLoading) return <PostDetailsSkeleton />;
+  if (isLoading && !details) return <PostDetailsSkeleton />;
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800">
@@ -938,9 +969,9 @@ export default function PostDetailsView({ canonicalKey = "" }) {
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-        {errorMessage && <ErrorState message={errorMessage} />}
+        {errorMessage && !details && <ErrorState message={errorMessage} />}
 
-        {!errorMessage && details && (
+        {details && (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <div className={`${SECTION_CARD_CLASS} border-t-4 border-indigo-600 p-6`}>
