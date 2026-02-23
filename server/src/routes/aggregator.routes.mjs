@@ -11,6 +11,7 @@ import {
   markJobFavorite,
   postListBysectionUrl,
   runMegaSyncNow,
+  seedPreviousYearPapersFromMarkdown,
   updateStatus,
 } from "../controllers/aggregator.controller.mjs";
 
@@ -21,6 +22,7 @@ router.get("/sites", getSites);
 router.put("/site/:id/status", updateStatus);
 // POST /api/site/sync-now
 router.post("/sync-now", runMegaSyncNow);
+router.post("/seed-previous-year-papers", seedPreviousYearPapersFromMarkdown);
 
 // GET /api/aggregator/mega-sections
 router.get("/mega-sections", getMegaSections);

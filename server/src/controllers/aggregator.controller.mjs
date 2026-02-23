@@ -1,4 +1,7 @@
 import { AggregatorSite } from "../models/aggregator.model.mjs";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { createHash } from "node:crypto";
 
 export const addSite = async (req, res, next) => {
   try {
@@ -54,6 +57,147 @@ import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
 import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
 import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
+import { buildDedupeKeys } from "../utils/dedupe.mjs";
+
+const PREVIOUS_YEAR_PAPER_SLUG = "previous-year-paper";
+const PREVIOUS_YEAR_PAPER_TITLE = "Previous Year Paper";
+const PAPER_MARKDOWN_FILE_PATH = path.resolve(process.cwd(), "paper.md");
+
+const cleanText = (value) =>
+  String(value || "")
+    .replace(/\u00A0/g, " ")
+    .replace(/â€“|â€”|–|—/g, "-")
+    .replace(/â€™|’/g, "'")
+    .replace(/â€œ|â€|“|”/g, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+
+const getHeadingYear = (value) => {
+  const match = cleanText(value).match(/\b(20\d{2})\b/);
+  return match?.[1] || "";
+};
+
+const stripHeadingMeta = (heading) =>
+  cleanText(heading)
+    .replace(/\(\d+\s*pdfs?\)/gi, "")
+    .replace(/\s*-\s*$/, "")
+    .trim();
+
+const withPrefix = (prefix, title) => {
+  const cleanedPrefix = cleanText(prefix);
+  const cleanedTitle = cleanText(title);
+  if (!cleanedPrefix) return cleanedTitle;
+  if (!cleanedTitle) return cleanedPrefix;
+  if (cleanedTitle.toLowerCase().startsWith(cleanedPrefix.toLowerCase())) {
+    return cleanedTitle;
+  }
+  return `${cleanedPrefix} - ${cleanedTitle}`;
+};
+
+const slugify = (value) =>
+  cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const buildManualPaperCanonicalKey = ({ paperName, url }) => {
+  const slug = slugify(paperName) || "paper";
+  const urlHash = createHash("sha1")
+    .update(cleanText(url))
+    .digest("hex")
+    .slice(0, 10);
+  return `${slug}-${urlHash}`;
+};
+
+const normalizeUpscPrelimsName = (title) =>
+  cleanText(title)
+    .replace(/\bupsc\s*cse\b/gi, "Civil Services")
+    .replace(/\s*-\s*/g, " - ");
+
+const buildReadablePaperTitle = ({ rawTitle, heading }) => {
+  const title = cleanText(rawTitle);
+  const normalizedHeading = stripHeadingMeta(heading);
+  const titleLower = title.toLowerCase();
+  const headingLower = normalizedHeading.toLowerCase();
+
+  if (!title) return "";
+  if (titleLower.includes("civil services")) return title;
+  if (/\bupsc\s*cse\b/i.test(titleLower)) return normalizeUpscPrelimsName(title);
+
+  if (headingLower.includes("optional subjects") && headingLower.includes("mains")) {
+    const year = getHeadingYear(normalizedHeading) || getHeadingYear(title);
+    const prefix = year
+      ? `Civil Services (Mains) ${year} Optional Subject`
+      : "Civil Services (Mains) Optional Subject";
+    return withPrefix(prefix, title);
+  }
+
+  if (headingLower.includes("civil services")) {
+    return withPrefix(normalizedHeading, title);
+  }
+
+  if (headingLower.includes("bssc")) {
+    return withPrefix("BSSC", title);
+  }
+
+  if (headingLower.includes("bpsc")) {
+    return withPrefix("BPSC", title);
+  }
+
+  if (headingLower.includes("indian railways")) {
+    return withPrefix("Indian Railways", title);
+  }
+
+  if (normalizedHeading) {
+    return withPrefix(normalizedHeading, title);
+  }
+
+  return title;
+};
+
+const extractPaperLinesFromMarkdown = (markdown) => {
+  const lines = String(markdown || "")
+    .split(/\r?\n/)
+    .map((line) => cleanText(line))
+    .filter(Boolean);
+
+  const papers = [];
+  const urlSeen = new Set();
+  let currentHeading = "";
+
+  for (const line of lines) {
+    const linkMatch = line.match(/^(.+?):\s*(https?:\/\/\S+)$/i);
+    if (!linkMatch) {
+      currentHeading = line;
+      continue;
+    }
+
+    const rawPaperName = cleanText(linkMatch[1]);
+    const rawUrl = cleanText(linkMatch[2]);
+    if (!rawPaperName || !rawUrl) continue;
+
+    let normalizedUrl = "";
+    try {
+      normalizedUrl = new URL(rawUrl).toString();
+    } catch {
+      continue;
+    }
+
+    if (urlSeen.has(normalizedUrl)) continue;
+    urlSeen.add(normalizedUrl);
+
+    papers.push({
+      paperName: buildReadablePaperTitle({
+        rawTitle: rawPaperName,
+        heading: currentHeading,
+      }),
+      url: normalizedUrl,
+    });
+  }
+
+  return papers.filter((paper) => paper.paperName && paper.url);
+};
 
 export const runMegaSyncNow = async (req, res, next) => {
   try {
@@ -83,6 +227,122 @@ export const runMegaSyncNow = async (req, res, next) => {
       message: "Sync-now started in background worker",
       postDelayMs,
       workerThreadId: result.workerThreadId,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const seedPreviousYearPapersFromMarkdown = async (req, res, next) => {
+  try {
+    const slug = cleanText(req.body?.slug || PREVIOUS_YEAR_PAPER_SLUG);
+    const title = cleanText(req.body?.title || PREVIOUS_YEAR_PAPER_TITLE);
+    const markdownPath = cleanText(req.body?.filePath || PAPER_MARKDOWN_FILE_PATH);
+    const pruneMissing = req.body?.pruneMissing === true;
+
+    if (!slug || !title) {
+      return res.status(400).json({
+        success: false,
+        message: "slug and title are required",
+      });
+    }
+
+    const markdownRaw = await readFile(markdownPath, "utf8");
+    const papers = extractPaperLinesFromMarkdown(markdownRaw);
+    if (!papers.length) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid paper links found in markdown file",
+      });
+    }
+
+    await MegaSection.updateOne(
+      { slug },
+      {
+        $set: {
+          title,
+          isManual: true,
+          sources: [],
+        },
+      },
+      { upsert: true },
+    );
+
+    let inserted = 0;
+    let updated = 0;
+    let unchanged = 0;
+    const seedUrlKeys = [];
+
+    for (const paper of papers) {
+      const { altKeys } = buildDedupeKeys(paper.paperName, paper.url);
+      const urlKey = altKeys.urlKey || cleanText(paper.url);
+      const canonicalKey = buildManualPaperCanonicalKey({
+        paperName: paper.paperName,
+        url: paper.url,
+      });
+
+      if (!urlKey || !canonicalKey) continue;
+      seedUrlKeys.push(urlKey);
+
+      const result = await MegaPost.updateOne(
+        { megaSlug: slug, altUrlKey: urlKey },
+        {
+          $set: {
+            megaSlug: slug,
+            megaTitle: title,
+            title: paper.paperName,
+            paperName: paper.paperName,
+            canonicalKey,
+            originalUrl: paper.url,
+            url: paper.url,
+            altIdKey: altKeys.idKey || "",
+            altTokenKey: altKeys.tokenKey || "",
+            altUrlKey: urlKey,
+            sourceSiteName: "manual-paper-seed",
+            sourceSectionUrl: markdownPath,
+          },
+          $setOnInsert: {
+            aiScraped: false,
+          },
+        },
+        { upsert: true },
+      );
+
+      if (result.upsertedCount > 0) {
+        inserted++;
+      } else if (result.modifiedCount > 0) {
+        updated++;
+      } else {
+        unchanged++;
+      }
+    }
+
+    let deleted = 0;
+    if (pruneMissing) {
+      const deleteResult = await MegaPost.deleteMany({
+        megaSlug: slug,
+        altUrlKey: { $nin: seedUrlKeys },
+      });
+      deleted = deleteResult.deletedCount || 0;
+    }
+
+    void clearFrontApiCacheBestEffort({ reason: "previous-year-paper-seed" });
+
+    return res.status(200).json({
+      success: true,
+      message: "Previous Year Paper mega section seeded successfully",
+      data: {
+        slug,
+        title,
+        filePath: markdownPath,
+        totalParsed: papers.length,
+        inserted,
+        updated,
+        unchanged,
+        deleted,
+        pruneMissing,
+        papers,
+      },
     });
   } catch (err) {
     next(err);

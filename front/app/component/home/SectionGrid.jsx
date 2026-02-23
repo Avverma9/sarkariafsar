@@ -110,6 +110,44 @@ function normalizeTitle(value) {
     .trim();
 }
 
+function normalizeSectionLabel(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isPreviousYearPaperSection(value) {
+  const normalized = normalizeSectionLabel(value);
+  return normalized.includes("previous year") && normalized.includes("paper");
+}
+
+function getPostDisplayTitle(post) {
+  const postName = String(post?.postName || "").trim();
+  if (postName) return postName;
+  const title = String(post?.title || "").trim();
+  if (title) return title;
+  return "Untitled Post";
+}
+
+function toSafeHttpUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function resolvePreviousPaperUrl(post, sectionTitle) {
+  if (!isPreviousYearPaperSection(sectionTitle)) return "";
+  return toSafeHttpUrl(post?.url || post?.sourceUrl);
+}
+
 function isHiddenPostTitle(title) {
   return HIDDEN_POST_TITLES.has(normalizeTitle(title));
 }
@@ -170,7 +208,16 @@ function mapSectionsToCards(sections, postsByMegaTitle) {
     const megaTitle = String(section?.megaTitle || section?.title || "").trim();
     const displayTitle = String(section?.title || section?.megaTitle || section?.slug || "Section").trim();
     const rawPosts = Array.isArray(postsByMegaTitle[megaTitle]) ? postsByMegaTitle[megaTitle] : [];
-    const posts = rawPosts.filter((post) => !isHiddenPostTitle(post?.title));
+    const posts = rawPosts
+      .map((post) => {
+        const title = getPostDisplayTitle(post);
+        return {
+          ...post,
+          title,
+          externalUrl: resolvePreviousPaperUrl(post, megaTitle || displayTitle),
+        };
+      })
+      .filter((post) => !isHiddenPostTitle(post.title));
 
     return {
       id: String(section?._id || section?.slug || megaTitle || index),
@@ -236,6 +283,7 @@ function SectionModal({ section, onClose }) {
           )}
           {filteredItems.map((item) => {
             const canonicalKey = String(item.canonicalKey || "").trim();
+            const externalUrl = String(item.externalUrl || "").trim();
             const row = (
               <>
                 <h4 className={`min-w-0 flex-1 text-sm font-medium text-slate-700 ${section.hoverText}`}>
@@ -248,6 +296,20 @@ function SectionModal({ section, onClose }) {
                 )}
               </>
             );
+
+            if (externalUrl) {
+              return (
+                <a
+                  key={`${section.id}-${item.canonicalKey || item.title}`}
+                  href={externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start justify-between gap-3 border-b border-slate-100 p-3 last:border-b-0 hover:bg-slate-50"
+                >
+                  {row}
+                </a>
+              );
+            }
 
             if (!canonicalKey) {
               return (
@@ -447,6 +509,7 @@ export default function SectionGrid({ initialSections = [], initialPostsByMegaTi
                   {card.initialItems.length === 0 && <p className="p-4 text-sm text-slate-500">No posts found.</p>}
                   {card.initialItems.map((item) => {
                     const canonicalKey = String(item.canonicalKey || "").trim();
+                    const externalUrl = String(item.externalUrl || "").trim();
                     const row = (
                       <>
                         <h4 className={`min-w-0 flex-1 text-sm font-medium text-slate-700 ${card.hoverText}`}>
@@ -459,6 +522,20 @@ export default function SectionGrid({ initialSections = [], initialPostsByMegaTi
                         )}
                       </>
                     );
+
+                    if (externalUrl) {
+                      return (
+                        <a
+                          key={`${card.id}-${item.canonicalKey || item.title}`}
+                          href={externalUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-start justify-between gap-3 px-4 py-3 transition hover:bg-slate-50"
+                        >
+                          {row}
+                        </a>
+                      );
+                    }
 
                     if (!canonicalKey) {
                       return (
