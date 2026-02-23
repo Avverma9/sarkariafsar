@@ -6,12 +6,14 @@ const megaPostSchema = new mongoose.Schema(
     megaTitle: { type: String, required: true },
 
     title: { type: String, required: true, index: true },
+    paperName: { type: String, default: "" },
 
     // 🔥 Deduplication key
     canonicalKey: { type: String, required: true, index: true },
 
     // 🔥 ORIGINAL POST URL (AI scraping ke liye)
     originalUrl: { type: String, required: true },
+    url: { type: String, default: "" },
 
     // Secondary dedupe keys
     altIdKey: { type: String, default: "", index: true },

@@ -16,6 +16,44 @@ function formatPostDate(value) {
   }).format(date);
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isPreviousYearPaperSection(value) {
+  const normalized = normalizeText(value);
+  return normalized.includes("previous year") && normalized.includes("paper");
+}
+
+function getPostDisplayTitle(post) {
+  const postName = String(post?.postName || "").trim();
+  if (postName) return postName;
+  const title = String(post?.title || "").trim();
+  if (title) return title;
+  return "Untitled Post";
+}
+
+function toSafeHttpUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  try {
+    const parsed = new URL(raw);
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "";
+    return parsed.toString();
+  } catch {
+    return "";
+  }
+}
+
+function resolvePreviousPaperUrl(post, megaTitle) {
+  if (!isPreviousYearPaperSection(megaTitle)) return "";
+  return toSafeHttpUrl(post?.url || post?.sourceUrl);
+}
+
 function buildSearchParams(baseState, overrides = {}) {
   const next = {
     page: Number(baseState.page || 1),
@@ -172,7 +210,8 @@ export default function PostListBySectionPage({
             <div className="grid grid-cols-1 gap-3">
               {posts.map((post, index) => {
                 const canonicalKey = String(post?.canonicalKey || "").trim();
-                const title = String(post?.title || "Untitled Post").trim();
+                const title = getPostDisplayTitle(post);
+                const previousPaperUrl = resolvePreviousPaperUrl(post, megaTitle);
                 const posted = formatPostDate(post?.postDate || post?.createdAt);
                 const source = String(post?.sourceSiteName || post?.source || "").trim();
                 const aiReady = Boolean(post?.aiScraped || post?.aiData);
@@ -183,7 +222,18 @@ export default function PostListBySectionPage({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <h2 className="line-clamp-2 text-sm font-semibold text-slate-900">
-                          {title}
+                          {previousPaperUrl ? (
+                            <a
+                              href={previousPaperUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                            >
+                              {title}
+                            </a>
+                          ) : (
+                            title
+                          )}
                         </h2>
 
                         <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-500">
@@ -218,6 +268,7 @@ export default function PostListBySectionPage({
                   </div>
                 );
 
+                if (previousPaperUrl) return <div key={key}>{card}</div>;
                 if (!canonicalKey) return <div key={key}>{card}</div>;
                 return (
                   <Link
