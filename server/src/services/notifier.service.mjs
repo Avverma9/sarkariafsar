@@ -8,6 +8,14 @@ import logger from "../utils/logger.mjs";
 
 let transporter = null;
 
+function formatDateYmdLocal(value) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return "";
+  const y = value.getFullYear();
+  const m = String(value.getMonth() + 1).padStart(2, "0");
+  const d = String(value.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function getTransporter() {
   if (transporter) return transporter;
   transporter = nodemailer.createTransport({
@@ -40,10 +48,8 @@ async function sendMail({ to, subject, html, text }) {
 
 function renderEmail({ recruitment, event, sourceUrl }) {
   const title = String(recruitment?.title || "Recruitment Update");
-  const eventType = String(event?.eventType || "");
-  const eventDate = event?.eventDate instanceof Date
-    ? event.eventDate.toISOString().slice(0, 10)
-    : "Not specified";
+  const eventType = String(event?.eventType || "UPDATE");
+  const eventDate = formatDateYmdLocal(event?.eventDate) || "Not specified";
   const link = String(event?.linkUrl || "");
 
   const subject = `[Recruitment Update] ${title} - ${eventType}`;
@@ -71,17 +77,35 @@ function renderEmail({ recruitment, event, sourceUrl }) {
 }
 
 export async function notifyWatchers(recruitmentId, insertedEvents = []) {
-  if (!mongoose.Types.ObjectId.isValid(String(recruitmentId || ""))) {
+  const recruitmentIdRaw = String(recruitmentId || "").trim();
+  if (!mongoose.Types.ObjectId.isValid(recruitmentIdRaw)) {
     throw new Error("Valid recruitmentId is required");
   }
   if (!Array.isArray(insertedEvents) || !insertedEvents.length) {
     return { watchers: 0, events: 0, sent: 0, skipped: 0, failed: 0 };
   }
+  const recruitmentObjectId = new mongoose.Types.ObjectId(recruitmentIdRaw);
 
-  const [watchers, recruitment] = await Promise.all([
-    UserWatch.find({ recruitmentId, enabled: true }).lean(),
-    Recruitment.findById(recruitmentId).lean(),
+  const sourcePostIds = [
+    ...new Set(
+      insertedEvents
+        .map((ev) => String(ev?.sourcePostId || "").trim())
+        .filter((id) => mongoose.Types.ObjectId.isValid(id)),
+    ),
+  ];
+
+  const [watchers, recruitment, sourcePosts] = await Promise.all([
+    UserWatch.find({ recruitmentId: recruitmentObjectId, enabled: true }).lean(),
+    Recruitment.findById(recruitmentObjectId).lean(),
+    sourcePostIds.length
+      ? MegaPost.find({ _id: { $in: sourcePostIds } })
+          .select("_id originalUrl")
+          .lean()
+      : [],
   ]);
+  const sourceUrlByPostId = new Map(
+    sourcePosts.map((row) => [String(row._id), String(row.originalUrl || "").trim()]),
+  );
 
   if (!watchers.length) return { watchers: 0, events: insertedEvents.length, sent: 0, skipped: 0, failed: 0 };
 
@@ -100,17 +124,26 @@ export async function notifyWatchers(recruitmentId, insertedEvents = []) {
       skipped += insertedEvents.length;
       continue;
     }
+
     for (const ev of insertedEvents) {
       const eventKey = `${ev.eventType}:${ev.signatureHash}`;
-      const sourcePost = ev.sourcePostId
-        ? await MegaPost.findById(ev.sourcePostId).select("originalUrl").lean()
-        : null;
-      const sourceUrl = String(sourcePost?.originalUrl || ev?.payload?.sourceUrl || recruitment?.canonicalSourceUrl || "");
+      const eventSourcePostId = String(ev?.sourcePostId || "").trim();
+      const sourceUrl = String(
+        sourceUrlByPostId.get(eventSourcePostId) ||
+          ev?.payload?.sourceUrl ||
+          recruitment?.canonicalSourceUrl ||
+          "",
+      );
+      const notifyLogQuery = {
+        email: to,
+        recruitmentId: recruitmentObjectId,
+        eventKey,
+      };
+      let logCreated = false;
 
       try {
         await NotifyLog.create({
-          email: to,
-          recruitmentId,
+          ...notifyLogQuery,
           eventKey,
           sentAt: new Date(),
           meta: {
@@ -119,6 +152,7 @@ export async function notifyWatchers(recruitmentId, insertedEvents = []) {
             sourceUrl,
           },
         });
+        logCreated = true;
 
         const mail = renderEmail({ recruitment, event: ev, sourceUrl });
         const mailRes = await sendMail({
@@ -127,14 +161,31 @@ export async function notifyWatchers(recruitmentId, insertedEvents = []) {
           text: mail.text,
           html: mail.html,
         });
-        if (mailRes.sent) sent++;
-        else skipped++;
+        if (mailRes.sent) {
+          sent++;
+        } else {
+          skipped++;
+          if (logCreated) {
+            await NotifyLog.deleteOne(notifyLogQuery).catch((cleanupErr) => {
+              logger.warn(
+                `NotifyLog rollback failed. recruitmentId=${recruitmentIdRaw} email=${to} event=${eventKey}: ${cleanupErr.message}`,
+              );
+            });
+          }
+        }
       } catch (err) {
         if (err?.code === 11000) {
           skipped++;
           continue;
         }
         failed++;
+        if (logCreated) {
+          await NotifyLog.deleteOne(notifyLogQuery).catch((cleanupErr) => {
+            logger.warn(
+              `NotifyLog rollback failed. recruitmentId=${recruitmentIdRaw} email=${to} event=${eventKey}: ${cleanupErr.message}`,
+            );
+          });
+        }
         logger.error(`Watcher notification failed. recruitmentId=${recruitmentId} email=${to} event=${eventKey}: ${err.message}`);
       }
     }

@@ -6,7 +6,6 @@ import app from "./src/app.mjs";
 import { connectDB } from "./src/config/db.mjs";
 import logger from "./src/utils/logger.mjs";
 import { startPostUpdateScheduler } from "./src/services/postUpdate.service.mjs";
-import { startMegaSyncScheduler } from "./src/services/scraper.service.mjs";
 
 const PORT = process.env.PORT || 3000;
 const CLUSTER_ENABLED = String(process.env.CLUSTER_ENABLED || "true")
@@ -23,15 +22,18 @@ const startWorker = async () => {
     logger.info("MongoDB connected");
     if (String(process.env.RUN_SCHEDULERS || "true") === "true") {
       startPostUpdateScheduler();
-      startMegaSyncScheduler();
-      logger.info("Schedulers enabled on this worker");
+      logger.info("Post update scheduler enabled on this worker");
     }
 
     app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}, pid=${process.pid}`);
     });
   } catch (error) {
-    logger.error("Failed to start server", error.message);
+    const details =
+      error && typeof error === "object"
+        ? error.stack || error.message
+        : String(error);
+    logger.error(`Failed to start server: ${details || "unknown error"}`);
     process.exit(1);
   }
 };

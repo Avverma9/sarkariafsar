@@ -1,7 +1,5 @@
 import "server-only";
 
-import http from "node:http";
-import https from "node:https";
 import { cache } from "react";
 import { baseUrl } from "./baseUrl";
 import { normalizeSectionsData } from "./sections";
@@ -52,43 +50,6 @@ async function fetchJson(url) {
   } catch {
     return null;
   }
-}
-
-function sendGetWithBody(urlString, body) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const client = url.protocol === "https:" ? https : http;
-    const bodyText = JSON.stringify(body || {});
-
-    const req = client.request(
-      url,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(bodyText),
-        },
-      },
-      (res) => {
-        let raw = "";
-        res.setEncoding("utf8");
-        res.on("data", (chunk) => {
-          raw += chunk;
-        });
-        res.on("end", () => {
-          resolve({
-            statusCode: Number(res.statusCode || 500),
-            bodyText: raw,
-          });
-        });
-      },
-    );
-
-    req.on("error", reject);
-    req.write(bodyText);
-    req.end();
-  });
 }
 
 async function fetchPostListByMegaTitle(megaTitle, page = 1, limit = 100) {
@@ -147,15 +108,13 @@ export const getTickerUpdates = cache(async function getTickerUpdatesCached() {
 
 async function fetchDeadlineItems(body = {}) {
   const normalizedBody = parseDeadlineRequestBody(body);
-  const upstreamUrl = `${baseUrl}/site/deadline-jobs`;
-
-  try {
-    const response = await sendGetWithBody(upstreamUrl, normalizedBody);
-    const payload = JSON.parse(response.bodyText || "null");
-    return getPayloadData(payload);
-  } catch {
-    return [];
-  }
+  const params = new URLSearchParams({
+    days: String(normalizedBody.days),
+    page: String(normalizedBody.page),
+    limit: String(normalizedBody.limit),
+  });
+  const payload = await fetchJson(`${baseUrl}/site/deadline-jobs?${params.toString()}`);
+  return getPayloadData(payload);
 }
 
 async function fetchTrendingItems() {
@@ -164,8 +123,12 @@ async function fetchTrendingItems() {
     limit: "20",
     megaSlug: "latest-gov-jobs",
   });
-  const payload = await fetchJson(`${baseUrl}/site/favorite-jobs?${params.toString()}`);
-  return getPayloadData(payload);
+  const payload = await fetchJson(`${baseUrl}/site/trending-jobs?${params.toString()}`);
+  const rows = getPayloadData(payload);
+  if (rows.length > 0) return rows;
+
+  const fallback = await fetchPostListByMegaTitle("Latest Gov Jobs", 1, 20);
+  return Array.isArray(fallback) ? fallback : [];
 }
 
 async function fetchSectionPostsByMegaTitle(sections, limit = 100) {

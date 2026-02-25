@@ -12,13 +12,11 @@ const postDetailSchema = new mongoose.Schema(
     pageHash: { type: String, default: "", index: true },
     htmlStableHash: { type: String, default: "" },
     textHash: { type: String, default: "" },
-    modelUsed: { type: String, default: "" },
     lastScrapedAt: { type: Date, default: Date.now },
-    formattedData: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   {
     timestamps: true,
-    strict: false,
+    strict: true,
   }
 );
 

@@ -1,5 +1,6 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { buildReadyPostHtml } from "../utils/postHtmlTransform.mjs";
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36";
@@ -174,6 +175,22 @@ export async function scrapePostDetails(postUrl) {
 
   const contentText = clean(root.text());
   const contentHtml = root.html() || "";
+  let newHtml = "";
+
+  if (String(contentHtml || "").trim()) {
+    try {
+      const transformed = buildReadyPostHtml({
+        title,
+        sourceUrl: postUrl,
+        contentHtml,
+      });
+      newHtml = String(
+        transformed?.reactHtml || transformed?.newHtml || "",
+      ).trim();
+    } catch {
+      newHtml = "";
+    }
+  }
 
   const allLinks = extractLinks($, root, postUrl);
   const { applyLinks, importantLinks } = classifyLinks(allLinks);
@@ -197,6 +214,7 @@ export async function scrapePostDetails(postUrl) {
     siteHost: new URL(postUrl).hostname,
     contentText,
     contentHtml,
+    newHtml,
     applyLinks,
     importantLinks,
     tables,

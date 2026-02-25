@@ -8,6 +8,7 @@ import {
   getMegaSections,
   getSites,
   getDeadlineJobs,
+  getTrendingJobs,
   markJobFavorite,
   postListBysectionUrl,
   runMegaSyncNow,
@@ -35,5 +36,6 @@ router.get("/post-list-by-section-url", postListBysectionUrl);
 router.get("/find-by-title", findMegaPostsByTitle);
 router.post("/favorite-job", markJobFavorite);
 router.get("/favorite-jobs", getFavoriteJobs);
+router.get("/trending-jobs", getTrendingJobs);
 router.get("/deadline-jobs", getDeadlineJobs);
 export default router;

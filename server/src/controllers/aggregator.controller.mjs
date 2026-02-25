@@ -2,7 +2,46 @@ import { AggregatorSite } from "../models/aggregator.model.mjs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
+import MegaSection from "../models/megaSection.model.mjs";
+import MegaPost from "../models/megaPost.model.mjs";
+import PostDetail from "../models/postdetail.model.mjs";
+import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
+import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
+import { buildDedupeKeys } from "../utils/dedupe.mjs";
 
+const PREVIOUS_YEAR_PAPER_SLUG = "previous-year-paper";
+const PREVIOUS_YEAR_PAPER_TITLE = "Previous Year Paper";
+const PAPER_MARKDOWN_FILE_PATH = path.resolve(process.cwd(), "paper.md");
+const DEFAULT_TRENDING_MEGA_SLUGS = [
+  "latest-gov-jobs",
+  "admission-form",
+  "admit-cards",
+  "recent-results",
+  "answer-keys",
+];
+const DEFAULT_DEADLINE_MEGA_SLUGS = ["latest-gov-jobs", "admission-form"];
+const HIDDEN_TITLE_REGEXES = [
+  /^answer\s*key$/i,
+  /^admit\s*card$/i,
+  /^latest\s*job$/i,
+  /^sarkari\s*result$/i,
+  /^let[’']?s\s*update$/i,
+  /^skip\s*to\s*content$/i,
+  /sarkariresult\.com\.cm/i,
+  /sarkariexam\.com/i,
+  /rojgarresult\.com/i,
+];
+const DEADLINE_HINT_SOURCE =
+  "(?:last\\s*date|apply\\s*(?:online\\s*)?last\\s*date|application\\s*last\\s*date|closing\\s*date|last\\s*date\\s*to\\s*apply|form\\s*last\\s*date)";
+const MONTH_TOKEN_SOURCE =
+  "(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)";
+const DATE_TOKEN_SOURCE = [
+  "\\b\\d{1,2}[-/.]\\d{1,2}[-/.]\\d{2,4}\\b",
+  `\\b\\d{1,2}\\s*(?:${MONTH_TOKEN_SOURCE})\\s*\\d{4}\\b`,
+  `\\b(?:${MONTH_TOKEN_SOURCE})\\s*\\d{1,2},?\\s*\\d{4}\\b`,
+].join("|");
+const DEADLINE_WINDOW_BEFORE_CHARS = 140;
+const DEADLINE_WINDOW_AFTER_CHARS = 220;
 export const addSite = async (req, res, next) => {
   try {
     const { name, url } = req.body;
@@ -52,16 +91,7 @@ export const updateStatus = async (req, res, next) => {
   }
 };
 
-import MegaSection from "../models/megaSection.model.mjs";
-import MegaPost from "../models/megaPost.model.mjs";
-import PostDetail from "../models/postdetail.model.mjs";
-import { triggerMegaSyncRun } from "../services/scraper.service.mjs";
-import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
-import { buildDedupeKeys } from "../utils/dedupe.mjs";
 
-const PREVIOUS_YEAR_PAPER_SLUG = "previous-year-paper";
-const PREVIOUS_YEAR_PAPER_TITLE = "Previous Year Paper";
-const PAPER_MARKDOWN_FILE_PATH = path.resolve(process.cwd(), "paper.md");
 
 const cleanText = (value) =>
   String(value || "")
@@ -199,6 +229,19 @@ const extractPaperLinesFromMarkdown = (markdown) => {
   return papers.filter((paper) => paper.paperName && paper.url);
 };
 
+function parseSlugList(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function buildHiddenTitleNorFilter(fieldName = "title") {
+  return {
+    $nor: HIDDEN_TITLE_REGEXES.map((rx) => ({ [fieldName]: { $regex: rx } })),
+  };
+}
+
 export const runMegaSyncNow = async (req, res, next) => {
   try {
     const postDelayMsRaw = req.body?.postDelayMs ?? req.query?.postDelayMs;
@@ -206,10 +249,17 @@ export const runMegaSyncNow = async (req, res, next) => {
       postDelayMsRaw === undefined
         ? 0
         : Math.max(0, Number(postDelayMsRaw) || 0);
+    const maxPostsPerSourceRaw =
+      req.body?.maxPostsPerSource ?? req.query?.maxPostsPerSource;
+    const maxPostsPerSource =
+      maxPostsPerSourceRaw === undefined
+        ? undefined
+        : Math.max(0, Number(maxPostsPerSourceRaw) || 0);
 
     const result = await triggerMegaSyncRun({
       reason: "api-sync-now",
       postDelayMs,
+      ...(maxPostsPerSource !== undefined ? { maxPostsPerSource } : {}),
     });
 
     if (!result.accepted) {
@@ -218,6 +268,7 @@ export const runMegaSyncNow = async (req, res, next) => {
         queued: false,
         message: `Sync skipped: ${result.reason}`,
         reason: result.reason,
+        maxPostsPerSource: result.maxPostsPerSource,
       });
     }
 
@@ -226,6 +277,7 @@ export const runMegaSyncNow = async (req, res, next) => {
       queued: true,
       message: "Sync-now started in background worker",
       postDelayMs,
+      maxPostsPerSource: result.maxPostsPerSource,
       workerThreadId: result.workerThreadId,
     });
   } catch (err) {
@@ -389,6 +441,53 @@ export const getMegaPosts = async (req, res, next) => {
   }
 };
 
+export const getAllContentHtml = async (req, res, next) => {
+  try {
+    const megaSlug = String(req.query?.megaSlug || req.body?.megaSlug || "").trim();
+    const sourceSiteName = String(
+      req.query?.sourceSiteName || req.body?.sourceSiteName || "",
+    ).trim();
+    const includeEmpty =
+      String(req.query?.includeEmpty || req.body?.includeEmpty || "")
+        .trim()
+        .toLowerCase() === "true";
+
+    const query = {};
+    if (megaSlug) query.megaSlug = megaSlug;
+    if (sourceSiteName) query.sourceSiteName = sourceSiteName;
+    if (!includeEmpty) {
+      query.contentHtml = { $exists: true, $ne: "" };
+    }
+
+    const rows = await MegaPost.find(query)
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .select("_id canonicalKey megaSlug megaTitle title originalUrl sourceSiteName contentHtml")
+      .lean();
+
+    return res.json({
+      success: true,
+      count: rows.length,
+      filters: {
+        megaSlug,
+        sourceSiteName,
+        includeEmpty,
+      },
+      data: rows.map((row) => ({
+        postId: String(row._id),
+        canonicalKey: String(row.canonicalKey || ""),
+        megaSlug: String(row.megaSlug || ""),
+        megaTitle: String(row.megaTitle || ""),
+        title: String(row.title || ""),
+        sourceUrl: String(row.originalUrl || ""),
+        sourceSiteName: String(row.sourceSiteName || ""),
+        contentHtml: String(row.contentHtml || ""),
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 export const deleteMegaPostsBySourceSiteName = async (req, res, next) => {
   try {
     const sourceSiteName = String(
@@ -450,21 +549,9 @@ export const postListBysectionUrl = async (req, res, next) => {
         .json({ success: false, message: "megaTitle is required" });
     }
 
-    const hiddenTitleRegexes = [
-      /^answer\s*key$/i,
-      /^admit\s*card$/i,
-      /^latest\s*job$/i,
-      /^sarkari\s*result$/i,
-      /^let[’']?s\s*update$/i,
-      /^skip\s*to\s*content$/i,
-      /sarkariresult\.com\.cm/i,
-      /sarkariexam\.com/i,
-      /rojgarresult\.com/i,
-    ];
-
     const match = {
       megaTitle,
-      $nor: hiddenTitleRegexes.map((rx) => ({ title: { $regex: rx } })),
+      ...buildHiddenTitleNorFilter("title"),
     };
     if (sectionUrl) match.sourceSectionUrl = sectionUrl;
 
@@ -558,6 +645,25 @@ function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function monthNameToNumber(value) {
+  const month = String(value || "").trim().toLowerCase().slice(0, 3);
+  const map = {
+    jan: 1,
+    feb: 2,
+    mar: 3,
+    apr: 4,
+    may: 5,
+    jun: 6,
+    jul: 7,
+    aug: 8,
+    sep: 9,
+    oct: 10,
+    nov: 11,
+    dec: 12,
+  };
+  return map[month] || 0;
+}
+
 function inferJobType(megaSlug, title) {
   const slug = String(megaSlug || "").toLowerCase();
   const t = String(title || "").toLowerCase();
@@ -580,7 +686,7 @@ export const findMegaPostsByTitle = async (req, res, next) => {
     const sectionUrl = String(req.query?.sectionUrl || req.body?.sectionUrl || "").trim();
     const exact = String(req.query?.exact || req.body?.exact || "").trim().toLowerCase() === "true";
     const pageNum = Math.max(1, Number(req.query?.page || req.body?.page || 1));
-    const lim = Math.min(200, Math.max(1, Number(req.query?.limit || req.body?.limit || 20)));
+    const lim = Math.min(10000, Math.max(1, Number(req.query?.limit || req.body?.limit || 20)));
     const skip = (pageNum - 1) * lim;
 
     if (!title) {
@@ -708,18 +814,289 @@ function parseFlexibleDate(input) {
     return buildDate(m[3], m[2], m[1]);
   }
 
+  // dd-mm-yy, dd/mm/yy, dd.mm.yy (assume 20yy)
+  m = raw.match(/(?:^|\D)(\d{1,2})[-/.](\d{1,2})[-/.](\d{2})(?:\D|$)/);
+  if (m) {
+    return buildDate(`20${m[3]}`, m[2], m[1]);
+  }
+
+  // dd Month yyyy (e.g., 25 February 2026)
+  m = raw.match(
+    /(?:^|\D)(\d{1,2})\s*(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*(\d{4})(?:\D|$)/i,
+  );
+  if (m) {
+    const month = monthNameToNumber(m[2]);
+    if (month) return buildDate(m[3], month, m[1]);
+  }
+
+  // Month dd, yyyy (e.g., February 25, 2026)
+  m = raw.match(
+    /(?:^|\D)(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|sept(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s*(\d{1,2})(?:st|nd|rd|th)?[,]?\s*(\d{4})(?:\D|$)/i,
+  );
+  if (m) {
+    const month = monthNameToNumber(m[1]);
+    if (month) return buildDate(m[3], month, m[2]);
+  }
+
   const direct = new Date(raw);
   return Number.isNaN(direct.getTime()) ? null : direct;
+}
+
+function extractDateTokensFromText(text) {
+  const normalized = cleanText(text);
+  if (!normalized) return [];
+  const dateRegex = new RegExp(DATE_TOKEN_SOURCE, "gi");
+  return Array.from(normalized.matchAll(dateRegex), (m) => String(m[0] || "").trim()).filter(Boolean);
+}
+
+function findClosestDeadlineDateFromText(text) {
+  const normalized = cleanText(text);
+  if (!normalized) return null;
+
+  const hintRegex = new RegExp(DEADLINE_HINT_SOURCE, "gi");
+  const dateRegex = new RegExp(DATE_TOKEN_SOURCE, "gi");
+  const scored = [];
+
+  for (const hint of normalized.matchAll(hintRegex)) {
+    const hintIndex = Number(hint.index || 0);
+    const start = Math.max(0, hintIndex - DEADLINE_WINDOW_BEFORE_CHARS);
+    const end = Math.min(normalized.length, hintIndex + DEADLINE_WINDOW_AFTER_CHARS);
+    const windowText = normalized.slice(start, end);
+
+    for (const tokenMatch of windowText.matchAll(dateRegex)) {
+      const token = String(tokenMatch[0] || "").trim();
+      if (!token) continue;
+      const parsed = parseFlexibleDate(token);
+      if (!parsed) continue;
+
+      const tokenIndex = start + Number(tokenMatch.index || 0);
+      scored.push({
+        token,
+        date: parsed,
+        distance: Math.abs(tokenIndex - hintIndex),
+      });
+    }
+  }
+
+  if (!scored.length) return null;
+  scored.sort((a, b) => {
+    if (a.distance !== b.distance) return a.distance - b.distance;
+    return b.date.getTime() - a.date.getTime();
+  });
+  return scored[0];
+}
+
+function resolveApplicationLastDateFromRow(row = {}) {
+  const structuredValues = [
+    row.applicationLastDate,
+    row.snapshotApplicationLastDate,
+    row.snapshotDatesLastDate,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  for (const value of structuredValues) {
+    const parsed = parseFlexibleDate(value);
+    if (parsed) {
+      return { raw: value, date: parsed, source: "structured" };
+    }
+  }
+
+  const textSources = [row.contentText, row.title]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .join(" ");
+
+  const closest = findClosestDeadlineDateFromText(textSources);
+  if (closest?.date) {
+    return {
+      raw: closest.token,
+      date: closest.date,
+      source: "content-hint",
+    };
+  }
+
+  const tokens = extractDateTokensFromText(textSources);
+  for (const token of tokens) {
+    const parsed = parseFlexibleDate(token);
+    if (parsed) {
+      return { raw: token, date: parsed, source: "content-any" };
+    }
+  }
+
+  return { raw: "", date: null, source: "" };
 }
 
 function normalizeToday(date = new Date()) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+function formatDateYmdLocal(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 function dayDiff(fromDate, toDate) {
   const ms = 24 * 60 * 60 * 1000;
   return Math.round((toDate.getTime() - fromDate.getTime()) / ms);
 }
+
+export const getTrendingJobs = async (req, res, next) => {
+  try {
+    const megaSlug = String(req.query?.megaSlug || req.body?.megaSlug || "").trim();
+    const megaSlugs = parseSlugList(req.query?.megaSlugs || req.body?.megaSlugs || "");
+    const pageNum = Math.max(1, Number(req.query?.page || req.body?.page || 1));
+    const lim = Math.min(200, Math.max(1, Number(req.query?.limit || req.body?.limit || 20)));
+    const scanLimit = Math.min(
+      2000,
+      Math.max(
+        lim * 8,
+        Number(req.query?.scanLimit || req.body?.scanLimit || 300),
+      ),
+    );
+
+    const requestedSlugs = megaSlugs.length
+      ? megaSlugs
+      : megaSlug
+        ? [megaSlug]
+        : DEFAULT_TRENDING_MEGA_SLUGS;
+
+    const match = {
+      ...buildHiddenTitleNorFilter("title"),
+    };
+    if (requestedSlugs.length) {
+      match.megaSlug = { $in: requestedSlugs };
+    }
+
+    const [rows, totalRows] = await Promise.all([
+      MegaPost.aggregate([
+        { $match: match },
+        { $sort: { updatedAt: -1, createdAt: -1 } },
+        { $limit: scanLimit },
+        {
+          $lookup: {
+            from: "postdetails",
+            let: {
+              megaPostId: "$_id",
+              canonicalKey: "$canonicalKey",
+            },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $or: [
+                      { $eq: ["$megaPostId", "$$megaPostId"] },
+                      { $eq: ["$canonicalKey", "$$canonicalKey"] },
+                    ],
+                  },
+                },
+              },
+              { $sort: { updatedAt: -1, createdAt: -1 } },
+              { $limit: 1 },
+            ],
+            as: "postDetail",
+          },
+        },
+        { $set: { postDetail: { $first: "$postDetail" } } },
+        {
+          $project: {
+            _id: 1,
+            title: 1,
+            canonicalKey: 1,
+            megaSlug: 1,
+            megaTitle: 1,
+            originalUrl: 1,
+            sourceSectionUrl: 1,
+            updatedAt: 1,
+            createdAt: 1,
+            isFavorite: 1,
+            isFavourite: 1,
+            recruitmentTitle: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.title",
+                "$title",
+              ],
+            },
+            applicationLastDate: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.importantDates.applicationLastDate",
+                "$postDetail.formattedData.recruitment.applicationLastDate",
+              ],
+            },
+            organizationShortName: {
+              $ifNull: [
+                "$postDetail.formattedData.recruitment.organization.shortName",
+                "$postDetail.formattedData.recruitment.organization.shortname",
+              ],
+            },
+          },
+        },
+      ]),
+      MegaPost.countDocuments(match),
+    ]);
+
+    const seen = new Set();
+    const normalized = [];
+
+    for (const row of rows) {
+      const canonicalKey = String(row.canonicalKey || "").trim();
+      const uniqKey = canonicalKey || String(row._id || "");
+      if (!uniqKey || seen.has(uniqKey)) continue;
+      seen.add(uniqKey);
+
+      normalized.push({
+        postId: String(row._id),
+        title: String(row.title || "").trim(),
+        canonicalKey,
+        megaSlug: String(row.megaSlug || "").trim(),
+        megaTitle: String(row.megaTitle || "").trim(),
+        sourceUrl: String(row.originalUrl || "").trim(),
+        sectionUrl: String(row.sourceSectionUrl || "").trim(),
+        postDate: row.updatedAt || row.createdAt || null,
+        isFavorite:
+          row.isFavorite === true ||
+          (row.isFavorite !== false && row.isFavourite === true),
+        recruitmentTitle: String(row.recruitmentTitle || "").trim(),
+        applicationLastDate: String(row.applicationLastDate || "").trim(),
+        organizationShortName: String(row.organizationShortName || "").trim(),
+        recruitment: {
+          title: String(row.recruitmentTitle || "").trim(),
+          organization: {
+            shortName: String(row.organizationShortName || "").trim(),
+          },
+        },
+        jobType: inferJobType(row.megaSlug, row.title),
+      });
+    }
+
+    const total = normalized.length;
+    const skip = (pageNum - 1) * lim;
+    const data = normalized.slice(skip, skip + lim);
+
+    return res.json({
+      success: true,
+      query: {
+        megaSlug,
+        megaSlugs: requestedSlugs,
+        page: pageNum,
+        limit: lim,
+        scanLimit,
+      },
+      count: data.length,
+      pagination: {
+        total: Math.min(totalRows, total),
+        page: pageNum,
+        limit: lim,
+        pages: Math.ceil(Math.min(totalRows, total) / lim),
+      },
+      data,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
 export const markJobFavorite = async (req, res, next) => {
   try {
@@ -902,75 +1279,175 @@ export const getFavoriteJobs = async (req, res, next) => {
 
 export const getDeadlineJobs = async (req, res, next) => {
   try {
-    const days = Math.max(0, Number(req.query?.days || req.body?.days || 3));
+    const days = Math.max(0, Number(req.query?.days || req.body?.days || 5));
     const pageNum = Math.max(1, Number(req.query?.page || req.body?.page || 1));
-    const lim = Math.min(500, Math.max(1, Number(req.query?.limit || req.body?.limit || 50)));
+    const lim = Math.min(200, Math.max(1, Number(req.query?.limit || req.body?.limit || 50)));
+    const megaSlug = String(req.query?.megaSlug || req.body?.megaSlug || "").trim();
+    const megaSlugs = parseSlugList(req.query?.megaSlugs || req.body?.megaSlugs || "");
+    const requestedSlugs = megaSlugs.length
+      ? megaSlugs
+      : megaSlug
+        ? [megaSlug]
+        : DEFAULT_DEADLINE_MEGA_SLUGS;
+    const scanLimit = Math.min(
+      3000,
+      Math.max(
+        lim * 12,
+        Number(req.query?.scanLimit || req.body?.scanLimit || 1200),
+      ),
+    );
 
-    const rows = await PostDetail.aggregate([
+    const match = {
+      ...buildHiddenTitleNorFilter("title"),
+    };
+    if (requestedSlugs.length) {
+      match.megaSlug = { $in: requestedSlugs };
+    }
+
+    const rows = await MegaPost.aggregate([
+      { $match: match },
+      { $sort: { updatedAt: -1, createdAt: -1 } },
+      { $limit: scanLimit },
       {
         $lookup: {
-          from: "megaposts",
-          localField: "megaPostId",
-          foreignField: "_id",
-          as: "post",
+          from: "postdetails",
+          let: {
+            megaPostId: "$_id",
+            canonicalKey: "$canonicalKey",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $eq: ["$megaPostId", "$$megaPostId"] },
+                    { $eq: ["$canonicalKey", "$$canonicalKey"] },
+                  ],
+                },
+              },
+            },
+            { $sort: { updatedAt: -1, createdAt: -1 } },
+            { $limit: 1 },
+          ],
+          as: "postDetail",
         },
       },
-      { $set: { post: { $first: "$post" } } },
-      { $match: { "post._id": { $exists: true } } },
+      { $set: { postDetail: { $first: "$postDetail" } } },
       {
         $project: {
-          _id: 0,
-          megaPostId: "$post._id",
-          canonicalKey: "$post.canonicalKey",
-          megaSlug: "$post.megaSlug",
-          megaTitle: "$post.megaTitle",
-          title: "$post.title",
-          sourceUrl: "$post.originalUrl",
+          _id: 1,
+          canonicalKey: 1,
+          megaSlug: 1,
+          megaTitle: 1,
+          title: 1,
+          originalUrl: 1,
+          sourceSectionUrl: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          contentText: 1,
           applicationLastDate: {
             $ifNull: [
-              "$formattedData.recruitment.importantDates.applicationLastDate",
-              "$formattedData.recruitment.applicationLastDate",
+              "$postDetail.formattedData.recruitment.importantDates.applicationLastDate",
+              "$postDetail.formattedData.recruitment.applicationLastDate",
             ],
           },
-        },
-      },
-      {
-        $match: {
-          applicationLastDate: { $type: "string", $ne: "" },
+          snapshotApplicationLastDate: {
+            $ifNull: [
+              "$updateSnapshot.importantDates.applicationLastDate",
+              "$updateSnapshot.applicationLastDate",
+            ],
+          },
+          snapshotDatesLastDate: {
+            $ifNull: [
+              "$updateSnapshot.importantDates.lastDate",
+              "$updateSnapshot.lastDate",
+            ],
+          },
+          recruitmentTitle: {
+            $ifNull: [
+              "$postDetail.formattedData.recruitment.title",
+              "$title",
+            ],
+          },
+          organizationShortName: {
+            $ifNull: [
+              "$postDetail.formattedData.recruitment.organization.shortName",
+              "$postDetail.formattedData.recruitment.organization.shortname",
+            ],
+          },
         },
       },
     ]);
 
     const today = normalizeToday();
     const filtered = [];
+    const seen = new Set();
 
     for (const row of rows) {
-      const applicationLastDate = String(row.applicationLastDate || "").trim();
-      if (!applicationLastDate) continue;
+      const canonicalKey = String(row.canonicalKey || "").trim();
+      const uniqKey = canonicalKey || String(row._id || "").trim();
+      if (!uniqKey || seen.has(uniqKey)) continue;
+      seen.add(uniqKey);
 
-      const deadlineDate = parseFlexibleDate(applicationLastDate);
-      if (!deadlineDate) continue;
+      const resolved = resolveApplicationLastDateFromRow(row);
+      if (!resolved.date) continue;
 
-      const d = normalizeToday(deadlineDate);
+      const d = normalizeToday(resolved.date);
       const left = dayDiff(today, d);
       if (left < 0 || left > days) continue;
 
       filtered.push({
-        ...row,
+        postId: String(row._id || ""),
+        canonicalKey,
+        megaSlug: String(row.megaSlug || "").trim(),
+        megaTitle: String(row.megaTitle || "").trim(),
+        title: String(row.title || "").trim(),
+        sourceUrl: String(row.originalUrl || "").trim(),
+        sectionUrl: String(row.sourceSectionUrl || "").trim(),
+        postDate: row.updatedAt || row.createdAt || null,
+        applicationLastDate: String(resolved.raw || "").trim() || formatDateYmdLocal(d),
         daysLeft: left,
-        deadlineDate: d.toISOString().slice(0, 10),
+        deadlineDate: formatDateYmdLocal(d),
+        deadlineText:
+          left === 0
+            ? "Last Date: Today"
+            : `Last Date in ${left} day${left === 1 ? "" : "s"}`,
+        recruitmentTitle: String(row.recruitmentTitle || row.title || "").trim(),
+        organizationShortName: String(row.organizationShortName || "").trim(),
+        recruitment: {
+          title: String(row.recruitmentTitle || row.title || "").trim(),
+          organization: {
+            shortName: String(row.organizationShortName || "").trim(),
+          },
+        },
+        jobType: inferJobType(row.megaSlug, row.title),
+        _source: resolved.source,
       });
     }
 
-    filtered.sort((a, b) => a.daysLeft - b.daysLeft);
+    filtered.sort((a, b) => {
+      if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+      return new Date(b.postDate || 0).getTime() - new Date(a.postDate || 0).getTime();
+    });
 
     const total = filtered.length;
     const skip = (pageNum - 1) * lim;
-    const data = filtered.slice(skip, skip + lim);
+    const data = filtered.slice(skip, skip + lim).map((row) => {
+      const output = { ...row };
+      delete output._source;
+      return output;
+    });
 
     return res.json({
       success: true,
-      query: { days, page: pageNum, limit: lim },
+      query: {
+        days,
+        page: pageNum,
+        limit: lim,
+        megaSlug,
+        megaSlugs: requestedSlugs,
+        scanLimit,
+      },
       count: data.length,
       pagination: {
         total,

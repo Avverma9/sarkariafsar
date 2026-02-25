@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import cron from "node-cron";
 import MegaPost from "../models/megaPost.model.mjs";
-import PostDetail from "../models/postdetail.model.mjs";
+import UserWatch from "../models/userWatch.model.mjs";
 import { buildDedupeKeys } from "../utils/dedupe.mjs";
 import logger from "../utils/logger.mjs";
 import { comparePageHashSignature } from "../utils/pageHash.mjs";
@@ -15,6 +15,7 @@ import { scrapePostsFromSection } from "./scraper.service.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
 import { sendPostUpdateNotification } from "./email.service.mjs";
 import { acquireJobLock, releaseJobLock } from "./jobLock.service.mjs";
+import { processMegaPostToRecruitment } from "./recruitmentLinker.service.mjs";
 
 const DEFAULT_MATCH_THRESHOLD = Number(process.env.POST_UPDATE_MATCH_THRESHOLD || 0.8);
 const DEFAULT_MAX_CANDIDATES = Number(process.env.POST_UPDATE_MAX_CANDIDATES || 5);
@@ -26,6 +27,22 @@ const DEFAULT_POST_UPDATE_LOCK_TTL_MS = Math.max(
 );
 const POST_UPDATE_LOCK_KEY = "post-update";
 const STALE_WINDOW_MS = 2 * 60 * 60 * 1000;
+const POST_UPDATE_RECRUITMENT_REFRESH_ENABLED = String(
+  process.env.POST_UPDATE_RECRUITMENT_REFRESH_ENABLED || "true",
+)
+  .trim()
+  .toLowerCase() !== "false";
+const HIDDEN_TITLE_REGEXES = [
+  /^answer\s*key$/i,
+  /^admit\s*card$/i,
+  /^latest\s*job$/i,
+  /^sarkari\s*result$/i,
+  /^let[’']?s\s*update$/i,
+  /^skip\s*to\s*content$/i,
+  /sarkariresult\.com\.cm/i,
+  /sarkariexam\.com/i,
+  /rojgarresult\.com/i,
+];
 
 function makeError(message, statusCode = 500) {
   const err = new Error(message);
@@ -201,6 +218,22 @@ async function findBestMatchingCandidate(post, options = {}) {
   };
 }
 
+async function shouldRefreshRecruitment(post, options = {}) {
+  if (options.refreshRecruitment === false) return false;
+  if (!POST_UPDATE_RECRUITMENT_REFRESH_ENABLED) return false;
+  if (options.forceRecruitmentRefresh === true) return true;
+
+  const recruitmentId = String(post?.recruitmentId || "").trim();
+  if (!recruitmentId || !mongoose.Types.ObjectId.isValid(recruitmentId)) return false;
+
+  const watchExists = await UserWatch.exists({
+    recruitmentId: new mongoose.Types.ObjectId(recruitmentId),
+    enabled: true,
+    "channels.email": { $ne: false },
+  });
+  return !!watchExists;
+}
+
 export async function updateSinglePostById(postId, options = {}) {
   if (!postId || !mongoose.Types.ObjectId.isValid(postId)) {
     throw makeError("Valid postId is required", 400);
@@ -208,19 +241,6 @@ export async function updateSinglePostById(postId, options = {}) {
 
   const post = await MegaPost.findById(postId);
   if (!post) throw makeError("MegaPost not found", 404);
-  const postDetail = await PostDetail.findOne({ megaPostId: post._id })
-    .select("_id formattedData")
-    .lean();
-  if (!postDetail) {
-    return {
-      updated: false,
-      matched: false,
-      skipped: true,
-      reason: "PostDetail not found for this MegaPost",
-      postId: String(post._id),
-      email: { sent: false, reason: "skipped-no-postdetail" },
-    };
-  }
 
   const now = new Date();
   const oldUrl = String(post.originalUrl || "");
@@ -244,6 +264,7 @@ export async function updateSinglePostById(postId, options = {}) {
       threshold: matchResult.matchThreshold,
       bestMatchUrl: best.candidate.postUrl,
       email: { sent: false, reason: "not-updated" },
+      tracking: { attempted: false, refreshed: false, reason: "not-updated" },
     };
   }
 
@@ -274,6 +295,7 @@ export async function updateSinglePostById(postId, options = {}) {
     post.title = String(best.raw.title || best.candidate.title || post.title).trim();
     post.contentHtml = String(best.raw.contentHtml || "").trim();
     post.contentText = String(best.raw.contentText || "").trim();
+    post.newHtml = String(best.raw.newHtml || "").trim();
     post.updateSnapshot = {
       ...best.snapshot,
       _hash: {
@@ -334,12 +356,52 @@ export async function updateSinglePostById(postId, options = {}) {
       });
 
       if (emailStatus.sent) {
-        post.lastPostNotifyAt = new Date();
-        await post.save();
+        await MegaPost.updateOne(
+          { _id: post._id },
+          { $set: { lastPostNotifyAt: new Date() } },
+        );
       }
     } catch (err) {
       logger.error(`Update email failed for post=${post._id}: ${err.message}`);
       emailStatus = { sent: false, reason: err.message };
+    }
+  }
+
+  let tracking = { attempted: false, refreshed: false, reason: "not-updated" };
+  if (shouldUpdate) {
+    try {
+      const shouldRefresh = await shouldRefreshRecruitment(post, options);
+      if (!shouldRefresh) {
+        tracking = {
+          attempted: false,
+          refreshed: false,
+          reason: "watch-refresh-not-required",
+        };
+      } else {
+        const refreshResult = await processMegaPostToRecruitment(post._id);
+        tracking = {
+          attempted: true,
+          refreshed: true,
+          reason: "",
+          recruitmentId: refreshResult?.recruitmentId || "",
+          recruitmentKey: refreshResult?.recruitmentKey || "",
+          insertedEvents: Number(refreshResult?.insertedEvents || 0),
+          notify: refreshResult?.notify || {
+            watchers: 0,
+            events: 0,
+            sent: 0,
+            skipped: 0,
+            failed: 0,
+          },
+        };
+      }
+    } catch (err) {
+      logger.error(`Recruitment refresh failed for post=${post._id}: ${err.message}`);
+      tracking = {
+        attempted: true,
+        refreshed: false,
+        reason: err.message,
+      };
     }
   }
 
@@ -356,21 +418,33 @@ export async function updateSinglePostById(postId, options = {}) {
     textChanged,
     fieldChanges: notifyChanges,
     email: emailStatus,
+    tracking,
   };
 }
 
 function buildBatchQuery({ force = false } = {}) {
   const q = {
     sourceSectionUrl: { $exists: true, $ne: "" },
+    $or: [
+      { contentHtml: { $exists: true, $ne: "" } },
+      { contentText: { $exists: true, $ne: "" } },
+    ],
+    $nor: HIDDEN_TITLE_REGEXES.map((rx) => ({ title: { $regex: rx } })),
   };
 
   if (force) return q;
 
   const staleBefore = new Date(Date.now() - STALE_WINDOW_MS);
-  q.$or = [
-    { lastPostUpdateCheckAt: { $exists: false } },
-    { lastPostUpdateCheckAt: { $lt: staleBefore } },
+  q.$and = [
+    { $or: q.$or },
+    {
+      $or: [
+        { lastPostUpdateCheckAt: { $exists: false } },
+        { lastPostUpdateCheckAt: { $lt: staleBefore } },
+      ],
+    },
   ];
+  delete q.$or;
   return q;
 }
 
@@ -381,15 +455,6 @@ export async function runPostUpdateBatch(options = {}) {
 
   const posts = await MegaPost.aggregate([
     { $match: query },
-    {
-      $lookup: {
-        from: "postdetails",
-        localField: "_id",
-        foreignField: "megaPostId",
-        as: "postDetail",
-      },
-    },
-    { $match: { "postDetail.0": { $exists: true } } },
     { $sort: { lastPostUpdateCheckAt: 1, updatedAt: 1 } },
     { $limit: limit },
     { $project: { _id: 1 } },
@@ -400,14 +465,12 @@ export async function runPostUpdateBatch(options = {}) {
   let updatedCount = 0;
   let failedCount = 0;
   let notifiedCount = 0;
-  let skippedCount = 0;
 
   for (const post of posts) {
     try {
       const result = await updateSinglePostById(post._id, options);
       if (result.matched) matchedCount++;
       if (result.updated) updatedCount++;
-      if (result.skipped) skippedCount++;
       if (result.email?.sent) notifiedCount++;
       report.push(result);
     } catch (err) {
@@ -426,7 +489,7 @@ export async function runPostUpdateBatch(options = {}) {
     scanned: posts.length,
     matched: matchedCount,
     updated: updatedCount,
-    skipped: skippedCount,
+    skipped: 0,
     notified: notifiedCount,
     failed: failedCount,
     report,
