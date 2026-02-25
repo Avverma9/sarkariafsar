@@ -582,7 +582,10 @@ export default function PostDetailsView({
         const normalized = normalizePostDetails(payload);
         debugPostDetails("Normalized details:", normalized);
 
-        if (isMounted) setDetails(normalized);
+        if (isMounted) {
+          console.log("[PostDetailsView] postDetails data received:", normalized);
+          setDetails(normalized);
+        }
       } catch (error) {
         if (error.name !== "AbortError") {
           console.error("[PostDetailsView] Fetch failed:", error);
