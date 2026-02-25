@@ -7,7 +7,14 @@ async function run() {
     await connectDB();
     const postDelayMs = Number(workerData?.postDelayMs || 0);
     const reason = String(workerData?.reason || "manual");
-    const result = await syncMegaSectionsAndPosts({ postDelayMs, reason });
+    const maxPostsPerSourceRaw = Number(workerData?.maxPostsPerSource);
+    const result = await syncMegaSectionsAndPosts({
+      postDelayMs,
+      reason,
+      ...(Number.isFinite(maxPostsPerSourceRaw)
+        ? { maxPostsPerSource: Math.max(0, maxPostsPerSourceRaw) }
+        : {}),
+    });
     parentPort?.postMessage({
       ok: true,
       reason,

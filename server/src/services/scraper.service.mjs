@@ -9,8 +9,8 @@ import MegaSection from "../models/megaSection.model.mjs";
 import MegaPost from "../models/megaPost.model.mjs";
 import logger from "../utils/logger.mjs";
 import { buildDedupeKeys } from "../utils/dedupe.mjs";
+import { buildReadyPostHtml } from "../utils/postHtmlTransform.mjs";
 import { scrapePostDetails } from "./postscrape.service.mjs";
-import { compareContentSimilarityWithPerplexity } from "./perplexityDedup.service.mjs";
 import { clearFrontApiCacheBestEffort } from "./frontCache.service.mjs";
 import {
   acquireJobLock,
@@ -35,20 +35,19 @@ const DEFAULT_MEGA_SYNC_POST_DELAY_MS = Math.max(
   0,
   Number(process.env.MEGA_SYNC_POST_DELAY_MS || 60000),
 );
+const DEFAULT_MEGA_SYNC_MAX_POSTS_PER_SOURCE = Math.max(
+  0,
+  Number(process.env.MEGA_SYNC_MAX_POSTS_PER_SOURCE || 120),
+);
 const DEFAULT_MEGA_SYNC_LOCK_TTL_MS = Math.max(
   60 * 1000,
   Number(process.env.MEGA_SYNC_LOCK_TTL_MS || 90 * 60 * 1000),
-);
-const DEFAULT_CONTENT_DUPLICATE_THRESHOLD = Math.max(
-  1,
-  Math.min(100, Number(process.env.MEGA_SYNC_CONTENT_DUP_THRESHOLD || 70)),
 );
 const MEGA_SYNC_LOCK_KEY = "mega-sync";
 const WORKER_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../workers/megaSync.worker.mjs",
 );
-let aiDedupUnavailableLogged = false;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -195,86 +194,6 @@ async function findTitleDuplicateCandidate({ title = "", originalUrl = "" }) {
   };
 }
 
-async function findAiDuplicateCandidate({
-  title = "",
-  contentText = "",
-  originalUrl = "",
-  threshold = DEFAULT_CONTENT_DUPLICATE_THRESHOLD,
-}) {
-  const normalizedContent = String(contentText || "").trim();
-  if (!normalizedContent) return null;
-
-  const tokens = splitSignificantTitleTokens(title);
-  if (!tokens.length) return null;
-
-  const titleTerms = [...new Set(tokens)].slice(0, 4);
-  if (!titleTerms.length) return null;
-
-  const query = {
-    contentText: { $exists: true, $ne: "" },
-    $or: titleTerms.map((term) => ({
-      title: { $regex: new RegExp(`\\b${escapeRegex(term)}`, "i") },
-    })),
-  };
-  const normalizedUrl = String(originalUrl || "").trim();
-  if (normalizedUrl) {
-    query.originalUrl = { $ne: normalizedUrl };
-  }
-
-  const rows = await MegaPost.find(query)
-    .sort({ updatedAt: -1, createdAt: -1 })
-    .limit(12)
-    .select("_id title contentText originalUrl updatedAt")
-    .lean();
-
-  const ranked = rows
-    .map((row) => {
-      const rowTokens = splitSignificantTitleTokens(row.title);
-      return {
-        row,
-        score: tokenOverlapScore(tokens, rowTokens),
-      };
-    })
-    .filter((entry) => entry.score >= 0.34)
-    .sort((a, b) => {
-      if (b.score !== a.score) return b.score - a.score;
-      return new Date(b.row.updatedAt || 0).getTime() - new Date(a.row.updatedAt || 0).getTime();
-    })
-    .slice(0, 2);
-
-  for (const entry of ranked) {
-    try {
-      const compare = await compareContentSimilarityWithPerplexity({
-        titleA: title,
-        contentA: normalizedContent,
-        titleB: entry.row.title,
-        contentB: entry.row.contentText,
-        threshold,
-      });
-      if (!compare.available) {
-        if (!aiDedupUnavailableLogged) {
-          aiDedupUnavailableLogged = true;
-          logger.warn(
-            `AI duplicate check unavailable (${compare.reason || "unknown"}). Skipping AI dedupe.`,
-          );
-        }
-        return null;
-      }
-      if (compare.isDuplicate) {
-        return {
-          post: entry.row,
-          similarity: compare.similarity,
-          matchType: "content-ai",
-        };
-      }
-    } catch (err) {
-      logger.warn(`Perplexity duplicate check failed: ${err.message}`);
-    }
-  }
-
-  return null;
-}
-
 /* ------------------ YOUR EXISTING SECTION SCRAPER ------------------ */
 /* Tumhare scrapeSectionsFromSite(siteUrl) ko as-is rakho. */
 /* yahan import karke use karenge. */
@@ -404,10 +323,28 @@ const SELECTORS_BY_HOST = {
   ],
 };
 
+const NAV_NOISE_TITLE_PATTERNS = [
+  /^skip to content$/i,
+  /^sarkari result$/i,
+  /^sarkari exam$/i,
+  /^rojgar result(?:\.com)?$/i,
+  /^latest job$/i,
+  /^admit card$/i,
+  /^exam result$/i,
+  /^result$/i,
+  /^answer keys?$/i,
+  /^top online form$/i,
+  /^latest form(?:\s+\d{4})?$/i,
+  /^recruitments?$/i,
+  /^home$/i,
+  /^menu$/i,
+];
+
 function isJunkPostTitle(title) {
-  const t = (title || "").toLowerCase();
+  const t = clean(title).toLowerCase();
   if (!t) return true;
   if (t.length < 10) return true;
+  if (NAV_NOISE_TITLE_PATTERNS.some((pattern) => pattern.test(t))) return true;
   if (
     t.includes("privacy") ||
     t.includes("disclaimer") ||
@@ -470,17 +407,23 @@ export async function scrapePostsFromSection(sectionUrl, siteBaseUrl) {
 
 export async function syncMegaSectionsAndPosts(options = {}) {
   const reason = String(options.reason || "manual");
-  const aiDedupEnabled = String(process.env.MEGA_SYNC_AI_DEDUP_ENABLED || "true")
-    .trim()
-    .toLowerCase() !== "false";
-  const shouldRunAiDedup = aiDedupEnabled && reason.includes("sync-now");
   const postDelayMs = Math.max(
     0,
     Number(options.postDelayMs ?? DEFAULT_MEGA_SYNC_POST_DELAY_MS),
   );
+  const maxPostsPerSource = Math.max(
+    0,
+    Number(options.maxPostsPerSource ?? DEFAULT_MEGA_SYNC_MAX_POSTS_PER_SOURCE),
+  );
   const sites = await AggregatorSite.find({ status: "active" }).lean();
   if (!sites.length) {
-    return { megaSaved: 0, postsInserted: 0, postsPatched: 0, report: [] };
+    return {
+      megaSaved: 0,
+      postsInserted: 0,
+      postsPatched: 0,
+      maxPostsPerSource,
+      report: [],
+    };
   }
 
   const results = await Promise.allSettled(
@@ -520,8 +463,12 @@ export async function syncMegaSectionsAndPosts(options = {}) {
   let postsInserted = 0;
   let postsPatched = 0;
   const report = [];
+  const megaSectionsForPosts = [...megaSections].sort((a, b) => {
+    const rank = (slug) => (String(slug || "") === "latest-gov-jobs" ? 1 : 0);
+    return rank(a.slug) - rank(b.slug);
+  });
 
-  for (const m of megaSections) {
+  for (const m of megaSectionsForPosts) {
     if (m.manual) {
       report.push({
         mega: m.title,
@@ -538,11 +485,17 @@ export async function syncMegaSectionsAndPosts(options = {}) {
     for (const src of m.sources) {
       let insertedForThisSource = 0;
       let patchedForThisSource = 0;
+      let fetchedForThisSource = 0;
+      let consideredForThisSource = 0;
 
       try {
         const posts = await scrapePostsFromSection(src.sectionUrl, src.siteUrl);
+        const postsToSync =
+          maxPostsPerSource > 0 ? posts.slice(0, maxPostsPerSource) : posts;
+        fetchedForThisSource = posts.length;
+        consideredForThisSource = postsToSync.length;
 
-        for (const p of posts) {
+        for (const p of postsToSync) {
           const { canonicalKey, altKeys } = buildDedupeKeys(p.title, p.postUrl);
           if (!canonicalKey) continue;
 
@@ -557,31 +510,29 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             megaSlug: m.slug,
             $or: matchOr,
           })
-            .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
+            .select("_id megaSlug canonicalKey originalUrl contentHtml contentText newHtml")
             .lean();
 
           // If post moved across section/slugs, keep same document identity by URL/id fallback.
           if (!existing && altKeys.urlKey) {
             existing = await MegaPost.findOne({ altUrlKey: altKeys.urlKey })
               .sort({ updatedAt: -1 })
-              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
+              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText newHtml")
               .lean();
           }
           if (!existing && altKeys.idKey) {
-            const idFallbackOr = [{ megaTitle: m.title }];
-            if (src.siteId) idFallbackOr.push({ sourceSiteId: src.siteId });
-            existing = await MegaPost.findOne({
-              altIdKey: altKeys.idKey,
-              $or: idFallbackOr,
-            })
+            // Cross-site/cross-section hard dedupe by strong identifier key.
+            existing = await MegaPost.findOne({ altIdKey: altKeys.idKey })
               .sort({ updatedAt: -1 })
-              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText")
+              .select("_id megaSlug canonicalKey originalUrl contentHtml contentText newHtml")
               .lean();
           }
 
           if (existing) {
             const currentUrl = String(existing.originalUrl || "").trim().replace(/\/+$/, "");
             const nextUrl = String(p.postUrl || "").trim().replace(/\/+$/, "");
+            const existingContentHtml = String(existing.contentHtml || "").trim();
+            const existingNewHtml = String(existing.newHtml || "").trim();
             const metadataChanged =
               String(existing.megaSlug || "") !== String(m.slug || "") ||
               String(existing.canonicalKey || "") !== String(canonicalKey || "") ||
@@ -589,15 +540,18 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             const contentMissing =
               !String(existing.contentHtml || "").trim() &&
               !String(existing.contentText || "").trim();
+            const newHtmlMissing = !!existingContentHtml && !existingNewHtml;
 
             let refreshedHtml = "";
             let refreshedText = "";
+            let refreshedNewHtml = "";
             let refreshedContent = false;
             if (metadataChanged || contentMissing) {
               try {
                 const raw = await scrapePostDetails(p.postUrl);
                 refreshedHtml = String(raw?.contentHtml || "").trim();
                 refreshedText = String(raw?.contentText || "").trim();
+                refreshedNewHtml = String(raw?.newHtml || "").trim();
                 refreshedContent = !!(refreshedHtml || refreshedText);
               } catch (err) {
                 logger.warn(
@@ -626,9 +580,23 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             if (refreshedContent) {
               setFields.contentHtml = refreshedHtml;
               setFields.contentText = refreshedText;
+              setFields.newHtml = refreshedNewHtml;
               setFields.aiScraped = false;
               setFields.aiScrapedAt = null;
               setFields.lastEventProcessedAt = null;
+            } else if (newHtmlMissing) {
+              try {
+                const transformed = buildReadyPostHtml({
+                  title: p.title || "",
+                  sourceUrl: p.postUrl || existing.originalUrl || "",
+                  contentHtml: existingContentHtml,
+                });
+                setFields.newHtml = String(
+                  transformed?.reactHtml || transformed?.newHtml || "",
+                ).trim();
+              } catch {
+                setFields.newHtml = "";
+              }
             }
 
             try {
@@ -661,32 +629,31 @@ export async function syncMegaSectionsAndPosts(options = {}) {
 
           let patchedByDuplicate = false;
 
-          if (shouldRunAiDedup) {
-            const titleDuplicateCandidate = await findTitleDuplicateCandidate({
-              title: p.title,
-              originalUrl: p.postUrl,
-            });
+          // Non-AI deterministic dedupe should always run to prevent cross-site duplicates.
+          const titleDuplicateCandidate = await findTitleDuplicateCandidate({
+            title: p.title,
+            originalUrl: p.postUrl,
+          });
 
-            if (titleDuplicateCandidate?.post?._id) {
-              try {
-                await MegaPost.updateOne(
-                  { _id: titleDuplicateCandidate.post._id },
-                  { $set: basePatchFields },
+          if (titleDuplicateCandidate?.post?._id) {
+            try {
+              await MegaPost.updateOne(
+                { _id: titleDuplicateCandidate.post._id },
+                { $set: basePatchFields },
+              );
+              patchedByDuplicate = true;
+              patchedForThisSource++;
+              postsPatched++;
+              logger.info(
+                `Title dedupe patched MegaPost ${titleDuplicateCandidate.post._id} reason=${reason}`,
+              );
+            } catch (err) {
+              if (err?.code === 11000) {
+                logger.warn(
+                  `Title dedupe patch duplicate-key for ${p.postUrl}; falling back to deep check`,
                 );
-                patchedByDuplicate = true;
-                patchedForThisSource++;
-                postsPatched++;
-                logger.info(
-                  `Title dedupe patched MegaPost ${titleDuplicateCandidate.post._id} reason=${reason}`,
-                );
-              } catch (err) {
-                if (err?.code === 11000) {
-                  logger.warn(
-                    `Title dedupe patch duplicate-key for ${p.postUrl}; falling back to deep check`,
-                  );
-                } else {
-                  throw err;
-                }
+              } else {
+                throw err;
               }
             }
           }
@@ -697,10 +664,12 @@ export async function syncMegaSectionsAndPosts(options = {}) {
 
           let contentHtml = "";
           let contentText = "";
+          let newHtml = "";
           try {
             const raw = await scrapePostDetails(p.postUrl);
             contentHtml = String(raw?.contentHtml || "").trim();
             contentText = String(raw?.contentText || "").trim();
+            newHtml = String(raw?.newHtml || "").trim();
             if (postDelayMs > 0) {
               await sleep(postDelayMs);
             }
@@ -710,45 +679,6 @@ export async function syncMegaSectionsAndPosts(options = {}) {
             );
             if (postDelayMs > 0) {
               await sleep(postDelayMs);
-            }
-          }
-
-          if (shouldRunAiDedup && contentText) {
-            const duplicateCandidate = await findAiDuplicateCandidate({
-              title: p.title,
-              contentText,
-              originalUrl: p.postUrl,
-            });
-
-            if (duplicateCandidate?.post?._id) {
-              const patchFields = {
-                ...basePatchFields,
-                contentHtml,
-                contentText,
-                aiScraped: false,
-                aiScrapedAt: null,
-                lastEventProcessedAt: null,
-              };
-              try {
-                await MegaPost.updateOne(
-                  { _id: duplicateCandidate.post._id },
-                  { $set: patchFields },
-                );
-                patchedByDuplicate = true;
-                patchedForThisSource++;
-                postsPatched++;
-                logger.info(
-                  `Content dedupe patched MegaPost ${duplicateCandidate.post._id} similarity=${duplicateCandidate.similarity} reason=${reason}`,
-                );
-              } catch (err) {
-                if (err?.code === 11000) {
-                  logger.warn(
-                    `Content dedupe patch duplicate-key for ${p.postUrl}; falling back to upsert`,
-                  );
-                } else {
-                  throw err;
-                }
-              }
             }
           }
 
@@ -763,6 +693,7 @@ export async function syncMegaSectionsAndPosts(options = {}) {
                 ...basePatchFields,
                 contentHtml,
                 contentText,
+                newHtml,
                 aiScraped: false,
               },
             },
@@ -780,6 +711,9 @@ export async function syncMegaSectionsAndPosts(options = {}) {
           site: src.siteName,
           section: src.sectionTitle,
           sectionUrl: src.sectionUrl,
+          postsFetched: fetchedForThisSource,
+          postsConsidered: consideredForThisSource,
+          maxPostsPerSource,
           inserted: insertedForThisSource,
           patched: patchedForThisSource,
         });
@@ -796,7 +730,7 @@ export async function syncMegaSectionsAndPosts(options = {}) {
     { $set: { lastChecked: new Date() } },
   );
 
-  return { megaSaved, postsInserted, postsPatched, report };
+  return { megaSaved, postsInserted, postsPatched, maxPostsPerSource, report };
 }
 
 let megaSyncSchedulerTask = null;
@@ -833,10 +767,14 @@ export async function triggerMegaSyncRun(options = {}) {
     0,
     Number(options.postDelayMs ?? DEFAULT_MEGA_SYNC_POST_DELAY_MS),
   );
+  const maxPostsPerSource = Math.max(
+    0,
+    Number(options.maxPostsPerSource ?? DEFAULT_MEGA_SYNC_MAX_POSTS_PER_SOURCE),
+  );
   const reason = String(options.reason || "manual");
 
   if (megaSyncWorker) {
-    return { accepted: false, reason: "already-running-local" };
+    return { accepted: false, reason: "already-running-local", maxPostsPerSource };
   }
 
   const owner = `pid:${process.pid}:${Date.now()}`;
@@ -847,13 +785,13 @@ export async function triggerMegaSyncRun(options = {}) {
   });
 
   if (!lockResult.acquired) {
-    return { accepted: false, reason: "already-running-distributed" };
+    return { accepted: false, reason: "already-running-distributed", maxPostsPerSource };
   }
 
   megaSyncLockOwner = owner;
 
   const worker = new Worker(WORKER_PATH, {
-    workerData: { postDelayMs, reason },
+    workerData: { postDelayMs, reason, maxPostsPerSource },
   });
   megaSyncWorker = worker;
   startMegaSyncHeartbeat();
@@ -889,6 +827,7 @@ export async function triggerMegaSyncRun(options = {}) {
     accepted: true,
     reason,
     workerThreadId: worker.threadId,
+    maxPostsPerSource,
   };
 }
 
@@ -896,6 +835,10 @@ export async function runMegaSyncImmediately(options = {}) {
   const postDelayMs = Math.max(
     0,
     Number(options.postDelayMs ?? 0),
+  );
+  const maxPostsPerSource = Math.max(
+    0,
+    Number(options.maxPostsPerSource ?? DEFAULT_MEGA_SYNC_MAX_POSTS_PER_SOURCE),
   );
   const reason = String(options.reason || "api-sync-now");
   const forceTakeover = options.forceTakeover === true;
@@ -933,7 +876,11 @@ export async function runMegaSyncImmediately(options = {}) {
       }
     }, 60 * 1000);
 
-    const result = await syncMegaSectionsAndPosts({ postDelayMs, reason });
+    const result = await syncMegaSectionsAndPosts({
+      postDelayMs,
+      reason,
+      maxPostsPerSource,
+    });
     await clearFrontApiCacheBestEffort({ reason: `mega-sync-immediate:${reason}` });
     return { accepted: true, reason, result };
   } finally {
@@ -965,6 +912,7 @@ export function startMegaSyncScheduler() {
     try {
       const result = await triggerMegaSyncRun({
         postDelayMs: DEFAULT_MEGA_SYNC_POST_DELAY_MS,
+        maxPostsPerSource: DEFAULT_MEGA_SYNC_MAX_POSTS_PER_SOURCE,
         reason: "cron-sync-now",
       });
       if (!result.accepted) {

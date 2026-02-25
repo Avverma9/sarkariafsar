@@ -10,28 +10,77 @@ const TARGET_URL    = "https://sarkariafsar.com";
 
 const COMPETITOR_DOMAINS = new Set([
   "sarkariresult.com.cm", "www.sarkariresult.com.cm",
+  "sarkariresult.com",    "www.sarkariresult.com",
   "sarkariexam.com",      "www.sarkariexam.com",
   "rojarresult.com",      "www.rojarresult.com",
   "rojgarresult.com",     "www.rojgarresult.com",
 ]);
 
+const COMPETITOR_HOST_ROOTS = [
+  "sarkariresult.com.cm",
+  "sarkariresult.com",
+  "sarkariexam.com",
+  "rojgarresult.com",
+  "rojarresult.com",
+];
+
 const COMPETITOR_BRAND_PATTERNS = [
   /sarkari\s*result\.com\.cm/gi,
   /sarkariresult\.com\.cm/gi,
   /sarkari\s*result\s*\.com/gi,
+  /sarkariresult\.com/gi,
+  /sarkari\s*result\s*\.?\s*com/gi,
   /sarkariexam\.com/gi,
+  /sarkari\s*exam\s*\.?\s*com/gi,
   /rojgar\s*result\.com/gi,
+  /rojgarresult\.com/gi,
+  /rojgar\s*result\s*\.?\s*com/gi,
   /rojar\s*result\.com/gi,
+  /rojarresult\.com/gi,
+  /rojar\s*result\s*\.?\s*com/gi,
+  /sarkari\s*result/gi,
+  /sarkariresult/gi,
+  /sarkari\s*exam/gi,
+  /sarkariexam/gi,
+  /rojgar\s*result/gi,
+  /rojgarresult/gi,
+  /rojar\s*result/gi,
+  /rojarresult/gi,
   /sarkarinaukri/gi,
   /sarkariresult\s+team/gi,
   /sarkari\s*result\s*team/gi,
 ];
 
+const COMPETITOR_TEXT_REGEX =
+  /\b(?:sarkari\s*result|sarkariresult|sarkariexam|sarkari\s*exam|rojgar\s*result|rojgarresult|rojar\s*result|rojarresult|sarkarinaukri)(?:\s*\.?\s*com(?:\.cm)?)?\b/i;
+const COMPETITOR_TEXT_REGEX_GLOBAL =
+  /\b(?:sarkari\s*result|sarkariresult|sarkariexam|sarkari\s*exam|rojgar\s*result|rojgarresult|rojar\s*result|rojarresult|sarkarinaukri)(?:\s*\.?\s*com(?:\.cm)?)?\b/gi;
+const COMPETITOR_URL_REGEX =
+  /https?:\/\/(?:www\.)?(?:sarkariresult\.com(?:\.cm)?|sarkariexam\.com|rojgarresult\.com|rojarresult\.com)\S*/gi;
+const COMPETITOR_DOMAIN_TEXT_PATTERNS = [
+  /sarkari\s*result\s*\.?\s*com\s*\.?\s*cm/gi,
+  /sarkariresult\s*\.?\s*com\s*\.?\s*cm/gi,
+  /sarkari\s*result\s*\.?\s*com\b/gi,
+  /sarkariresult\s*\.?\s*com\b/gi,
+  /sarkari\s*exam\s*\.?\s*com\b/gi,
+  /sarkariexam\s*\.?\s*com\b/gi,
+  /rojgar\s*result\s*\.?\s*com\b/gi,
+  /rojgarresult\s*\.?\s*com\b/gi,
+  /rojar\s*result\s*\.?\s*com\b/gi,
+  /rojarresult\s*\.?\s*com\b/gi,
+];
+const TITLE_SEGMENT_SPLIT_REGEX = /\s*(?:\||\/|::?|•)+\s*|\s[-–—]\s/g;
+
 const COMPETITOR_BRAND_TEXTS = [
   "sarkari result.com.cm", "sarkariresult.com.cm",
-  "sarkariexam.com",       "rojgarresult.com",
-  "rojarresult.com",       "sarkariresult team",
-  "sarkarinaukri",         "sarkari result team",
+  "sarkariresult.com",     "sarkari result.com",
+  "sarkariexam.com",       "sarkari exam",
+  "rojgarresult.com",      "rojgar result",
+  "rojarresult.com",       "rojar result",
+  "sarkariresult team",    "sarkarinaukri",
+  "sarkari result team",   "sarkariresult",
+  "sarkariexam",           "rojgarresult",
+  "rojarresult",
   "sarkari result .com",
 ];
 
@@ -186,6 +235,57 @@ function normalizeSpace(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
+const TAILWIND_CLASS_MAP = {
+  "sa-shell": "mx-auto w-full max-w-5xl space-y-5 px-4 py-5 sm:px-6 lg:px-8",
+  "sa-hero":
+    "relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-r from-slate-900 via-blue-900 to-blue-700 p-6 text-white shadow-sm",
+  "sa-hero-badge":
+    "inline-flex items-center rounded-full border border-white/30 bg-white/15 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide",
+  "sa-hero-meta": "mt-3 flex flex-wrap gap-4 text-xs text-blue-100",
+  "sa-card": "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm",
+  "sa-card-header": "flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-5 py-3",
+  "sa-card-icon": "inline-flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-700",
+  "sa-card-body": "p-5",
+  "sa-content": "prose prose-slate max-w-none text-slate-700",
+  "sa-note": "rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3",
+  "sa-note-text": "text-sm leading-7 text-slate-700",
+  "sa-section-card": "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+  "sa-section-head": "flex items-center gap-2 bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-3 text-white",
+  "sa-section-icon": "text-base",
+  "sa-section-title": "text-sm font-semibold tracking-wide",
+  "sa-table-wrap": "my-4 w-full overflow-x-auto rounded-xl border border-slate-200",
+  "sa-table": "w-full min-w-[520px] border-collapse text-sm",
+  "sa-info-table": "w-full border-collapse text-sm",
+  "sa-info-key":
+    "w-[38%] border-b border-slate-200 bg-slate-50 px-4 py-2 align-top font-semibold text-slate-800",
+  "sa-info-val": "border-b border-slate-200 px-4 py-2 align-top text-slate-700",
+  "sa-info-full": "border-b border-slate-200 px-4 py-2 align-top text-slate-700",
+  "sa-side-wrap": "my-4 w-full overflow-x-auto rounded-xl border border-rose-200 bg-white shadow-sm",
+  "sa-side-table": "w-full min-w-[520px] border-collapse text-sm",
+  "sa-side-th": "w-1/2 border border-rose-200 bg-rose-700 px-4 py-3 text-center text-sm font-semibold text-white",
+  "sa-side-td": "w-1/2 border border-rose-100 px-4 py-3 align-top",
+  "sa-side-list": "list-disc space-y-2 pl-5 text-slate-700",
+  "sa-side-icon": "mr-1",
+  "sa-side-val": "font-semibold text-slate-900",
+  "sa-nested-list": "mt-1 list-disc pl-5 text-[13px] text-slate-600",
+  "sa-sub-item": "my-1",
+  "sa-table-section-header": "bg-slate-100 text-center font-semibold text-slate-900",
+  "sa-pdf-btn":
+    "inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-blue-700 to-emerald-600 px-3 py-1.5 text-xs font-semibold text-white no-underline",
+  "sa-disclaimer": "rounded-md border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600",
+  "has-small-font-size":
+    "rounded-md border-l-4 border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-600",
+  "sa-footer": "mt-4 border-t border-slate-200 pt-4 text-center text-xs text-slate-500",
+};
+
+const HUMAN_COPY_TEMPLATES = [
+  "Applicants should verify {focus} once before submitting the form. This post is rewritten in simple language so the process stays clear.",
+  "Use this page as a quick checklist for {focus}. The content is arranged in a human-friendly flow to avoid missing deadlines.",
+  "Before applying, review {focus} carefully and keep documents ready. This version is drafted for practical, step-by-step reading.",
+  "This update highlights {focus} in plain terms so candidates can decide quickly and apply with confidence.",
+  "For faster preparation, focus on {focus} first and then read all official links. The wording is intentionally clear for everyday readers.",
+];
+
 function normalizeHost(value) {
   return String(value ?? "").trim().toLowerCase().replace(/^www\./, "");
 }
@@ -220,6 +320,17 @@ function hasBlockedPromoHint(value = "") {
   return BLOCKED_PROMO_HINTS.some((hint) => text.includes(hint));
 }
 
+function isCompetitorHost(host = "") {
+  const normalizedHost = normalizeHost(host);
+  if (!normalizedHost) return false;
+  if (COMPETITOR_DOMAINS.has(normalizedHost)) return true;
+  return COMPETITOR_HOST_ROOTS.some(
+    (rootHost) =>
+      normalizedHost === rootHost ||
+      normalizedHost.endsWith(`.${rootHost}`),
+  );
+}
+
 function isCompetitorUrl(rawUrl = "", baseUrl = "") {
   const value = String(rawUrl ?? "").trim();
   if (
@@ -234,10 +345,16 @@ function isCompetitorUrl(rawUrl = "", baseUrl = "") {
 
   try {
     const resolved = new URL(normalizedInput, baseUrl || TARGET_URL);
-    return COMPETITOR_DOMAINS.has(normalizeHost(resolved.hostname));
+    return isCompetitorHost(resolved.hostname);
   } catch {
     return false;
   }
+}
+
+function shouldRemoveCompetitorNonPdfLink(rawUrl = "", baseUrl = "") {
+  if (!isCompetitorUrl(rawUrl, baseUrl)) return false;
+  if (isPdfLink(rawUrl, baseUrl)) return false;
+  return true;
 }
 
 function hasCompetitorPromo(value = "") {
@@ -279,17 +396,62 @@ function isCompetitorText(text = "") {
   if (!lower) return false;
   return (
     COMPETITOR_BRAND_TEXTS.some((b) => lower.includes(b)) ||
-    /sarkari\s*result/i.test(lower)
+    COMPETITOR_TEXT_REGEX.test(lower)
   );
+}
+
+function resetCompetitorPatternState() {
+  COMPETITOR_BRAND_PATTERNS.forEach((r) => { r.lastIndex = 0; });
+}
+
+function stripCompetitorPhrasesFromText(value = "") {
+  let result = String(value ?? "");
+  result = result.replace(COMPETITOR_URL_REGEX, " ");
+  for (const pattern of COMPETITOR_DOMAIN_TEXT_PATTERNS) {
+    result = result.replace(pattern, TARGET_DOMAIN);
+  }
+  result = result.replace(COMPETITOR_TEXT_REGEX_GLOBAL, TARGET_BRAND);
+  result = result
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.:;!?])/g, "$1")
+    .replace(/([(\[{])\s+/g, "$1")
+    .replace(/\s+([)\]}])/g, "$1");
+  return normalizeSpace(result);
 }
 
 function cleanCompetitorTextInHtml(html = "") {
   let result = String(html ?? "");
+  result = result.replace(COMPETITOR_URL_REGEX, " ");
   for (const pattern of COMPETITOR_BRAND_PATTERNS) {
-    result = result.replace(pattern, TARGET_BRAND);
+    result = result.replace(pattern, " ");
   }
-  COMPETITOR_BRAND_PATTERNS.forEach((r) => { r.lastIndex = 0; });
+  result = result.replace(COMPETITOR_TEXT_REGEX_GLOBAL, " ");
+  resetCompetitorPatternState();
+  result = result
+    .replace(/>\s*(?:\||\/|:|-|–|—)\s*</g, "><")
+    .replace(/\(\s*\)/g, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/\{\s*\}/g, "")
+    .replace(/(?:\s*(?:\||\/|:|-|–|—)\s*){2,}/g, " ");
   return result;
+}
+
+function sanitizeDisplayTitle(rawTitle = "", fallbackTitle = "Recruitment Details") {
+  const source = normalizeSpace(rawTitle);
+  if (!source) return fallbackTitle;
+
+  const cleaned = stripCompetitorPhrasesFromText(source);
+  const segments = cleaned
+    .split(TITLE_SEGMENT_SPLIT_REGEX)
+    .map((x) => normalizeSpace(x))
+    .filter(Boolean)
+    .filter((x) => !isCompetitorText(x) && !hasCompetitorPromo(x));
+
+  const candidate = normalizeSpace(
+    String(segments[0] || cleaned || "").replace(/^[|:/\-–—\s]+|[|:/\-–—\s]+$/g, ""),
+  );
+
+  return candidate || fallbackTitle;
 }
 
 function detectSectionConfig(text = "") {
@@ -330,6 +492,110 @@ function stripUnsafeAttributes($, root) {
         lower === "crossorigin"
       ) $(el).removeAttr(key);
     }
+  });
+}
+
+function htmlSnippetToText(value = "") {
+  return normalizeSpace(
+    String(value ?? "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/&nbsp;/gi, " "),
+  );
+}
+
+function normalizeInlineLine(value = "") {
+  let line = String(value ?? "").trim();
+  if (!line) return "";
+  line = line
+    .replace(/^<p[^>]*>/i, "")
+    .replace(/<\/p>$/i, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/^\s*(?:[-•●▪–—]+\s*)+/u, "")
+    .replace(/^\s*:\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return line;
+}
+
+function detectHeadingFromLine(lineHtml = "") {
+  const text = htmlSnippetToText(lineHtml).replace(/[:\-–—]+$/g, "").trim();
+  if (!text || text.length > 80) return null;
+  return detectSectionConfig(text);
+}
+
+// Some sources send whole content in one <p>/<div> with many <br> lines.
+// Convert that stream into heading + list blocks so section cards can be generated.
+function transformBreakHeavyBlocks($, root, report) {
+  root.find("p,div,section,article").each((_, el) => {
+    const node = $(el);
+    if (!node.length) return;
+    if (node.find("table,ul,ol,section,article,form").length > 0) return;
+
+    const rawHtml = String(node.html() ?? "");
+    if (!/<br\s*\/?>/i.test(rawHtml)) return;
+
+    const lines = rawHtml
+      .split(/<br\s*\/?>/gi)
+      .map((line) => normalizeInlineLine(line))
+      .filter(Boolean);
+
+    if (lines.length < 8) return;
+
+    let headingHits = 0;
+    for (const line of lines) {
+      if (detectHeadingFromLine(line)) headingHits += 1;
+    }
+    if (headingHits < 2) return;
+
+    const introLines = [];
+    const sections = [];
+    let active = null;
+
+    const flushActive = () => {
+      if (!active) return;
+      const items = active.items
+        .map((item) => normalizeInlineLine(item))
+        .filter(Boolean);
+      if (items.length) {
+        sections.push({ cfg: active.cfg, items });
+      }
+      active = null;
+    };
+
+    for (const line of lines) {
+      const normalizedLine = normalizeInlineLine(line);
+      if (!normalizedLine) continue;
+
+      const headingCfg = detectHeadingFromLine(normalizedLine);
+      if (headingCfg) {
+        flushActive();
+        active = { cfg: headingCfg, items: [] };
+        continue;
+      }
+
+      if (active) active.items.push(normalizedLine);
+      else introLines.push(normalizedLine);
+    }
+
+    flushActive();
+    if (!sections.length) return;
+
+    const introHtml = introLines
+      .map((line) => `<p>${line}</p>`)
+      .join("");
+
+    const sectionHtml = sections
+      .map(
+        (section) => `
+<h3>${escapeHtml(section.cfg.label)}</h3>
+<ul>
+${section.items.map((item) => `<li>${item}</li>`).join("")}
+</ul>`,
+      )
+      .join("");
+
+    node.replaceWith(`${introHtml}${sectionHtml}`);
+    report.sectionsConverted += sections.length;
   });
 }
 
@@ -585,7 +851,7 @@ function restructureSections($, root) {
 //  SECTION 5 — COMPETITOR REMOVAL & TEXT SANITISATION
 // ═══════════════════════════════════════════════════════════════════════════
 
-function removeCompetitorElements($, root, report) {
+function removeCompetitorElements($, root, report, sourceUrl = "") {
   // 5A: Sidebar tables
   root.find("table").each((_, el) => {
     const node      = $(el);
@@ -613,51 +879,13 @@ function removeCompetitorElements($, root, report) {
     }
   });
 
-  // 5C.1: Competitor promo/follow/app text blocks
-  root.find("p,li,div,section,td,th,span").each((_, el) => {
-    const node = $(el);
-    const text = normalizeSpace(node.text());
-    if (!text || text.length > 1200) return;
-    if (!hasCompetitorPromo(text)) return;
-    if (node.find("table,ul,ol,section,article,form").length > 0) return;
-    node.remove();
-    report.removedBanners += 1;
-  });
-
-  // 5D: Standalone competitor-named leaf nodes
-  root.find("p,span,div,td,a,h1,h2,h3,h4,h5,h6").each((_, el) => {
-    const node = $(el);
-    if (node.children("*").length > 0) return;
-    const text = normalizeSpace(node.text());
-    if (text.length < 150 && isCompetitorText(text)) node.remove();
-  });
-
-  // 5E: <a> whose text is a competitor brand
-  root.find("a").each((_, el) => {
+  // 5D: Remove only competitor non-PDF links, keep surrounding content.
+  root.find("a[href]").each((_, el) => {
     const node     = $(el);
-    const linkText = normalizeSpace(node.text());
-    if (!isCompetitorText(linkText)) return;
-    try {
-      const href = normalizeSpace(node.attr("href"));
-      const host = normalizeHost(new URL(href, TARGET_URL).hostname ?? "");
-      if (!href || COMPETITOR_DOMAINS.has(host)) {
-        dropNodePreservingText($, node);
-      } else {
-        node.text(TARGET_BRAND);
-      }
-    } catch {
-      dropNodePreservingText($, node);
-    }
-  });
-
-  // 5F: Global regex sweep on all remaining HTML
-  root.find("*").each((_, el) => {
-    const node  = $(el);
-    const inner = node.html();
-    if (!inner) return;
-    if (COMPETITOR_BRAND_PATTERNS.some((r) => { const m = r.test(inner); r.lastIndex = 0; return m; })) {
-      node.html(cleanCompetitorTextInHtml(inner));
-    }
+    const href     = normalizeSpace(node.attr("href"));
+    if (!shouldRemoveCompetitorNonPdfLink(href, sourceUrl || TARGET_URL)) return;
+    dropNodePreservingText($, node);
+    report.removedBanners += 1;
   });
 }
 
@@ -681,11 +909,7 @@ function processLinksAndImages($, root, sourceUrl, report) {
       return;
     }
 
-    if (
-      isCompetitorUrl(href, sourceUrl) ||
-      hasCompetitorPromo(composite) ||
-      isCompetitorText(composite)
-    ) {
+    if (shouldRemoveCompetitorNonPdfLink(href, sourceUrl)) {
       dropNodePreservingText($, node);
       report.removedBanners += 1;
       return;
@@ -743,16 +967,43 @@ function processLinksAndImages($, root, sourceUrl, report) {
       report.removedBanners += 1;
       return;
     }
-    if (hasCompetitorPromo(text) || isCompetitorText(text)) {
-      node.remove();
-      report.removedBanners += 1;
-      return;
-    }
     if (hasAnyHint(text, APP_HINTS)) {
       node.remove(); report.removedAppLinks += 1; return;
     }
     if (hasAnyHint(text, SOCIAL_HINTS)) {
       node.remove(); report.removedSocialLinks += 1;
+    }
+  });
+}
+
+function removeResidualCompetitorNodes($, root, report, sourceUrl = "") {
+  root.find("a[href]").each((_, el) => {
+    const node = $(el);
+    const href = normalizeSpace(node.attr("href"));
+    if (!shouldRemoveCompetitorNonPdfLink(href, sourceUrl || TARGET_URL)) return;
+    dropNodePreservingText($, node);
+    report.removedBanners += 1;
+  });
+}
+
+function sanitizeCompetitorTextNodes($, root, report) {
+  root.find("h1,h2,h3,h4,h5,h6,p,li,span,strong,b,td,th,a").each((_, el) => {
+    const node = $(el);
+    if (!node.length) return;
+    if (node.children("*").length > 0) return;
+
+    const text = normalizeSpace(node.text());
+    if (!text) return;
+    if (!isCompetitorText(text) && !hasCompetitorPromo(text)) return;
+
+    const sanitized = stripCompetitorPhrasesFromText(text);
+    if (!sanitized) {
+      node.remove();
+      report.removedBanners += 1;
+      return;
+    }
+    if (sanitized !== text) {
+      node.text(sanitized);
     }
   });
 }
@@ -783,19 +1034,9 @@ function enhanceExistingTables($, root, report) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function sanitiseDisclaimer($, root) {
-  root.find(".has-small-font-size, p, div").each((_, el) => {
-    const node  = $(el);
-    const inner = node.html() ?? "";
-    if (!COMPETITOR_BRAND_PATTERNS.some((r) => { const m = r.test(inner); r.lastIndex = 0; return m; })) return;
-    let cleaned = inner;
-    cleaned = cleaned.replace(/sarkariresult\s*team/gi,  "our team");
-    cleaned = cleaned.replace(/sarkariresult\.com\.cm/gi, TARGET_DOMAIN);
-    cleaned = cleaned.replace(/sarkarinaukri/gi,          TARGET_BRAND);
-    cleaned = cleaned.replace(/rojgarresult\.com/gi,      TARGET_DOMAIN);
-    cleaned = cleaned.replace(/rojarresult\.com/gi,       TARGET_DOMAIN);
-    cleaned = cleaned.replace(/sarkariexam\.com/gi,       TARGET_DOMAIN);
-    cleaned = cleaned.replace(/sarkari\s*result/gi,       TARGET_BRAND);
-    node.html(cleaned);
+  root.find(".has-small-font-size").each((_, el) => {
+    const node = $(el);
+    if (!node.length) return;
     node.addClass("sa-disclaimer");
   });
 }
@@ -817,6 +1058,227 @@ function cleanEmptyNodes($, root) {
   }
 }
 
+function buildStableHash(input = "") {
+  let hash = 2166136261;
+  const text = String(input ?? "");
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function pickFocusKeywords(title = "", bodyText = "") {
+  const text = `${title} ${bodyText}`.toLowerCase();
+  const words = text
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 4);
+  const stop = new Set([
+    "recruitment", "notification", "apply", "online", "official", "post",
+    "posts", "details", "latest", "important", "exam", "result", "admit",
+    "card", "date", "dates", "form", "application", "vacancy", "vacancies",
+    "government", "jobs", "job",
+  ]);
+  const unique = [];
+  for (const w of words) {
+    if (stop.has(w)) continue;
+    if (!unique.includes(w)) unique.push(w);
+    if (unique.length >= 2) break;
+  }
+  return unique;
+}
+
+function buildUniqueHumanCopy({ title = "", sourceUrl = "", contentHtml = "" } = {}) {
+  const $ = cheerio.load(String(contentHtml || ""));
+  const bodyText = normalizeSpace($("p,li,td").text()).slice(0, 500);
+  const focusWords = pickFocusKeywords(title, bodyText);
+  const focus =
+    focusWords.length >= 2
+      ? `${focusWords[0]}, ${focusWords[1]}`
+      : focusWords.length === 1
+        ? `${focusWords[0]} and deadlines`
+        : "eligibility, deadlines, and documents";
+
+  const seed = `${title}|${sourceUrl}|${bodyText.slice(0, 160)}`;
+  const hash = buildStableHash(seed);
+  const index = parseInt(hash.slice(0, 2), 16) % HUMAN_COPY_TEMPLATES.length;
+  const line = HUMAN_COPY_TEMPLATES[index].replace("{focus}", focus);
+  return `${line} Post reference: ${hash.toUpperCase()}.`;
+}
+
+const CLASS_COLOR_FAMILIES =
+  "(?:slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white|black)";
+const TEXT_COLOR_CLASS_REGEX = new RegExp(
+  `^text-${CLASS_COLOR_FAMILIES}(?:-(?:50|100|200|300|400|500|600|700|800|900|950))?$`,
+  "i",
+);
+const BG_COLOR_CLASS_REGEX = new RegExp(
+  `^bg-${CLASS_COLOR_FAMILIES}(?:-(?:50|100|200|300|400|500|600|700|800|900|950))?$`,
+  "i",
+);
+const DARK_BG_CLASS_REGEX = new RegExp(
+  `^bg-${CLASS_COLOR_FAMILIES}(?:-(?:500|600|700|800|900|950))$`,
+  "i",
+);
+const DARK_GRADIENT_STOP_REGEX = new RegExp(
+  `^(?:from|via|to)-${CLASS_COLOR_FAMILIES}-(?:500|600|700|800|900|950)$`,
+  "i",
+);
+const MUTED_TEXT_ON_DARK_REGEX = /^text-(?:slate|gray|zinc|neutral|stone)(?:-(?:50|100|200|300|400|500|600|700|800|900|950))?$/i;
+
+function splitClassTokens(value = "") {
+  return normalizeSpace(value).split(/\s+/).filter(Boolean);
+}
+
+function uniqClassTokens(tokens = []) {
+  return Array.from(new Set(tokens.filter(Boolean)));
+}
+
+function pushClassTokensIfMissing(tokens = [], extraTokens = []) {
+  for (const token of extraTokens) {
+    if (!token) continue;
+    if (!tokens.includes(token)) tokens.push(token);
+  }
+}
+
+function forceTextColorClass(tokens = [], forcedTextClass = "text-slate-700") {
+  const cleaned = tokens.filter((token) => !TEXT_COLOR_CLASS_REGEX.test(token));
+  if (forcedTextClass) cleaned.push(forcedTextClass);
+  return cleaned;
+}
+
+function collapseTextColorClasses(tokens = [], fallbackTextClass = "text-slate-700") {
+  let chosen = "";
+  const cleaned = [];
+  for (const token of tokens) {
+    if (TEXT_COLOR_CLASS_REGEX.test(token)) {
+      if (!chosen) {
+        chosen = token;
+        cleaned.push(token);
+      }
+      continue;
+    }
+    cleaned.push(token);
+  }
+  if (!chosen && fallbackTextClass) cleaned.push(fallbackTextClass);
+  return cleaned;
+}
+
+function hasBackgroundClass(tokens = []) {
+  return tokens.some((token) => BG_COLOR_CLASS_REGEX.test(token) || token.startsWith("bg-gradient-to-"));
+}
+
+function hasDarkBackground(tokens = []) {
+  const solidDark = tokens.some((token) => DARK_BG_CLASS_REGEX.test(token));
+  if (solidDark) return true;
+  const hasGradient = tokens.some((token) => token.startsWith("bg-gradient-to-"));
+  if (!hasGradient) return false;
+  return tokens.some((token) => DARK_GRADIENT_STOP_REGEX.test(token));
+}
+
+function applyTailwindClassMapping($, root) {
+  const remapNodeClass = (node) => {
+    const raw = normalizeSpace(node.attr("class"));
+    if (!raw) {
+      node.removeAttr("class");
+      return;
+    }
+
+    const mapped = [];
+    const tokens = raw.split(/\s+/).filter(Boolean);
+    for (const token of tokens) {
+      const tw = TAILWIND_CLASS_MAP[token];
+      if (tw) {
+        mapped.push(...tw.split(/\s+/).filter(Boolean));
+        continue;
+      }
+    }
+
+    const uniq = Array.from(new Set(mapped));
+    if (!uniq.length) {
+      node.removeAttr("class");
+      return;
+    }
+    node.attr("class", uniq.join(" "));
+  };
+
+  if (root?.length && root.attr && typeof root.attr === "function") {
+    remapNodeClass(root);
+  }
+
+  root.find("[class]").each((_, el) => {
+    remapNodeClass($(el));
+  });
+
+  root.find("[style]").removeAttr("style");
+
+  root.find("table").each((_, el) => {
+    const node = $(el);
+    node.find("th").each((__, th) => {
+      const thNode = $(th);
+      let tokens = splitClassTokens(thNode.attr("class"));
+
+      pushClassTokensIfMissing(tokens, [
+        "border-b",
+        "border-slate-200",
+        "px-4",
+        "py-2",
+        "text-left",
+        "text-xs",
+        "font-semibold",
+        "uppercase",
+        "tracking-wide",
+      ]);
+
+      if (!hasBackgroundClass(tokens)) tokens.push("bg-slate-100");
+
+      if (hasDarkBackground(tokens)) {
+        tokens = tokens.filter((token) => !MUTED_TEXT_ON_DARK_REGEX.test(token));
+        tokens = forceTextColorClass(tokens, "text-white");
+      } else {
+        tokens = collapseTextColorClasses(tokens, "text-slate-800");
+      }
+
+      tokens = uniqClassTokens(tokens);
+      if (tokens.length) thNode.attr("class", tokens.join(" "));
+      else thNode.removeAttr("class");
+    });
+
+    node.find("td").each((__, td) => {
+      const tdNode = $(td);
+      let tokens = splitClassTokens(tdNode.attr("class"));
+
+      pushClassTokensIfMissing(tokens, [
+        "border-b",
+        "border-slate-200",
+        "px-4",
+        "py-2",
+        "align-top",
+      ]);
+
+      if (hasDarkBackground(tokens)) {
+        tokens = tokens.filter((token) => !MUTED_TEXT_ON_DARK_REGEX.test(token));
+        tokens = forceTextColorClass(tokens, "text-white");
+      } else {
+        tokens = collapseTextColorClasses(tokens, "text-slate-700");
+      }
+
+      tokens = uniqClassTokens(tokens);
+      if (tokens.length) tdNode.attr("class", tokens.join(" "));
+      else tdNode.removeAttr("class");
+    });
+
+    node.find("tr").last().find("td,th").each((__, c) => {
+      const cNode = $(c);
+      const cls = normalizeSpace(cNode.attr("class")).replace(/\bborder-b\b/g, "").replace(/\s+/g, " ").trim();
+      if (cls) cNode.attr("class", cls);
+      else cNode.removeAttr("class");
+    });
+  });
+}
+
 function removeBlockedPromoNodes($, root, report) {
   root.find("a,p,li,div,section,span,td,th,button").each((_, el) => {
     const node = $(el);
@@ -828,8 +1290,6 @@ function removeBlockedPromoNodes($, root, report) {
     if (!["a", "button"].includes(tag) && !isLeafLike) return;
     if (
       !hasBlockedPromoHint(text) &&
-      !hasCompetitorPromo(text) &&
-      !isCompetitorText(text) &&
       !isMetaFooterLine(text) &&
       !hasAnyHint(text, SOCIAL_HINTS) &&
       !hasAnyHint(text, APP_HINTS)
@@ -1084,10 +1544,10 @@ const MASTER_CSS = `
   table.sa-table tr:nth-child(even) td { background: #f5f8ff; }
   table.sa-table tr:last-child td     { border-bottom: none; }
   table.sa-table tr:hover td          { background: var(--sa-brand-lt); transition: background .12s; }
-  table.sa-table .sa-table-section-header,
-  table.sa-table td[colspan] {
-    background: linear-gradient(90deg, #0f3460, #1560bd) !important;
-    color: #fff !important; font-weight: 700;
+table.sa-table .sa-table-section-header,
+table.sa-table td[colspan] {
+    background: #eef4ff !important;
+    color: #0d2a47 !important; font-weight: 700;
     font-size: 0.88rem; text-align: center !important;
     padding: 12px 14px; letter-spacing: .2px;
   }
@@ -1227,41 +1687,51 @@ export function buildReadyPostHtml({
   });
 
   // STEP 2: Remove sidebar tables, competitor name nodes, brand text
-  removeCompetitorElements($, root, report);
+  removeCompetitorElements($, root, report, sourceUrl);
 
   // STEP 3: Strip unsafe attributes
   stripUnsafeAttributes($, root);
 
-  // STEP 4: Convert section lists → side-by-side tables / section cards
+  // STEP 4: Convert break-heavy text blocks into semantic heading/list structure
+  transformBreakHeavyBlocks($, root, report);
+
+  // STEP 5: Convert section lists → side-by-side tables / section cards
   restructureSections($, root);
 
-  // STEP 5: Process links & images
+  // STEP 6: Process links & images
   processLinksAndImages($, root, sourceUrl, report);
 
-  // STEP 6: Enhance remaining native tables
+  // STEP 7: Enhance remaining native tables
   enhanceExistingTables($, root, report);
 
-  // STEP 7: Sanitise disclaimer text
+  // STEP 8: Sanitise disclaimer text
   sanitiseDisclaimer($, root);
 
-  // STEP 8: Remove author/tag meta lines
+  // STEP 9: Remove author/tag meta lines
   removeAuthorTagNodes($, root, report);
 
-  // STEP 9: Remove leftover promo/join blocks
+  // STEP 10: Remove leftover promo/join blocks
   removeBlockedPromoNodes($, root, report);
 
-  // STEP 10: Final global regex sweep
-  const rawBody     = root.html() ?? "";
-  const cleanedBody = cleanCompetitorTextInHtml(rawBody);
-  if (cleanedBody !== rawBody) root.html(cleanedBody);
+  // STEP 11: Sanitize visible competitor text without deleting useful content.
+  sanitizeCompetitorTextNodes($, root, report);
 
-  // STEP 11: Remove empty nodes (3 passes)
+  // STEP 12: Hard pass for residual competitor non-PDF links.
+  removeResidualCompetitorNodes($, root, report, sourceUrl);
+
+  // STEP 13: Final residual pass
+  sanitizeCompetitorTextNodes($, root, report);
+  removeResidualCompetitorNodes($, root, report, sourceUrl);
+
+  // STEP 14: Remove empty nodes (3 passes)
   cleanEmptyNodes($, root);
 
-  // STEP 12: Build final output HTML
+  // STEP 15: Build final output HTML
   const finalBody  = root.html() ?? "";
+  const rawHeading = String(title || $("h1").first().text() || "Recruitment Details").trim();
+  const headingText = sanitizeDisplayTitle(rawHeading, "Recruitment Details");
   const heading    = escapeHtml(
-    String(title || $("h1").first().text() || "Recruitment Details").trim()
+    headingText
   );
   const year    = new Date().getFullYear();
   const dateStr = new Date().toLocaleDateString("en-IN", {
@@ -1313,5 +1783,44 @@ export function buildReadyPostHtml({
 </body>
 </html>`;
 
-  return { newHtml, report };
+  const doc$ = cheerio.load(newHtml, { decodeEntities: false });
+  const main = doc$("main.sa-shell").first();
+  const rootForReact = main.length ? main : doc$("body");
+  const uniqueHumanCopy = buildUniqueHumanCopy({
+    title: headingText,
+    sourceUrl,
+    contentHtml: finalBody,
+  });
+
+  const noteBlock = `
+<section class="sa-note">
+  <p class="sa-note-text">${escapeHtml(uniqueHumanCopy)}</p>
+</section>`;
+
+  if (rootForReact?.length) {
+    const hero = rootForReact.find(".sa-hero").first();
+    if (hero.length) hero.after(noteBlock);
+    else rootForReact.prepend(noteBlock);
+  }
+
+  applyTailwindClassMapping(doc$, rootForReact);
+  const reactHtml = rootForReact?.length
+    ? doc$.html(rootForReact)
+    : `<div class="mx-auto w-full max-w-5xl px-4 py-5"><div class="prose prose-slate max-w-none">${finalBody}</div></div>`;
+
+  const reactRenderSnippet = [
+    "return (",
+    "  <div className=\"w-full\">",
+    "    <div dangerouslySetInnerHTML={{ __html: post.reactHtml || post.newHtml }} />",
+    "  </div>",
+    ");",
+  ].join("\n");
+
+  return {
+    newHtml,
+    reactHtml,
+    reactRenderSnippet,
+    uniqueHumanCopy,
+    report,
+  };
 }

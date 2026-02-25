@@ -1,437 +1,654 @@
 "use client";
 
-import {
-  BellRing,
-  CalendarDays,
-  CheckSquare,
-  ChevronRight,
-  ClipboardCheck,
-  ExternalLink,
-  FileImage,
-  FileText,
-  Globe2,
-  HelpCircle,
-  IdCard,
-  Info,
-  IndianRupee,
-  Link2,
-  ShieldCheck,
-  Sparkles,
-  Trophy,
-  Users,
-} from "lucide-react";
+import { BellRing, ChevronRight } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildSectionHref, resolveSectionRoute } from "../../lib/sectionRouting";
 import PostDetailsSkeleton from "./PostDetailsSkeleton";
 import { buildPublicApiUrl, fetchJsonWithFallback } from "@/app/lib/clientApi";
+import { normalizePostDetails } from "@/app/lib/post-details";
 
-const SECTION_CARD_CLASS =
-  "mb-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm";
-const SECTION_HEADER_CLASS =
-  "flex items-center border-b border-slate-200 bg-slate-50 px-5 py-3 font-semibold text-slate-700";
-const BLOCKED_EXTERNAL_HOSTS = ["sarkariresult.com.cm", "sarkariexam.com", "rojgarresult.com"];
-const INLINE_PREVIEW_IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".webp"];
-const EMPTY_TEXT_VALUES = new Set([
-  "not specified",
-  "not available",
-  "na",
-  "n/a",
-  "nil",
-  "null",
-  "undefined",
-  "--",
-]);
-const GENERIC_LINK_TEXTS = new Set([
-  "click here",
-  "link active",
-  "available soon",
-  "coming soon",
-  "download here",
-  "view here",
-  "check here",
-  "apply here",
-]);
-
-const DATE_LABELS = [
-  ["notificationDate", "Notification Date"],
-  ["postDate", "Post Date"],
-  ["applicationStartDate", "Application Begin"],
-  ["applicationLastDate", "Last Date For Apply"],
-  ["feePaymentLastDate", "Last Date Fee Payment"],
-  ["correctionDate", "Correction Date"],
-  ["preExamDate", "Pre Exam Date"],
-  ["mainsExamDate", "Mains Exam Date"],
-  ["examDate", "Exam Date"],
-  ["admitCardDate", "Admit Card Date"],
-  ["resultDate", "Result Date"],
-  ["answerKeyReleaseDate", "Answer Key Date"],
-  ["finalAnswerKeyDate", "Final Answer Key Date"],
-  ["documentVerificationDate", "Document Verification Date"],
-  ["counsellingDate", "Counselling Date"],
-  ["meritListDate", "Merit List Date"],
-  ["examCityDetailsDate", "Exam City Details Date"],
-  ["petAdmitCardAvailable", "PET Admit Card Available"],
-  ["petExamStartDate", "PET Exam Start Date"],
-];
-
-const FEE_LABELS = [
-  ["general", "General"],
-  ["ewsObc", "EWS / OBC"],
-  ["scSt", "SC / ST"],
-  ["female", "Female"],
-  ["ph", "PH"],
-  ["correctionCharge", "Correction Charge"],
-];
-
-const LINK_CONFIG = {
-  applyOnline: {
-    label: "Apply Online",
-    icon: CheckSquare,
-    className: "bg-indigo-600 text-white hover:bg-indigo-700",
-  },
-  officialNotification: {
-    label: "Official Notification",
-    icon: FileText,
-    className: "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100",
-  },
-  syllabus: {
-    label: "Syllabus",
-    icon: ClipboardCheck,
-    className: "border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100",
-  },
-  examPattern: {
-    label: "Exam Pattern",
-    icon: ClipboardCheck,
-    className: "border border-violet-200 bg-violet-50 text-violet-700 hover:bg-violet-100",
-  },
-  admitCard: {
-    label: "Admit Card",
-    icon: IdCard,
-    className: "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-  },
-  resultLink: {
-    label: "Result",
-    icon: Trophy,
-    className: "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100",
-  },
-  answerKey: {
-    label: "Answer Key",
-    icon: FileText,
-    className: "border border-cyan-200 bg-cyan-50 text-cyan-700 hover:bg-cyan-100",
-  },
-  documentVerificationNotice: {
-    label: "Document Verification Notice",
-    icon: FileText,
-    className: "border border-pink-200 bg-pink-50 text-pink-700 hover:bg-pink-100",
-  },
-  faq: {
-    label: "FAQ",
-    icon: HelpCircle,
-    className: "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
-  },
-  officialWebsite: {
-    label: "Official Website",
-    icon: Globe2,
-    className: "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100",
-  },
-};
 const WATCHED_POSTS_STORAGE_KEY = "watched-posts-v1";
-
-function readMaybeJson(value) {
-  if (!value) return null;
-  if (typeof value === "object") return value;
-  if (typeof value === "string") {
-    try {
-      return JSON.parse(value);
-    } catch {
-      return null;
-    }
+const SA_FONT_LINKS = `
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+`;
+const TAILWIND_LAYOUT_OVERRIDE_STYLE = `
+<style id="sa-tailwind-layout-override">
+:root {
+  --sa-bg: #edf4ff;
+  --sa-card: #ffffff;
+  --sa-ink: #10243d;
+  --sa-muted: #4e6880;
+  --sa-line: #d6e3f2;
+  --sa-brand: #0f66d0;
+  --sa-brand-strong: #084f9c;
+  --sa-accent: #0ca37d;
+  --sa-soft: #f2f8ff;
+  --sa-radius: 18px;
+  --sa-shadow: 0 28px 42px -34px rgba(10, 34, 66, 0.55);
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  font-size: 16px;
+}
+html,
+body {
+  margin: 0 !important;
+  width: 100% !important;
+}
+body {
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif !important;
+  color: var(--sa-ink) !important;
+  background:
+    radial-gradient(1200px 520px at 0% 0%, rgba(116, 182, 255, 0.24), transparent 58%),
+    radial-gradient(900px 460px at 100% 0%, rgba(255, 197, 116, 0.2), transparent 52%),
+    var(--sa-bg) !important;
+  line-height: 1.72;
+  padding: 18px 12px 56px !important;
+}
+main,
+.mx-auto {
+  width: min(1100px, calc(100vw - 24px)) !important;
+  max-width: 1100px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+main {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 18px !important;
+}
+main > * {
+  animation: sa-rise 0.55s ease both;
+}
+main > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+main > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+main > section:first-of-type {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.36) !important;
+  border-radius: 24px !important;
+  background: linear-gradient(125deg, #0b2c4c 0%, #0f66d0 56%, #0ca37d 100%) !important;
+  padding: 26px 24px !important;
+  box-shadow: var(--sa-shadow);
+}
+main > section:first-of-type::before {
+  content: "";
+  position: absolute;
+  inset: auto -50px -110px auto;
+  width: 240px;
+  height: 240px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.26) 0%, rgba(255, 255, 255, 0) 68%);
+}
+main > section:first-of-type h1 {
+  margin: 10px 0 10px !important;
+  color: #f5fbff !important;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif !important;
+  font-size: clamp(1.55rem, 2.35vw, 2.2rem) !important;
+  line-height: 1.3 !important;
+  letter-spacing: 0.01em;
+}
+main > section:first-of-type > div:first-child {
+  border-radius: 999px !important;
+  border: 1px solid rgba(255, 255, 255, 0.34) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #f3fbff !important;
+  font-size: 0.68rem !important;
+  letter-spacing: 0.08em !important;
+  padding: 6px 12px !important;
+}
+main > section:first-of-type a {
+  color: #d4f6ff !important;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+main > section:nth-of-type(2) {
+  border: 1px solid #a4e2c7 !important;
+  border-radius: 16px !important;
+  background: linear-gradient(90deg, #e8fff3 0%, #f4fff9 100%) !important;
+}
+main > section:nth-of-type(2) p {
+  margin: 0 !important;
+  color: #16543f !important;
+  font-weight: 500 !important;
+}
+main > div,
+.inside-article {
+  border: 1px solid var(--sa-line) !important;
+  border-radius: 22px !important;
+  background: var(--sa-card) !important;
+  box-shadow: var(--sa-shadow);
+}
+main > div > div:first-child {
+  border-bottom: 1px solid var(--sa-line) !important;
+  background: linear-gradient(90deg, #f2f8ff 0%, #ffffff 65%) !important;
+  padding: 14px 18px !important;
+}
+main > div > div:first-child h2 {
+  margin: 0 !important;
+  color: #0f3458 !important;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif !important;
+  font-size: 1.3rem !important;
+}
+.p-5 {
+  padding: 1.25rem !important;
+}
+.prose,
+.prose.prose-slate {
+  max-width: none !important;
+  color: var(--sa-ink) !important;
+  font-size: 0.975rem !important;
+  line-height: 1.74 !important;
+}
+.prose > div > header {
+  display: none !important;
+}
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: #0f3458 !important;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif !important;
+  line-height: 1.34 !important;
+  margin: 1.08em 0 0.48em !important;
+}
+.prose h1 {
+  font-size: clamp(1.36rem, 2vw, 1.8rem) !important;
+}
+.prose h2 {
+  font-size: clamp(1.22rem, 1.8vw, 1.55rem) !important;
+}
+.prose h3 {
+  font-size: clamp(1.07rem, 1.48vw, 1.25rem) !important;
+}
+.prose p,
+p {
+  margin: 0 0 0.86em !important;
+  color: var(--sa-ink) !important;
+}
+p:empty {
+  display: none !important;
+}
+p > br:only-child {
+  display: none !important;
+}
+ul,
+ol {
+  margin: 0 0 1em !important;
+  padding-left: 1.12rem !important;
+}
+li {
+  margin: 0.24em 0 !important;
+}
+li::marker {
+  color: #2187db;
+}
+a {
+  color: var(--sa-brand) !important;
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 102, 208, 0.34);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+a:hover {
+  color: var(--sa-brand-strong) !important;
+  text-decoration-color: rgba(15, 102, 208, 0.62);
+}
+div[class*="overflow-x-auto"] {
+  margin: 14px 0 !important;
+  border: 1px solid var(--sa-line) !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+  overflow-x: auto !important;
+  box-shadow: inset 0 1px 0 #fff;
+}
+table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  min-width: 540px !important;
+  font-size: 0.9rem !important;
+  background: #fff !important;
+}
+th,
+td {
+  border: 1px solid var(--sa-line) !important;
+  padding: 11px 13px !important;
+  vertical-align: top !important;
+  color: var(--sa-ink) !important;
+}
+tr:first-child td,
+tr:first-child th {
+  background: #edf5ff !important;
+  color: #10395f !important;
+  font-weight: 700 !important;
+}
+tr:nth-child(even) td {
+  background: #f9fcff !important;
+}
+td[colspan] {
+  background: #e8f3ff !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+.inside-article h2 a,
+.inside-article h3 a,
+.inside-article h4 a {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.34rem !important;
+  border-radius: 999px !important;
+  border: 1px solid rgba(15, 102, 208, 0.24) !important;
+  background: linear-gradient(135deg, #0f66d0 0%, #0ca37d 100%) !important;
+  color: #f8fdff !important;
+  text-decoration: none !important;
+  padding: 0.38rem 0.82rem !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  box-shadow: 0 8px 16px -10px rgba(10, 55, 107, 0.7);
+}
+footer[aria-label="Entry meta"] {
+  margin-top: 1rem !important;
+  border-top: 1px dashed var(--sa-line) !important;
+  padding-top: 0.82rem !important;
+  color: var(--sa-muted) !important;
+  font-size: 0.78rem !important;
+}
+@keyframes sa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-  return null;
-}
-
-function normalizePostDetails(payload) {
-  let base = payload?.data ?? payload?.result ?? payload?.response ?? payload?.post ?? payload;
-  if (Array.isArray(base)) base = base[0] || {};
-  const parsedBase = readMaybeJson(base) || base || {};
-  const parsedFormatted = readMaybeJson(parsedBase?.formattedData) || parsedBase?.formattedData;
-
-  const recruitment =
-    parsedBase?.recruitment ||
-    parsedFormatted?.recruitment ||
-    parsedBase?.content?.recruitment ||
-    (parsedBase?.importantDates ? parsedBase : null) ||
-    {};
-
-  return { raw: parsedBase, recruitment };
-}
-
-function normalizeText(value) {
-  return String(value || "")
-    .replace(/â‚¹/g, "Rs.")
-    .replace(/\uFFFD/g, "")
-    .trim();
-}
-
-function hasValue(value) {
-  if (value === null || value === undefined) return false;
-  if (typeof value === "string") return value.trim() !== "";
-  if (Array.isArray(value)) return value.length > 0;
-  if (typeof value === "object") return Object.keys(value).length > 0;
-  return true;
-}
-
-function isMeaningfulValue(value) {
-  if (!hasValue(value)) return false;
-  if (typeof value === "string") {
-    const normalized = normalizeText(value).toLowerCase();
-    return normalized && !EMPTY_TEXT_VALUES.has(normalized);
-  }
-  if (Array.isArray(value)) return value.some((item) => isMeaningfulValue(item));
-  if (typeof value === "object") return Object.values(value).some((item) => isMeaningfulValue(item));
-  return true;
-}
-
-function formatDisplayValue(value) {
-  if (Array.isArray(value)) return value.map((item) => formatDisplayValue(item)).filter(Boolean).join(", ");
-  if (typeof value === "string") return normalizeText(value);
-  if (typeof value === "number") return String(value);
-  if (typeof value === "boolean") return value ? "Yes" : "No";
-  if (value && typeof value === "object") return JSON.stringify(value);
-  return "";
-}
-
-function toMeaningfulList(value) {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => formatDisplayValue(item)).filter((item) => isMeaningfulValue(item));
-}
-
-function rowsFromObject(obj) {
-  if (!obj || typeof obj !== "object" || Array.isArray(obj)) return [];
-  return Object.entries(obj).filter(([, value]) => isMeaningfulValue(value));
-}
-
-function humanLabel(value) {
-  return String(value || "")
-    .replace(/[_-]+/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/^./, (char) => char.toUpperCase());
-}
-
-function isLikelyUrl(value) {
-  return /^https?:\/\//i.test(String(value || "").trim());
-}
-
-function getUrlPathname(value) {
-  if (!isLikelyUrl(value)) return "";
-  try {
-    const url = new URL(String(value).trim());
-    return String(url.pathname || "").toLowerCase();
-  } catch {
-    return "";
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-function isPdfUrl(value) {
-  return getUrlPathname(value).endsWith(".pdf");
-}
-
-function isInlinePreviewImageUrl(value) {
-  const pathname = getUrlPathname(value);
-  if (!pathname) return false;
-  return INLINE_PREVIEW_IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext));
-}
-
-function isAttachmentUrl(value) {
-  return isPdfUrl(value) || isInlinePreviewImageUrl(value);
-}
-
-function isBlockedExternalUrl(value) {
-  if (!isLikelyUrl(value)) return false;
-  try {
-    const url = new URL(String(value).trim());
-    const host = String(url.hostname || "").toLowerCase();
-    return BLOCKED_EXTERNAL_HOSTS.some(
-      (blocked) => host === blocked || host === `www.${blocked}` || host.endsWith(`.${blocked}`),
-    );
-  } catch {
-    return false;
+@media (max-width: 768px) {
+  body {
+    padding: 12px 8px 40px !important;
+  }
+  main,
+  .mx-auto {
+    width: min(1100px, calc(100vw - 12px)) !important;
+  }
+  main > section:first-of-type {
+    padding: 18px 16px !important;
+    border-radius: 18px !important;
+  }
+  main > div,
+  .inside-article {
+    border-radius: 16px !important;
+  }
+  table {
+    min-width: 360px !important;
+    font-size: 0.85rem !important;
   }
 }
-
-function shouldBlockExternalUrl(value) {
-  return isBlockedExternalUrl(value) && !isAttachmentUrl(value);
+</style>`;
+const LEGACY_SECTION_HEADINGS = [
+  {
+    heading: "Important Dates",
+    keys: ["important dates", "key dates", "exam dates", "schedule", "timeline"],
+  },
+  {
+    heading: "Application Fee",
+    keys: ["application fee", "fee details", "fee structure", "application fees", "fee payment"],
+  },
+  {
+    heading: "Age Limit",
+    keys: ["age limit", "age criteria", "age as on", "age relaxation"],
+  },
+  {
+    heading: "Total Posts / Vacancy",
+    keys: ["total post", "total posts", "vacancy details", "post details", "vacancies", "post wise"],
+  },
+  {
+    heading: "Eligibility / Qualification",
+    keys: ["eligibility", "qualification", "educational qualification", "education criteria"],
+  },
+  {
+    heading: "Selection Process",
+    keys: ["selection process", "selection criteria", "selection procedure", "merit list"],
+  },
+  {
+    heading: "How to Apply",
+    keys: ["how to apply", "application process", "apply process", "apply online"],
+  },
+  {
+    heading: "Important Links",
+    keys: ["important links", "useful links", "direct links", "official links", "apply link"],
+  },
+];
+const NEW_HTML_FALLBACK_STYLE = `
+:root {
+  --sa-bg: #edf4ff;
+  --sa-card: #ffffff;
+  --sa-ink: #10243d;
+  --sa-muted: #4f6782;
+  --sa-line: #d7e3f2;
+  --sa-brand: #0f66d0;
+  --sa-brand-strong: #0a509d;
+  --sa-accent: #0ca37d;
+  --sa-radius: 18px;
+  --sa-shadow: 0 26px 38px -34px rgba(11, 36, 69, 0.52);
 }
-
-function buildPdfDownloadUrl(rawUrl) {
-  return `/api/pdf-proxy?download=1&url=${encodeURIComponent(rawUrl)}`;
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
-
-function extractFilenameFromContentDisposition(value) {
-  const header = String(value || "").trim();
-  if (!header) return "";
-
-  const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
-  if (utf8Match?.[1]) {
-    try {
-      return decodeURIComponent(utf8Match[1].replace(/["']/g, "").trim());
-    } catch {
-      return utf8Match[1].replace(/["']/g, "").trim();
-    }
+html {
+  font-size: 16px;
+}
+body {
+  margin: 0;
+  font-family: "Manrope", "Segoe UI", Tahoma, sans-serif;
+  color: var(--sa-ink);
+  background:
+    radial-gradient(1200px 520px at 0% 0%, rgba(116, 182, 255, 0.24), transparent 58%),
+    radial-gradient(900px 460px at 100% 0%, rgba(255, 197, 116, 0.2), transparent 52%),
+    var(--sa-bg);
+  line-height: 1.72;
+  padding: 18px 12px 56px;
+}
+.sa-shell {
+  width: min(1100px, calc(100vw - 24px));
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.sa-shell > * {
+  animation: sa-rise 0.52s ease both;
+}
+.sa-shell > *:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.sa-shell > *:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.sa-hero {
+  border: 1px solid rgba(255, 255, 255, 0.36);
+  border-radius: 24px;
+  padding: 26px 24px;
+  color: #f4fbff;
+  background: linear-gradient(125deg, #0b2c4c 0%, #0f66d0 56%, #0ca37d 100%);
+  box-shadow: var(--sa-shadow);
+}
+.sa-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.16);
+  color: #f3fbff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 6px 12px;
+  text-transform: uppercase;
+}
+.sa-hero h1 {
+  margin: 12px 0 10px;
+  color: #f5fbff;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-size: clamp(1.55rem, 2.35vw, 2.2rem);
+  line-height: 1.3;
+}
+.sa-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #d7f4ff;
+}
+.sa-hero-meta a {
+  color: #d7f4ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(215, 244, 255, 0.45);
+  text-underline-offset: 0.18em;
+}
+.sa-card,
+.sa-section-card,
+.sa-source-bar {
+  border: 1px solid var(--sa-line);
+  border-radius: 22px;
+  background: var(--sa-card);
+  box-shadow: var(--sa-shadow);
+}
+.sa-card-header {
+  border-bottom: 1px solid var(--sa-line);
+  background: linear-gradient(90deg, #f2f8ff 0%, #ffffff 65%);
+  padding: 14px 18px;
+}
+.sa-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+  background: #deedff;
+  color: #0f66d0;
+  display: grid;
+  place-items: center;
+}
+.sa-card-header h2 {
+  margin: 0;
+  color: #0f3458;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-size: 1.3rem;
+}
+.sa-card-body {
+  padding: 1.25rem;
+}
+.sa-content {
+  color: var(--sa-ink);
+  line-height: 1.74;
+}
+.sa-content h1,
+.sa-content h2,
+.sa-content h3,
+.sa-content h4,
+.sa-content h5,
+.sa-content h6 {
+  color: #0f3458;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  line-height: 1.34;
+  margin: 1.08em 0 0.48em;
+}
+.sa-content p {
+  margin: 0 0 0.86em;
+}
+.sa-content ul,
+.sa-content ol {
+  margin: 0 0 1em;
+  padding-left: 1.12rem;
+}
+.sa-content li {
+  margin: 0.24em 0;
+}
+.sa-content li::marker {
+  color: #2187db;
+}
+.sa-content a {
+  color: var(--sa-brand);
+  text-decoration: underline;
+  text-decoration-color: rgba(15, 102, 208, 0.34);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+.sa-content a:hover {
+  color: var(--sa-brand-strong);
+}
+.sa-front-legacy {
+  margin: 0 0 12px;
+}
+.sa-front-legacy > p {
+  margin: 0 0 8px;
+}
+.sa-front-section {
+  margin: 14px 0 0;
+  border: 1px solid var(--sa-line);
+  border-radius: 14px;
+  background: #fff;
+  overflow: hidden;
+}
+.sa-front-section h3 {
+  margin: 0;
+  color: #f4fbff;
+  background: linear-gradient(90deg, #0f66d0 0%, #0ca37d 100%);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 10px 14px;
+}
+.sa-front-section ul {
+  margin: 0;
+  padding: 12px 16px 14px 30px;
+}
+.sa-front-section li:last-child {
+  margin-bottom: 0;
+}
+.sa-table-wrap,
+.sa-side-wrap,
+.newtable1,
+.newtable2 {
+  margin: 14px 0;
+  border: 1px solid var(--sa-line);
+  border-radius: 16px;
+  background: #fff;
+  overflow-x: auto;
+}
+table,
+table.sa-table,
+.sa-side-table,
+.newtable1 table,
+.newtable2 table,
+.entry-content table {
+  width: 100% !important;
+  min-width: 540px;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  font-size: 0.9rem;
+  background: #fff;
+}
+th,
+td,
+table.sa-table th,
+table.sa-table td,
+.sa-side-th,
+.sa-side-td,
+.newtable1 th,
+.newtable1 td,
+.newtable2 th,
+.newtable2 td,
+.entry-content th,
+.entry-content td {
+  border: 1px solid var(--sa-line);
+  padding: 11px 13px;
+  vertical-align: top;
+  color: var(--sa-ink);
+  word-break: break-word;
+}
+tr:first-child td,
+tr:first-child th {
+  background: #edf5ff;
+  color: #10395f;
+  font-weight: 700;
+}
+tr:nth-child(even) td {
+  background: #f9fcff;
+}
+td[colspan] {
+  background: #e8f3ff !important;
+  font-weight: 700;
+  text-align: center;
+}
+a.sa-pdf-btn {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px !important;
+  border: 1px solid rgba(15, 102, 208, 0.22) !important;
+  background: linear-gradient(135deg, #0f66d0 0%, #0ca37d 100%) !important;
+  color: #f8fdff !important;
+  font-size: 0.78rem !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
+  padding: 0.38rem 0.82rem !important;
+  box-shadow: 0 8px 16px -10px rgba(10, 55, 107, 0.7);
+}
+.sa-source-bar {
+  padding: 12px 16px;
+  color: var(--sa-muted);
+  font-size: 0.78rem;
+}
+.sa-source-bar a {
+  color: var(--sa-brand);
+}
+.sa-footer {
+  margin-top: 1rem;
+  border-top: 1px dashed var(--sa-line);
+  padding-top: 0.82rem;
+  color: var(--sa-muted);
+  font-size: 0.78rem;
+}
+.has-small-font-size {
+  border-radius: 10px;
+  border-left: 3px solid #a8bfd8;
+  background: #f5f9ff;
+  color: #4b6078;
+  font-size: 0.78rem;
+  padding: 10px 12px;
+}
+@keyframes sa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
-
-  const basicMatch = header.match(/filename="?([^\";]+)"?/i);
-  return basicMatch?.[1] ? basicMatch[1].trim() : "";
-}
-
-function sanitizePdfFilename(value, fallback = "document.pdf") {
-  const safe = String(value || "")
-    .replace(/[\\/:*?"<>|]+/g, "_")
-    .trim();
-  const base = safe || fallback;
-  return /\.pdf$/i.test(base) ? base : `${base}.pdf`;
-}
-
-async function triggerPdfDownload(rawUrl) {
-  if (!isLikelyUrl(rawUrl)) return;
-
-  try {
-    const response = await fetch(buildPdfDownloadUrl(rawUrl), {
-      method: "GET",
-      cache: "no-store",
-    });
-    if (!response.ok) return;
-
-    const contentType = String(response.headers.get("content-type") || "").toLowerCase();
-    if (!contentType.includes("pdf")) return;
-
-    const disposition = response.headers.get("content-disposition") || "";
-    const fallbackFromPath = String(getUrlPathname(rawUrl)).split("/").pop() || "document.pdf";
-    const filename = sanitizePdfFilename(
-      extractFilenameFromContentDisposition(disposition),
-      sanitizePdfFilename(fallbackFromPath),
-    );
-
-    const blob = await response.blob();
-    const objectUrl = URL.createObjectURL(blob);
-
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    anchor.rel = "noopener noreferrer";
-    anchor.style.display = "none";
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-
-    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-  } catch {
-    // Ignore download failures silently to avoid breaking the page flow.
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-function isGenericLinkText(value) {
-  const normalized = normalizeText(value).toLowerCase();
-  if (!normalized) return false;
-  if (GENERIC_LINK_TEXTS.has(normalized)) return true;
-  return normalized === "click" || normalized === "here";
-}
-
-function isNonZeroMeaningfulValue(value) {
-  if (!isMeaningfulValue(value)) return false;
-  const asNumber = Number(value);
-  if (!Number.isNaN(asNumber)) return asNumber !== 0;
-  return true;
-}
-
-function resolveNavigableUrl(rawValue, fallbackUrls = []) {
-  const tryResolve = (candidateRaw) => {
-    const candidate = String(candidateRaw || "").trim();
-    if (!isLikelyUrl(candidate)) return "";
-    if (shouldBlockExternalUrl(candidate)) return "";
-    return candidate;
-  };
-
-  const primary = tryResolve(rawValue);
-  if (primary) return primary;
-
-  for (const fallback of fallbackUrls) {
-    const resolved = tryResolve(fallback);
-    if (resolved) return resolved;
+@media (max-width: 768px) {
+  body {
+    padding: 12px 8px 40px;
   }
-  return "";
-}
-
-function shouldHideLinkEntry(entry) {
-  const haystack = `${entry?.key || ""} ${entry?.label || ""} ${entry?.value || ""}`.toLowerCase();
-  if (haystack.includes("sarkari result app")) return true;
-  if (haystack.includes("sarkariresult app")) return true;
-  if (haystack.includes("com.vinod.sarkarinaukri")) return true;
-  if (haystack.includes("source url")) return true;
-  return false;
-}
-
-function parseDateLike(value) {
-  if (!isMeaningfulValue(value)) return null;
-  const raw = formatDisplayValue(value);
-  const direct = new Date(raw);
-  if (!Number.isNaN(direct.getTime())) return direct;
-
-  const iso = raw.match(/\d{4}-\d{2}-\d{2}/)?.[0];
-  if (iso) {
-    const parsed = new Date(iso);
-    if (!Number.isNaN(parsed.getTime())) return parsed;
+  .sa-shell {
+    width: min(1100px, calc(100vw - 12px));
   }
-
-  const ddMmYyyy = raw.match(/(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
-  if (ddMmYyyy) {
-    const parsed = new Date(Number(ddMmYyyy[3]), Number(ddMmYyyy[2]) - 1, Number(ddMmYyyy[1]));
-    if (!Number.isNaN(parsed.getTime())) return parsed;
+  .sa-hero {
+    border-radius: 18px;
+    padding: 18px 16px;
   }
-  return null;
-}
-
-function humanDate(value) {
-  if (!isMeaningfulValue(value)) return "Not specified";
-  const raw = formatDisplayValue(value);
-  if (/\bto\b/i.test(raw)) return raw;
-  if (/\d{4}-\d{2}-\d{2}.+\d{4}-\d{2}-\d{2}/.test(raw)) return raw;
-  if (/\d{1,2}[-/]\d{1,2}[-/]\d{4}.+\d{1,2}[-/]\d{1,2}[-/]\d{4}/.test(raw)) return raw;
-  if (!/(\d{4}-\d{1,2}-\d{1,2})|(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|([A-Za-z]{3,9}\s+\d{1,2},?\s+\d{4})/.test(raw)) {
-    return raw;
+  .sa-card,
+  .sa-section-card,
+  .sa-source-bar {
+    border-radius: 16px;
   }
-  const parsed = parseDateLike(raw);
-  if (!parsed) return raw;
-  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short", year: "numeric" }).format(parsed);
-}
-
-function valueWithCurrency(value, currency = "INR") {
-  if (!isMeaningfulValue(value)) return "Not specified";
-  const num = Number(value);
-  if (!Number.isNaN(num)) {
-    const symbol = String(currency || "INR").toUpperCase() === "INR" ? "Rs." : String(currency || "");
-    return `${symbol} ${num}`;
+  table,
+  table.sa-table,
+  .sa-side-table {
+    min-width: 360px;
+    font-size: 0.85rem;
   }
-  return formatDisplayValue(value);
 }
-
-function statusClasses(status) {
-  const normalized = String(status || "").toLowerCase();
-  if (normalized === "active") return { text: "Application Open", className: "bg-green-100 text-green-700" };
-  if (normalized === "upcoming") return { text: "Upcoming", className: "bg-amber-100 text-amber-700" };
-  if (normalized === "closed") return { text: "Closed", className: "bg-red-100 text-red-700" };
-  return { text: status || "Status", className: "bg-slate-100 text-slate-700" };
-}
-
-function hasApplicationClosed(applicationLastDate) {
-  const parsedDate = parseDateLike(applicationLastDate);
-  if (!parsedDate) return false;
-  const endOfDay = new Date(parsedDate.getFullYear(), parsedDate.getMonth(), parsedDate.getDate(), 23, 59, 59, 999);
-  return Date.now() > endOfDay.getTime();
-}
+`;
 
 function normalizeObjectId(value) {
   if (typeof value === "string") return value.trim();
@@ -440,10 +657,6 @@ function normalizeObjectId(value) {
     if (oid) return oid;
   }
   return "";
-}
-
-function isValidEmail(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
 function buildWatchLocalKey({ postDetailId = "", megaPostId = "", canonicalKey = "", megaSlug = "" }) {
@@ -483,10 +696,258 @@ function markPostAsWatched(localKey, data = {}) {
   window.localStorage.setItem(WATCHED_POSTS_STORAGE_KEY, JSON.stringify(next));
 }
 
-function debugPostDetails(...args) {
-  if (process.env.NODE_ENV !== "production") {
-    console.log("[PostDetailsView]", ...args);
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function formatDisplayDate(value = "") {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
   }
+  return raw;
+}
+
+function looksTailwindRichHtml(value) {
+  return /class=["'][^"']*(\bprose\b|\bbg-[^"'\s]+|\btext-[^"'\s]+|\bborder-[^"'\s]+|\bpx-[^"'\s]+|\bpy-[^"'\s]+|\brounded-[^"'\s]+|\bshadow-[^"'\s]+|\bmin-w-\[[^"']+\]|\bmax-w-\[[^"']+\]|\bw-full\b)[^"']*["']/i.test(
+    String(value || ""),
+  );
+}
+
+function normalizeUtilityClassList(rawClassValue = "", isTailwindDoc = false) {
+  const input = String(rawClassValue || "").trim();
+  if (!input) return "";
+
+  const seen = new Set();
+  let tokens = input
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .filter((token) => {
+      if (seen.has(token)) return false;
+      seen.add(token);
+      return true;
+    });
+
+  if (!isTailwindDoc) return tokens.join(" ");
+
+  const hasSlateText = tokens.some((token) => /^text-slate-\d{2,3}$/.test(token));
+  const hasBgWhite = tokens.includes("bg-white");
+  const darkBgTokens = new Set(["bg-slate-800", "bg-slate-900", "bg-slate-950"]);
+
+  if (hasSlateText || hasBgWhite) {
+    tokens = tokens.filter((token) => !darkBgTokens.has(token));
+  }
+  if (hasSlateText) {
+    tokens = tokens.filter((token) => token !== "text-white");
+  }
+
+  return tokens.join(" ");
+}
+
+function normalizeHtmlClassAttributes(docHtml = "", isTailwindDoc = false) {
+  const html = String(docHtml || "");
+  if (!html) return "";
+
+  return html.replace(/class=(["'])([\s\S]*?)\1/gi, (fullMatch, quote, classValue) => {
+    const normalized = normalizeUtilityClassList(classValue, isTailwindDoc);
+    if (!normalized) return "";
+    return `class=${quote}${normalized}${quote}`;
+  });
+}
+
+function normalizeLegacyInlineLine(value = "") {
+  let line = String(value || "").trim();
+  if (!line) return "";
+  line = line
+    .replace(/^<p[^>]*>/i, "")
+    .replace(/<\/p>$/i, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/^\s*(?:[-*.:]+)\s*/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return line;
+}
+
+function stripHtmlTags(value = "") {
+  return String(value || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function detectLegacySectionHeading(value = "") {
+  const line = String(value || "").toLowerCase();
+  if (!line) return "";
+  for (const section of LEGACY_SECTION_HEADINGS) {
+    if (section.keys.some((key) => line.includes(key))) return section.heading;
+  }
+  return "";
+}
+
+function enhanceLegacyLeadBlock(rawHtml = "") {
+  const html = String(rawHtml || "").trim();
+  if (!html) return "";
+  if (/sa-shell|sa-hero|sa-card-header/i.test(html)) return html;
+
+  const firstTableIndex = html.search(/<table[\s>]/i);
+  if (firstTableIndex < 0) return html;
+
+  const lead = html.slice(0, firstTableIndex);
+  const rest = html.slice(firstTableIndex);
+  if (!/<br\s*\/?>/i.test(lead)) return html;
+
+  const lines = lead
+    .split(/<br\s*\/?>/gi)
+    .map((line) => normalizeLegacyInlineLine(line))
+    .filter(Boolean);
+
+  if (lines.length < 6) return html;
+
+  const headingHits = lines.reduce((count, line) => {
+    const text = stripHtmlTags(line).replace(/[:\-–—]+$/g, "").trim();
+    return count + (detectLegacySectionHeading(text) ? 1 : 0);
+  }, 0);
+  if (headingHits < 2) return html;
+
+  const introLines = [];
+  const sections = [];
+  let activeSection = null;
+
+  const flushActive = () => {
+    if (!activeSection) return;
+    const filteredItems = activeSection.items.filter(Boolean);
+    if (filteredItems.length) {
+      sections.push({ heading: activeSection.heading, items: filteredItems });
+    }
+    activeSection = null;
+  };
+
+  for (const rawLine of lines) {
+    const line = normalizeLegacyInlineLine(rawLine);
+    if (!line) continue;
+
+    const asText = stripHtmlTags(line).replace(/[:\-–—]+$/g, "").trim();
+    const heading = detectLegacySectionHeading(asText);
+    if (heading) {
+      flushActive();
+      activeSection = { heading, items: [] };
+      continue;
+    }
+
+    if (activeSection) activeSection.items.push(line);
+    else introLines.push(line);
+  }
+  flushActive();
+
+  if (!sections.length) return html;
+
+  const introHtml = introLines.map((line) => `<p>${line}</p>`).join("");
+  const sectionHtml = sections
+    .map(
+      (section) => `
+<section class="sa-front-section">
+  <h3>${section.heading}</h3>
+  <ul>${section.items.map((item) => `<li>${item}</li>`).join("")}</ul>
+</section>`,
+    )
+    .join("");
+
+  return `<div class="sa-front-legacy">${introHtml}${sectionHtml}</div>${rest}`;
+}
+
+function removeEmptyParagraphBreaks(rawHtml = "") {
+  return String(rawHtml || "")
+    .replace(/<p[^>]*>\s*(?:<br\s*\/?>\s*)+<\/p>/gi, "")
+    .replace(/(<br\s*\/?>\s*){3,}/gi, "<br /><br />");
+}
+
+function stripForeignStyles(rawDoc = "") {
+  let doc = String(rawDoc || "");
+  if (!doc) return doc;
+
+  const hasPreparedLayout = /sa-shell|sa-hero|sa-card-header|sa-fallback-style/i.test(doc);
+  if (hasPreparedLayout) return doc;
+
+  doc = doc
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, "")
+    .replace(/\sstyle=(["'])(?:(?!\1).)*\1/gi, "");
+
+  return doc;
+}
+
+function buildPostSrcDoc(newHtml) {
+  const inputHtml = String(newHtml || "").trim();
+  if (!inputHtml) return "";
+  const html = removeEmptyParagraphBreaks(enhanceLegacyLeadBlock(inputHtml));
+
+  const rawDocBase = /<\s*html[\s>]/i.test(html)
+    ? html
+    : `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+</head>
+<body>${html}</body>
+</html>`;
+  const rawDoc = stripForeignStyles(rawDocBase);
+  const isTailwindDoc = looksTailwindRichHtml(rawDoc);
+  const baseDoc = normalizeHtmlClassAttributes(rawDoc, isTailwindDoc);
+
+  const hasFallbackStyle = /id=["']sa-fallback-style["']/i.test(baseDoc);
+  const hasTailwindLayoutOverride = /id=["']sa-tailwind-layout-override["']/i.test(baseDoc);
+  const hasEmbeddedStyle = /<style[\s>]/i.test(baseDoc);
+  const hasTailwindRuntime = /cdn\.tailwindcss\.com/i.test(baseDoc);
+  const hasBrandFontLinks = /family=Fraunces|family=Manrope/i.test(baseDoc);
+  const needsTailwindRuntime = isTailwindDoc && !hasTailwindRuntime;
+
+  const injections = [];
+  if (!hasBrandFontLinks) {
+    injections.push(SA_FONT_LINKS);
+  }
+
+  if (needsTailwindRuntime) {
+    injections.push(
+      `<script>window.tailwind = window.tailwind || {}; window.tailwind.config = { corePlugins: { preflight: false } };</script>`,
+      `<script src="https://cdn.tailwindcss.com?plugins=typography"></script>`,
+    );
+  }
+  if (isTailwindDoc && !hasTailwindLayoutOverride) {
+    injections.push(TAILWIND_LAYOUT_OVERRIDE_STYLE);
+  }
+
+  if (!isTailwindDoc && !hasFallbackStyle && !hasEmbeddedStyle) {
+    injections.push(`<style id="sa-fallback-style">${NEW_HTML_FALLBACK_STYLE}</style>`);
+  }
+
+  if (injections.length === 0) return baseDoc;
+
+  const headPayload = injections.join("\n");
+  if (/<\/head>/i.test(baseDoc)) {
+    return baseDoc.replace(/<\/head>/i, `${headPayload}\n</head>`);
+  }
+  if (/<\s*body[\s>]/i.test(baseDoc)) {
+    return baseDoc.replace(/<\s*body[\s>]/i, `<head>${headPayload}</head><body>`);
+  }
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  ${headPayload}
+</head>
+<body>${baseDoc}</body>
+</html>`;
 }
 
 function EmptyCanonicalKey() {
@@ -500,7 +961,11 @@ function EmptyCanonicalKey() {
 }
 
 function ErrorState({ message }) {
-  return <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">{message || "Unable to load post details."}</div>;
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+      {message || "Unable to load post details."}
+    </div>
+  );
 }
 
 export default function PostDetailsView({
@@ -511,25 +976,26 @@ export default function PostDetailsView({
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState(initialErrorMessage || "");
   const [details, setDetails] = useState(initialDetails || null);
+
   const [watchModalOpen, setWatchModalOpen] = useState(false);
-  const [previewImage, setPreviewImage] = useState(null);
   const [watchEmail, setWatchEmail] = useState("");
   const [watchSubmitting, setWatchSubmitting] = useState(false);
   const [watchFeedback, setWatchFeedback] = useState({ type: "", text: "" });
   const [watchEnabledForPost, setWatchEnabledForPost] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
+  const contentFrameRef = useRef(null);
+  const [contentFrameHeight, setContentFrameHeight] = useState(1200);
 
   useEffect(() => {
-    if (!canonicalKey) {
-      debugPostDetails("Skipped fetch: canonicalKey missing");
-      return;
-    }
+    if (!canonicalKey) return;
+
     let isMounted = true;
     const controller = new AbortController();
 
     const fetchDetails = async () => {
       setIsLoading(true);
       setErrorMessage("");
-      debugPostDetails("Fetching details for canonicalKey:", canonicalKey);
+
       try {
         const localEndpoint = "/api/post-details-by-canonicalkey";
         const publicBaseUrl = String(process.env.NEXT_PUBLIC_BASE_URL || "")
@@ -548,16 +1014,9 @@ export default function PostDetailsView({
 
         const shouldTryUpstreamFallback =
           Boolean(upstreamFallbackEndpoint) &&
-          (
-            response.status === 404 ||
-            !response.ok ||
-            !payload ||
-            payload?.success === false
-          );
+          (response.status === 404 || !response.ok || !payload || payload?.success === false);
 
-        // Some deployments proxy /api/* to backend service, so this app route may not resolve in production.
         if (shouldTryUpstreamFallback) {
-          debugPostDetails("Local route returned 404, retrying upstream:", upstreamFallbackEndpoint);
           response = await fetch(upstreamFallbackEndpoint, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -568,9 +1027,6 @@ export default function PostDetailsView({
           payload = await response.json().catch(() => null);
         }
 
-        debugPostDetails("Raw payload:", payload);
-        debugPostDetails("Fetch status:", response.status, response.statusText);
-
         if (!response.ok || !payload || payload?.success === false) {
           const upstreamStatus = payload?.upstream?.status;
           const upstreamType = payload?.upstream?.contentType;
@@ -579,17 +1035,12 @@ export default function PostDetailsView({
             : "";
           throw new Error(`${payload?.message || "Unable to load post details"}${upstreamMeta}`);
         }
-        const normalized = normalizePostDetails(payload);
-        debugPostDetails("Normalized details:", normalized);
 
-        if (isMounted) {
-          console.log("[PostDetailsView] postDetails data received:", normalized);
-          setDetails(normalized);
-        }
+        const normalized = normalizePostDetails(payload);
+        if (isMounted) setDetails(normalized);
       } catch (error) {
-        if (error.name !== "AbortError") {
-          console.error("[PostDetailsView] Fetch failed:", error);
-          if (isMounted) setErrorMessage(error.message || "Unable to load post details");
+        if (error?.name !== "AbortError" && isMounted) {
+          setErrorMessage(error?.message || "Unable to load post details");
         }
       } finally {
         if (isMounted) setIsLoading(false);
@@ -602,234 +1053,44 @@ export default function PostDetailsView({
       controller.abort();
     };
   }, [canonicalKey]);
-  
-  useEffect(() => {
-    debugPostDetails("State details changed:", details);
-  }, [details]);
 
   useEffect(() => {
     setWatchModalOpen(false);
-    setPreviewImage(null);
     setWatchEmail("");
     setWatchSubmitting(false);
     setWatchFeedback({ type: "", text: "" });
   }, [canonicalKey]);
 
-  const recruitment = details?.recruitment || {};
-  const organization = recruitment.organization || {};
-  const importantDates = recruitment.importantDates || {};
-  const vacancyDetails = recruitment.vacancyDetails || {};
-  const applicationFee = recruitment.applicationFee || {};
-  const ageLimit = recruitment.ageLimit || {};
-  const eligibility = recruitment.eligibility || {};
-  const physicalStandards = recruitment.physicalStandards || {};
-  const physicalEfficiencyTest = recruitment.physicalEfficiencyTest || {};
-  const importantLinks = recruitment.importantLinks || {};
-  const content = recruitment.content || {};
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
-  const displayTitle = recruitment.title || details?.raw?.postTitle || details?.raw?.title || "Recruitment Details";
-  const rawSectionTitle = String(
-    details?.raw?.megaTitle || details?.raw?.megaSlug || recruitment?.megaTitle || "",
-  ).trim();
+  const recruitment = details?.recruitment || {};
+  const post = details?.raw || {};
+  const postHtmlPayload = useMemo(
+    () => String(post?.reactHtml || post?.newHtml || "").trim(),
+    [post?.reactHtml, post?.newHtml],
+  );
+  const postSrcDoc = useMemo(
+    () => buildPostSrcDoc(postHtmlPayload),
+    [postHtmlPayload],
+  );
+
+  const displayTitle = recruitment.title || post.postTitle || post.megaTitle || "Recruitment Details";
+  const rawSectionTitle = String(post.megaTitle || post.megaSlug || recruitment.megaTitle || "").trim();
   const sectionRoute = resolveSectionRoute(rawSectionTitle || "Latest Gov Jobs");
   const breadcrumbSectionLabel = sectionRoute.label || "Latest Gov Jobs";
   const breadcrumbSectionHref = buildSectionHref(sectionRoute.megaTitle);
   const breadcrumbTitle = recruitment.advertisementNumber || displayTitle;
-  const postDateText = humanDate(importantDates.postDate || details?.raw?.postDate || details?.raw?.createdAt);
-  const isClosedByDate = hasApplicationClosed(importantDates.applicationLastDate);
-  const status = isClosedByDate ? { text: "Application Closed", className: "bg-red-100 text-red-700" } : statusClasses(recruitment.status);
 
-  const shortSummary = content.originalSummary || recruitment.additionalInfo || "Details are available below. Check all sections carefully before applying.";
-  const keyHighlights = toMeaningfulList(content.keyHighlights);
-  const whoShouldApply = toMeaningfulList(content.whoShouldApply);
-  const applicationSteps = toMeaningfulList(content.applicationSteps);
-  const documentsChecklist = toMeaningfulList(content.documentsChecklist);
-  const importantNotes = toMeaningfulList(content.importantNotes);
-  const documentationList = toMeaningfulList(recruitment.documentation);
-  const selectionProcessSummary = isMeaningfulValue(content.selectionProcessSummary) ? formatDisplayValue(content.selectionProcessSummary) : "";
-  const feeSummary = isMeaningfulValue(content.feeSummary) ? formatDisplayValue(content.feeSummary) : "";
-  const additionalInfo = isMeaningfulValue(recruitment.additionalInfo) ? formatDisplayValue(recruitment.additionalInfo) : "";
-
-  const metadataRows = [
-    { label: "Advertisement Number", value: recruitment.advertisementNumber },
-    { label: "Organization Type", value: organization.type },
-    {
-      label: "Official Website",
-      value: organization.website,
-      url:
-        isLikelyUrl(organization.website) && !shouldBlockExternalUrl(organization.website)
-          ? String(organization.website).trim()
-          : "",
-    },
-  ].filter((row) => {
-    if (!isMeaningfulValue(row.value)) return false;
-    if (isLikelyUrl(row.value) && shouldBlockExternalUrl(row.value)) return false;
-    return true;
-  });
-
-  const knownDateKeySet = new Set(DATE_LABELS.map(([key]) => key));
-  const dateRows = [
-    ...DATE_LABELS.filter(([key]) => isMeaningfulValue(importantDates[key])).map(([key, label]) => ({ key, label, value: importantDates[key] })),
-    ...Object.entries(importantDates)
-      .filter(([key, value]) => !knownDateKeySet.has(key) && isMeaningfulValue(value))
-      .map(([key, value]) => ({ key, label: humanLabel(key), value })),
-  ];
-
-  const knownFeeKeys = new Set([...FEE_LABELS.map(([key]) => key), "currency", "paymentMode", "exemptions", "other"]);
-  const feeRows = [
-    ...FEE_LABELS.filter(([key]) => hasValue(applicationFee[key])).map(([key, label]) => ({ key, label, value: applicationFee[key] })),
-    ...Object.entries(applicationFee)
-      .filter(([key, value]) => !knownFeeKeys.has(key) && isMeaningfulValue(value) && typeof value !== "object" && !Array.isArray(value))
-      .map(([key, value]) => ({ key, label: humanLabel(key), value })),
-  ];
-
-  const feeOtherRows = rowsFromObject(applicationFee.other).map(([key, value]) => ({ key, label: humanLabel(key), value }));
-  const paymentModes = toMeaningfulList(applicationFee.paymentMode);
-  const feeExemptions = isMeaningfulValue(applicationFee.exemptions) ? formatDisplayValue(applicationFee.exemptions) : "";
-
-  const positions = Array.isArray(vacancyDetails.positions) ? vacancyDetails.positions : [];
-  const totalPosts = vacancyDetails.totalPosts ?? positions.reduce((sum, row) => sum + (Number(row?.numberOfPosts) || 0), 0);
-
-  const categoryRows = [
-    ...Object.entries(vacancyDetails.categoryWise || {})
-      .filter(([key]) => key !== "other")
-      .filter(([, value]) => isNonZeroMeaningfulValue(value))
-      .map(([key, value]) => ({ key, label: humanLabel(key), value })),
-    ...rowsFromObject(vacancyDetails.categoryWise?.other)
-      .filter(([, value]) => isNonZeroMeaningfulValue(value))
-      .map(([key, value]) => ({ key: `other-${key}`, label: humanLabel(key), value })),
-  ];
-  const districtRows = Array.isArray(vacancyDetails.districtWise)
-    ? vacancyDetails.districtWise.filter((item) => item && typeof item === "object" && rowsFromObject(item).length > 0)
-    : [];
-
-  const ageRelaxationRows = [
-    ...Object.entries(ageLimit.ageRelaxation || {})
-      .filter(([key]) => key !== "other")
-      .filter(([, value]) => isMeaningfulValue(value))
-      .map(([key, value]) => ({ key, label: humanLabel(key), value })),
-    ...rowsFromObject(ageLimit.ageRelaxation?.other).map(([key, value]) => ({ key: `other-${key}`, label: humanLabel(key), value })),
-  ];
-
-  const ageCategoryRows = Object.entries(ageLimit.categoryWise || {})
-    .filter(([, value]) => value && typeof value === "object")
-    .map(([key, value]) => ({
-      key,
-      label: humanLabel(key).toUpperCase(),
-      male: value?.male,
-      female: value?.female,
-      extras: Object.entries(value)
-        .filter(([inner]) => inner !== "male" && inner !== "female")
-        .filter(([, innerValue]) => isNonZeroMeaningfulValue(innerValue))
-        .map(([inner, innerValue]) => ({ label: humanLabel(inner), value: innerValue })),
-    }))
-    .filter(
-      (row) =>
-        isNonZeroMeaningfulValue(row.male) ||
-        isNonZeroMeaningfulValue(row.female) ||
-        row.extras.length > 0,
-    );
-
-  const eligibilityRows = [
-    { key: "educationQualification", label: "Education Qualification", value: eligibility.educationQualification },
-    { key: "streamRequired", label: "Stream Required", value: eligibility.streamRequired },
-    { key: "minimumPercentage", label: "Minimum Percentage", value: eligibility.minimumPercentage },
-    { key: "experienceRequired", label: "Experience Required", value: eligibility.experienceRequired },
-  ].filter((row) => isMeaningfulValue(row.value));
-  const specialRequirements = toMeaningfulList(eligibility.specialRequirements);
-
-  const physicalRows = [
-    { label: "Male", ...(physicalStandards.male || {}), petDistance: physicalEfficiencyTest.male?.distance, petDuration: physicalEfficiencyTest.male?.duration },
-    { label: "Female", ...(physicalStandards.female || {}), petDistance: physicalEfficiencyTest.female?.distance, petDuration: physicalEfficiencyTest.female?.duration },
-  ];
-  const showPhysicalSection = physicalRows.some((row) => Object.entries(row).some(([key, value]) => key !== "label" && isMeaningfulValue(value)));
-  const selectionProcess = toMeaningfulList(recruitment.selectionProcess);
-  const faqList = Array.isArray(content.faq) ? content.faq.filter((item) => item && (isMeaningfulValue(item.q) || isMeaningfulValue(item.a))) : [];
-
-  const defaultLinkClass = "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100";
-  const knownLinkKeys = new Set(Object.keys(LINK_CONFIG));
-  const officialWebsiteFallback = String(importantLinks.officialWebsite || organization.website || "").trim();
-  const sourceUrlFallback = String(recruitment.sourceUrl || details?.raw?.sourceUrl || "").trim();
-
-  const fallbackUrlsForLink = (key) => {
-    if (key === "officialWebsite") return [officialWebsiteFallback];
-    return [officialWebsiteFallback, sourceUrlFallback];
-  };
-
-  const linkDisplayText = (rawText, resolvedUrl) => {
-    if (resolvedUrl) return "";
-    if (isGenericLinkText(rawText)) return "Direct URL not provided";
-    return rawText || "Not available";
-  };
-
-  const shouldSkipHiddenLinkEntry = (rawText, resolvedUrl) =>
-    !resolvedUrl && isLikelyUrl(rawText) && shouldBlockExternalUrl(rawText);
-
-  const allLinkEntries = [
-    ...Object.keys(LINK_CONFIG)
-      .filter((key) => isMeaningfulValue(importantLinks[key]))
-      .map((key) => {
-        const cfg = LINK_CONFIG[key];
-        const rawText = formatDisplayValue(importantLinks[key]);
-        const resolvedUrl = resolveNavigableUrl(rawText, fallbackUrlsForLink(key));
-        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
-        return {
-          key,
-          label: cfg.label,
-          value: linkDisplayText(rawText, resolvedUrl),
-          url: resolvedUrl,
-          icon: cfg.icon,
-          className: cfg.className,
-        };
-      })
-      .filter(Boolean),
-    ...Object.entries(importantLinks)
-      .filter(([key, value]) => key !== "other" && !knownLinkKeys.has(key) && isMeaningfulValue(value))
-      .map(([key, value]) => {
-        const rawText = formatDisplayValue(value);
-        const resolvedUrl = resolveNavigableUrl(rawText, []);
-        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
-        return {
-          key: `extra-${key}`,
-          label: humanLabel(key),
-          value: linkDisplayText(rawText, resolvedUrl),
-          url: resolvedUrl,
-          icon: Link2,
-          className: defaultLinkClass,
-        };
-      })
-      .filter(Boolean),
-    ...Object.entries(importantLinks.other || {})
-      .filter(([, value]) => isMeaningfulValue(value))
-      .map(([key, value]) => {
-        const rawText = formatDisplayValue(value);
-        const resolvedUrl = resolveNavigableUrl(rawText, []);
-        if (shouldSkipHiddenLinkEntry(rawText, resolvedUrl)) return null;
-        return {
-          key: `other-${key}`,
-          label: humanLabel(key),
-          value: linkDisplayText(rawText, resolvedUrl),
-          url: resolvedUrl,
-          icon: Link2,
-          className: defaultLinkClass,
-        };
-      })
-      .filter(Boolean),
-  ];
-
-  const clickableLinks = allLinkEntries.filter((item) => item?.url && !shouldHideLinkEntry(item));
-  const hasGuidanceSection = Boolean(
-    whoShouldApply.length || applicationSteps.length || importantNotes.length || selectionProcessSummary || feeSummary || additionalInfo,
-  );
   const postDetailWatchId = normalizeObjectId(
-    details?.raw?._id || details?.raw?.postDetailId || details?.raw?.postId || details?.raw?.id,
+    post._id || post.postDetailId || post.postId || post.id,
   );
-  const megaPostWatchId = normalizeObjectId(details?.raw?.megaPostId);
-  const canonicalWatchKey = String(
-    details?.raw?.canonicalKey || details?.raw?.canonical || canonicalKey || "",
-  ).trim();
-  const megaSlugForWatch = String(details?.raw?.megaSlug || "").trim();
+  const megaPostWatchId = normalizeObjectId(post.megaPostId);
+  const canonicalWatchKey = String(post.canonicalKey || post.canonical || canonicalKey || "").trim();
+  const megaSlugForWatch = String(post.megaSlug || "").trim();
   const postWatchId = postDetailWatchId || megaPostWatchId;
+
   const hasWatchTarget = Boolean(
     postWatchId || postDetailWatchId || megaPostWatchId || canonicalWatchKey,
   );
@@ -861,29 +1122,26 @@ export default function PostDetailsView({
     setWatchModalOpen(false);
   };
 
-  const closePreviewImage = () => {
-    setPreviewImage(null);
+  const resizeContentFrame = () => {
+    const frame = contentFrameRef.current;
+    if (!frame) return;
+    try {
+      const doc = frame.contentDocument;
+      if (!doc) return;
+      const bodyHeight = doc.body?.scrollHeight || 0;
+      const docHeight = doc.documentElement?.scrollHeight || 0;
+      const nextHeight = Math.max(bodyHeight, docHeight);
+      if (nextHeight > 0) {
+        setContentFrameHeight(Math.max(720, nextHeight + 8));
+      }
+    } catch {
+      // Ignore resize errors for cross-origin-like edge cases.
+    }
   };
 
-  const handleImportantLinkClick = (item) => {
-    const targetUrl = String(item?.url || "").trim();
-    if (!targetUrl) return;
-
-    if (isInlinePreviewImageUrl(targetUrl)) {
-      setPreviewImage({
-        label: item?.label || "Image Preview",
-        url: targetUrl,
-      });
-      return;
-    }
-
-    if (isPdfUrl(targetUrl)) {
-      void triggerPdfDownload(targetUrl);
-      return;
-    }
-
-    window.open(targetUrl, "_blank", "noopener,noreferrer");
-  };
+  useEffect(() => {
+    setContentFrameHeight(1200);
+  }, [postSrcDoc]);
 
   const submitWatchRequest = async (event) => {
     event.preventDefault();
@@ -920,6 +1178,7 @@ export default function PostDetailsView({
           whatsapp: false,
         },
       });
+
       const { response, payload } = await fetchJsonWithFallback({
         localUrl: "/api/watch",
         fallbackUrl: buildPublicApiUrl("/watch"),
@@ -944,6 +1203,7 @@ export default function PostDetailsView({
           megaSlug: megaSlugForWatch,
         });
       }
+
       setWatchEnabledForPost(true);
       setWatchEmail("");
       setWatchFeedback({ type: "", text: "" });
@@ -958,619 +1218,135 @@ export default function PostDetailsView({
     }
   };
 
+  const sourceHost = (() => {
+    const raw = String(post?.sourceUrl || "").trim();
+    if (!raw) return "";
+    try {
+      return new URL(raw).hostname.replace(/^www\./, "");
+    } catch {
+      return "";
+    }
+  })();
+  const publishedLabel = formatDisplayDate(
+    recruitment?.importantDates?.postDate || post?.postDate || "",
+  );
+  const deadlineLabel = formatDisplayDate(
+    recruitment?.importantDates?.applicationLastDate || post?.applicationLastDate || "",
+  );
+
   if (!canonicalKey) return <EmptyCanonicalKey />;
   if (isLoading && !details) return <PostDetailsSkeleton />;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800">
-      <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-center gap-1 text-xs text-slate-600">
-          <Link href="/" className="transition hover:text-indigo-600 hover:underline">
+    <div className="relative min-h-screen overflow-hidden bg-[#edf4ff] text-slate-800">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-80 bg-[radial-gradient(circle_at_top,_rgba(110,179,255,0.22),transparent_64%)]" />
+      <div className="pointer-events-none absolute -left-24 top-20 h-64 w-64 rounded-full bg-[#8ec9ff]/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 top-14 h-64 w-64 rounded-full bg-[#ffd097]/30 blur-3xl" />
+
+      <div className="relative mx-auto w-full max-w-[1240px] px-3 pt-4 sm:px-4 lg:px-6">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-full border border-white/60 bg-white/80 px-3 py-1.5 text-[11px] text-slate-600 shadow-sm backdrop-blur-sm sm:text-xs">
+          <Link href="/" className="font-semibold transition hover:text-sky-700 hover:underline">
             Home
           </Link>
           <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-          <Link href={breadcrumbSectionHref} className="transition hover:text-indigo-600 hover:underline">
+          <Link href={breadcrumbSectionHref} className="font-semibold transition hover:text-sky-700 hover:underline">
             {breadcrumbSectionLabel}
           </Link>
           <ChevronRight className="h-3 w-3 text-slate-400" aria-hidden="true" />
-          <span className="font-semibold text-slate-800">{breadcrumbTitle}</span>
+          <span className="max-w-[55ch] truncate font-semibold text-slate-700">{breadcrumbTitle}</span>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+      <div className="relative mx-auto w-full max-w-[1240px] px-3 pb-14 sm:px-4 lg:px-6">
         {errorMessage && !details && <ErrorState message={errorMessage} />}
 
         {details && (
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <div className={`${SECTION_CARD_CLASS} border-t-4 border-indigo-600 p-6`}>
-                <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${status.className}`}>
-                    {status.text}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={openWatchModal}
-                      disabled={!hasWatchTarget || watchEnabledForPost}
-                      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[11px] font-semibold transition disabled:cursor-not-allowed ${
-                        watchEnabledForPost
-                          ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
-                      }`}
-                      title={
-                        watchEnabledForPost
-                          ? "Notification already enabled for this post"
-                          : hasWatchTarget
-                            ? "Enable notification for this post"
-                            : "Post identifier not available"
-                      }
-                    >
-                      <BellRing className="h-3.5 w-3.5" />
-                      {watchEnabledForPost ? "Notification Enabled" : "Notify"}
-                    </button>
-                    <span className="text-xs text-slate-500">Posted: {postDateText}</span>
-                  </div>
-                </div>
-
-                <h1 className="mb-2 text-2xl font-bold text-slate-900 md:text-3xl">{displayTitle}</h1>
-                <p className="mb-4 font-medium text-slate-600">
-                  {organization.name ? `${organization.name}${organization.shortName ? ` (${organization.shortName})` : ""}` : "Organization not specified"}
-                </p>
-
-                <div className="mb-4 rounded-lg border border-blue-100 bg-blue-50 p-4">
-                  <h3 className="mb-2 flex items-center text-sm font-semibold text-blue-800">
-                    <Info className="mr-2 h-4 w-4" />
-                    Short Information
-                  </h3>
-                  <p className="text-sm leading-relaxed text-slate-700">{shortSummary}</p>
-                </div>
-
-                {keyHighlights.length > 0 && (
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    {keyHighlights.map((highlight, index) => (
-                      <span key={`${highlight}-${index}`} className="rounded border border-slate-200 bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-700">
-                        {highlight}
+          <div className="space-y-4 pt-2">
+            <section className="overflow-hidden rounded-[24px] border border-white/40 bg-gradient-to-r from-[#0b2c4c] via-[#0f66d0] to-[#0ca37d] p-5 text-white shadow-[0_30px_45px_-35px_rgba(9,41,78,0.9)] sm:p-6">
+              <div className="flex flex-col gap-5">
+                <div className="min-w-0">
+                  <h1 className="max-w-4xl text-[1.52rem] font-semibold leading-tight text-white sm:text-[1.85rem]">
+                    {displayTitle}
+                  </h1>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] sm:text-xs">
+                    {sourceHost ? (
+                      <span className="rounded-full border border-white/25 bg-white/12 px-2.5 py-1 text-sky-50">
+                        Source: {sourceHost}
                       </span>
-                    ))}
+                    ) : null}
+                    {publishedLabel ? (
+                      <span className="rounded-full border border-white/25 bg-white/12 px-2.5 py-1 text-sky-50">
+                        Published: {publishedLabel}
+                      </span>
+                    ) : null}
+                    {deadlineLabel ? (
+                      <span className="rounded-full border border-white/25 bg-white/12 px-2.5 py-1 text-sky-50">
+                        Last Date: {deadlineLabel}
+                      </span>
+                    ) : null}
                   </div>
-                )}
-
-                {metadataRows.length > 0 && (
-                  <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 text-sm md:grid-cols-2">
-                    {metadataRows.map((row) => (
-                      <div key={row.label} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                        {(() => {
-                          const displayValue = formatDisplayValue(row.value);
-                          return (
-                            <>
-                              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{row.label}</p>
-                              {row.url ? (
-                                <button
-                                  type="button"
-                                  onClick={() => handleImportantLinkClick({ label: row.label, url: row.url })}
-                                  className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-indigo-700 hover:underline"
-                                >
-                                  {displayValue}
-                                  <ExternalLink className="h-3.5 w-3.5" />
-                                </button>
-                              ) : (
-                                <p className="mt-1 text-sm font-semibold text-slate-700">{displayValue}</p>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2">
-                <div className={`${SECTION_CARD_CLASS} mb-0 h-full`}>
-                  <div className={SECTION_HEADER_CLASS}>
-                    <CalendarDays className="mr-2 h-4 w-4 text-indigo-500" />
-                    Important Dates
-                  </div>
-                  <div className="p-4">
-                    {dateRows.length === 0 && <p className="text-sm text-slate-500">No dates available.</p>}
-                    {dateRows.length > 0 && (
-                      <ul className="space-y-3 text-sm">
-                        {dateRows.map((row) => (
-                          <li key={row.key} className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">{row.label}</span>
-                            <span className={row.key === "applicationLastDate" ? "font-bold text-red-600" : "font-medium text-slate-800"}>
-                              {humanDate(row.value)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-
-                <div className={`${SECTION_CARD_CLASS} mb-0 h-full`}>
-                  <div className={SECTION_HEADER_CLASS}>
-                    <IndianRupee className="mr-2 h-4 w-4 text-emerald-500" />
-                    Application Fee
-                  </div>
-                  <div className="p-4">
-                    {feeRows.length === 0 && feeOtherRows.length === 0 && <p className="text-sm text-slate-500">Fee details not available.</p>}
-
-                    {(feeRows.length > 0 || feeOtherRows.length > 0) && (
-                      <ul className="space-y-3 text-sm">
-                        {feeRows.map((row) => (
-                          <li key={row.key} className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">{row.label}</span>
-                            <span className="font-bold text-slate-800">{valueWithCurrency(row.value, applicationFee.currency || "INR")}</span>
-                          </li>
-                        ))}
-                        {feeOtherRows.map((row) => (
-                          <li key={row.key} className="flex items-center justify-between gap-3">
-                            <span className="text-slate-500">{row.label}</span>
-                            <span className="font-bold text-slate-800">{formatDisplayValue(row.value)}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <div className="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-500">
-                      <p>
-                        <span className="font-semibold">Currency:</span>{" "}
-                        {isMeaningfulValue(applicationFee.currency) ? formatDisplayValue(applicationFee.currency) : "INR"}
-                      </p>
-                      <p className="mt-1">
-                        <span className="font-semibold">Payment Mode:</span> {paymentModes.length > 0 ? paymentModes.join(", ") : "Not specified"}
-                      </p>
-                      {feeExemptions && (
-                        <p className="mt-1">
-                          <span className="font-semibold">Exemptions:</span> {feeExemptions}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className={SECTION_CARD_CLASS}>
-                <div className={`${SECTION_HEADER_CLASS} justify-between`}>
-                  <div className="flex items-center">
-                    <Users className="mr-2 h-4 w-4 text-orange-500" />
-                    Vacancy Details
-                  </div>
-                  <span className="rounded bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-700">
-                    Total: {hasValue(totalPosts) ? totalPosts : 0}
-                  </span>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="border-b bg-slate-50 text-xs uppercase text-slate-500">
-                      <tr>
-                        <th className="px-6 py-3">Post Name</th>
-                        <th className="px-6 py-3">Posts</th>
-                        <th className="px-6 py-3">Category</th>
-                        <th className="px-6 py-3">Area Type</th>
-                        <th className="px-6 py-3">Discipline</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {positions.length === 0 && (
-                        <tr>
-                          <td className="px-6 py-4 text-sm text-slate-500" colSpan={5}>
-                            Vacancy positions not available.
-                          </td>
-                        </tr>
-                      )}
-                      {positions.map((pos, index) => (
-                        <tr key={`${pos.postName || "post"}-${index}`} className={index % 2 === 0 ? "border-b bg-white" : "border-b bg-slate-50"}>
-                          <td className="px-6 py-4 font-medium text-slate-800">{isMeaningfulValue(pos.postName) ? formatDisplayValue(pos.postName) : "Not specified"}</td>
-                          <td className="px-6 py-4 font-bold text-indigo-600">{hasValue(pos.numberOfPosts) ? formatDisplayValue(pos.numberOfPosts) : "NA"}</td>
-                          <td className="px-6 py-4 text-slate-700">{isMeaningfulValue(pos.category) ? formatDisplayValue(pos.category) : "NA"}</td>
-                          <td className="px-6 py-4 text-slate-700">{isMeaningfulValue(pos.areaType) ? formatDisplayValue(pos.areaType) : "NA"}</td>
-                          <td className="px-6 py-4 text-slate-700">{isMeaningfulValue(pos.discipline) ? formatDisplayValue(pos.discipline) : "NA"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {(categoryRows.length > 0 || districtRows.length > 0) && (
-                  <div className="space-y-4 border-t border-slate-100 p-4">
-                    {categoryRows.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Category Wise</p>
-                        <div className="flex flex-wrap gap-2">
-                          {categoryRows.map((row) => (
-                            <span key={row.key} className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-semibold text-slate-700">
-                              {row.label}: {formatDisplayValue(row.value)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {districtRows.length > 0 && (
-                      <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">District Wise</p>
-                        <div className="overflow-x-auto rounded-lg border border-slate-200">
-                          <table className="w-full text-left text-sm">
-                            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                              <tr>
-                                <th className="px-4 py-2">District</th>
-                                <th className="px-4 py-2">Posts</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {districtRows.map((row, index) => (
-                                <tr key={`district-${index}`} className={index % 2 === 0 ? "border-t bg-white" : "border-t bg-slate-50"}>
-                                  <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.districtName) ? formatDisplayValue(row.districtName) : "Not specified"}</td>
-                                  <td className="px-4 py-2 font-semibold text-slate-800">{hasValue(row.numberOfPosts) ? formatDisplayValue(row.numberOfPosts) : "NA"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className={SECTION_CARD_CLASS}>
-                <div className={SECTION_HEADER_CLASS}>
-                  <ClipboardCheck className="mr-2 h-4 w-4 text-teal-500" />
-                  Eligibility & Standards
-                </div>
-                <div className="space-y-6 p-6">
-                  <div>
-                    <h4 className="mb-2 text-sm font-semibold text-slate-800">
-                      Age Limit <span className="text-xs font-normal text-slate-500">(as on {isMeaningfulValue(ageLimit.asOn) ? formatDisplayValue(ageLimit.asOn) : "Not specified"})</span>
-                    </h4>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="rounded border border-slate-100 bg-slate-50 p-3 text-center">
-                        <span className="block text-xs text-slate-500">Minimum</span>
-                        <span className="font-bold text-slate-800">{hasValue(ageLimit.minimumAge) ? `${formatDisplayValue(ageLimit.minimumAge)} Years` : "Not specified"}</span>
-                      </div>
-                      <div className="rounded border border-slate-100 bg-slate-50 p-3 text-center">
-                        <span className="block text-xs text-slate-500">Maximum</span>
-                        <span className="font-bold text-slate-800">{hasValue(ageLimit.maximumAge) ? `${formatDisplayValue(ageLimit.maximumAge)} Years` : "Not specified"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {ageRelaxationRows.length > 0 && (
-                    <div>
-                      <h4 className="mb-2 text-sm font-semibold text-slate-800">Age Relaxation</h4>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {ageRelaxationRows.map((row) => (
-                          <div key={row.key} className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                            <span className="text-slate-600">{row.label}</span>
-                            <span className="font-semibold text-slate-800">{formatDisplayValue(row.value)}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {ageCategoryRows.length > 0 && (
-                    <div>
-                      <h4 className="mb-2 text-sm font-semibold text-slate-800">Category-wise Age Limit</h4>
-                      <div className="overflow-x-auto rounded-lg border border-slate-200">
-                        <table className="w-full text-left text-sm">
-                          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                            <tr>
-                              <th className="px-4 py-2">Category</th>
-                              <th className="px-4 py-2">Male</th>
-                              <th className="px-4 py-2">Female</th>
-                              <th className="px-4 py-2">Other</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {ageCategoryRows.map((row, index) => (
-                              <tr key={row.key} className={index % 2 === 0 ? "border-t bg-white" : "border-t bg-slate-50"}>
-                                <td className="px-4 py-2 font-semibold text-slate-700">{row.label}</td>
-                                <td className="px-4 py-2 text-slate-700">{isNonZeroMeaningfulValue(row.male) ? formatDisplayValue(row.male) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isNonZeroMeaningfulValue(row.female) ? formatDisplayValue(row.female) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">
-                                  {row.extras.length === 0 ? "NA" : row.extras.map((item) => `${item.label}: ${formatDisplayValue(item.value)}`).join(", ")}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-
-                  {(eligibilityRows.length > 0 || specialRequirements.length > 0) && (
-                    <div>
-                      <h4 className="mb-2 text-sm font-semibold text-slate-800">Eligibility</h4>
-                      {eligibilityRows.length > 0 && (
-                        <div className="space-y-2">
-                          {eligibilityRows.map((row) => (
-                            <div key={row.key} className="flex items-center justify-between rounded border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-                              <span className="text-slate-600">{row.label}</span>
-                              <span className="font-semibold text-slate-800">{formatDisplayValue(row.value)}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {specialRequirements.length > 0 && (
-                        <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Special Requirements</p>
-                          <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                            {specialRequirements.map((item, index) => (
-                              <li key={`${item}-${index}`}>{item}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {showPhysicalSection && (
-                    <div>
-                      <h4 className="mb-2 text-sm font-semibold text-slate-800">Physical Standards & PET</h4>
-                      <div className="overflow-x-auto rounded-lg border border-slate-200">
-                        <table className="w-full text-left text-sm">
-                          <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                            <tr>
-                              <th className="px-4 py-2">Category</th>
-                              <th className="px-4 py-2">Height</th>
-                              <th className="px-4 py-2">Chest</th>
-                              <th className="px-4 py-2">Weight</th>
-                              <th className="px-4 py-2">Eyesight</th>
-                              <th className="px-4 py-2">PET Distance</th>
-                              <th className="px-4 py-2">PET Duration</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {physicalRows.map((row, index) => (
-                              <tr key={row.label} className={index % 2 === 0 ? "border-t bg-white" : "border-t bg-slate-50"}>
-                                <td className="px-4 py-2 font-semibold text-slate-700">{row.label}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.height) ? formatDisplayValue(row.height) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.chest) ? formatDisplayValue(row.chest) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.weight) ? formatDisplayValue(row.weight) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.eyesight) ? formatDisplayValue(row.eyesight) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.petDistance) ? formatDisplayValue(row.petDistance) : "NA"}</td>
-                                <td className="px-4 py-2 text-slate-700">{isMeaningfulValue(row.petDuration) ? formatDisplayValue(row.petDuration) : "NA"}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className={SECTION_CARD_CLASS}>
-                <div className={SECTION_HEADER_CLASS}>
-                  <CheckSquare className="mr-2 h-4 w-4 text-purple-500" />
-                  Selection Process
-                </div>
-                <div className="p-6">
-                  {selectionProcess.length === 0 && <p className="text-sm text-slate-500">Selection process not specified.</p>}
-                  {selectionProcess.length > 0 && (
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      {selectionProcess.map((step, index) => (
-                        <div key={`${step}-${index}`} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-indigo-500 bg-white text-xs font-bold text-indigo-600">
-                            {index + 1}
-                          </span>
-                          <span className="text-sm font-semibold text-slate-700">{step}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {hasGuidanceSection && (
-                <div className={SECTION_CARD_CLASS}>
-                  <div className={SECTION_HEADER_CLASS}>
-                    <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
-                    Detailed Guidance
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-                    {whoShouldApply.length > 0 && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Who Should Apply</h4>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                          {whoShouldApply.map((item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {applicationSteps.length > 0 && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Application Steps</h4>
-                        <ol className="list-decimal space-y-1 pl-5 text-sm text-slate-700">
-                          {applicationSteps.map((item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
-                          ))}
-                        </ol>
-                      </div>
-                    )}
-
-                    {importantNotes.length > 0 && (
-                      <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 md:col-span-2">
-                        <h4 className="mb-2 text-sm font-semibold text-rose-700">Important Notes</h4>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-rose-700">
-                          {importantNotes.map((item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {selectionProcessSummary && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Selection Process Summary</h4>
-                        <p className="text-sm leading-relaxed text-slate-700">{selectionProcessSummary}</p>
-                      </div>
-                    )}
-
-                    {feeSummary && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Fee Summary</h4>
-                        <p className="text-sm leading-relaxed text-slate-700">{feeSummary}</p>
-                      </div>
-                    )}
-
-                    {additionalInfo && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 md:col-span-2">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Additional Information</h4>
-                        <p className="text-sm leading-relaxed text-slate-700">{additionalInfo}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {(documentationList.length > 0 || documentsChecklist.length > 0) && (
-                <div className={SECTION_CARD_CLASS}>
-                  <div className={SECTION_HEADER_CLASS}>
-                    <ShieldCheck className="mr-2 h-4 w-4 text-indigo-500" />
-                    Documentation
-                  </div>
-                  <div className="grid grid-cols-1 gap-4 p-6 md:grid-cols-2">
-                    {documentationList.length > 0 && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Required Documents</h4>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                          {documentationList.map((item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-
-                    {documentsChecklist.length > 0 && (
-                      <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                        <h4 className="mb-2 text-sm font-semibold text-slate-800">Checklist</h4>
-                        <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                          {documentsChecklist.map((item, index) => (
-                            <li key={`${item}-${index}`}>{item}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="lg:col-span-1">
-              <div className="sticky top-24 space-y-6">
-                <div className={`${SECTION_CARD_CLASS} border-t-4 border-emerald-500 shadow-lg`}>
-                  <div className={`${SECTION_HEADER_CLASS} bg-emerald-50 text-emerald-800`}>
-                    <Link2 className="mr-2 h-4 w-4" />
-                    Important Links
-                  </div>
-                  <div className="space-y-3 p-4">
-                    {clickableLinks.length === 0 && (
-                      <p className="text-sm text-slate-500">No important links available.</p>
-                    )}
-
-                    {clickableLinks.map((item) => {
-                      const Icon = item.icon || Link2;
-                      const isAssetLink = isAttachmentUrl(item.url);
-                      return (
-                        <button
-                          key={item.key}
-                          type="button"
-                          onClick={() => handleImportantLinkClick(item)}
-                          className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-left text-sm font-medium transition ${item.className || defaultLinkClass}`}
-                        >
-                          <span>{item.label}</span>
-                          {isAssetLink ? (
-                            <span className="text-[11px] font-semibold uppercase tracking-wide">Open</span>
-                          ) : (
-                            <Icon className="h-4 w-4" />
-                          )}
-                        </button>
-                      );
-                    })}
-
-                  </div>
-                </div>
-
-                <div className={SECTION_CARD_CLASS}>
-                  <div className={SECTION_HEADER_CLASS}>
-                    <HelpCircle className="mr-2 h-4 w-4 text-blue-500" />
-                    FAQ
-                  </div>
-                  <div className="divide-y divide-slate-100 p-4">
-                    {faqList.length === 0 && <p className="text-sm text-slate-500">FAQ not available.</p>}
-                    {faqList.map((faq, index) => (
-                      <div key={`${faq.q || "q"}-${index}`} className="py-3">
-                        <h5 className="mb-1 text-sm font-semibold text-slate-800">
-                          <span className="mr-1 text-indigo-500">Q.</span>
-                          {isMeaningfulValue(faq.q) ? formatDisplayValue(faq.q) : "Not specified"}
-                        </h5>
-                        <p className="ml-4 text-xs text-slate-600">{isMeaningfulValue(faq.a) ? formatDisplayValue(faq.a) : "Not specified"}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-gradient-to-br from-indigo-600 to-blue-700 p-6 text-center text-white">
-                  <FileImage className="mx-auto mb-3 h-8 w-8 opacity-80" />
-                  <h3 className="mb-1 font-bold">Need to Resize Photo?</h3>
-                  <p className="mb-4 text-xs text-indigo-100">Resize your image to specific KB/Pixels for this form.</p>
-                  <button type="button" className="w-full rounded-lg bg-white px-4 py-2 text-sm font-bold text-indigo-700 transition hover:bg-indigo-50">
-                    Open Resizer
+                  <button
+                    type="button"
+                    onClick={openWatchModal}
+                    disabled={!hasWatchTarget || watchEnabledForPost}
+                    className={`mt-4 inline-flex min-w-[172px] items-center justify-center gap-2 rounded-full px-4 py-2 text-xs font-semibold tracking-wide transition disabled:cursor-not-allowed ${
+                      watchEnabledForPost
+                        ? "border border-emerald-300/60 bg-emerald-100/90 text-emerald-900"
+                        : "border border-white/35 bg-white/16 text-white hover:bg-white/24 disabled:border-white/20 disabled:bg-white/10 disabled:text-white/55"
+                    }`}
+                    title={
+                      watchEnabledForPost
+                        ? "Notification already enabled for this post"
+                        : hasWatchTarget
+                          ? "Enable notification for this post"
+                          : "Post identifier not available"
+                    }
+                  >
+                    <BellRing className="h-3.5 w-3.5" />
+                    {watchEnabledForPost ? "Notification Enabled" : "Notify Me"}
                   </button>
                 </div>
               </div>
-            </div>
+            </section>
+
+            <section className="overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/95 shadow-[0_24px_36px_-30px_rgba(10,34,66,0.65)] backdrop-blur">
+              {!hasMounted ? (
+                <div className="m-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600 sm:m-6">
+                  Loading recruitment details...
+                </div>
+              ) : postSrcDoc ? (
+                <iframe
+                  ref={contentFrameRef}
+                  title={displayTitle}
+                  srcDoc={postSrcDoc}
+                  className="block w-full border-0 bg-transparent"
+                  style={{ height: `${contentFrameHeight}px` }}
+                  onLoad={() => {
+                    resizeContentFrame();
+                    setTimeout(resizeContentFrame, 180);
+                    setTimeout(resizeContentFrame, 640);
+                    setTimeout(resizeContentFrame, 1400);
+                    setTimeout(resizeContentFrame, 2400);
+                  }}
+                />
+              ) : (
+                <div className="m-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 sm:m-6">
+                  Content not available.
+                </div>
+              )}
+            </section>
           </div>
         )}
       </div>
 
-      {previewImage && (
-        <div
-          className="fixed inset-0 z-[92] flex items-center justify-center bg-slate-900/70 p-4"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closePreviewImage();
-          }}
-        >
-          <div className="w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-              <h3 className="text-sm font-semibold text-slate-800">{previewImage.label || "Image Preview"}</h3>
-              <button
-                type="button"
-                onClick={closePreviewImage}
-                className="rounded-md border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-100"
-              >
-                Close
-              </button>
-            </div>
-            <div className="max-h-[75vh] overflow-auto bg-slate-100 p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={previewImage.url}
-                alt={previewImage.label || "Preview"}
-                className="mx-auto h-auto max-h-[70vh] w-auto rounded-lg border border-slate-200 bg-white object-contain shadow-sm"
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
       {watchModalOpen && (
         <div
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/60 p-4"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[#082340]/55 p-4 backdrop-blur-[2px]"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) closeWatchModal();
           }}
         >
-          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_34px_54px_-30px_rgba(11,36,69,0.8)]">
             <div className="mb-4 flex items-start justify-between gap-2">
               <div>
                 <h3 className="text-base font-bold text-slate-900">Get Post Notification</h3>
@@ -1599,18 +1375,12 @@ export default function PostDetailsView({
                   placeholder="you@example.com"
                   autoFocus
                   required
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:border-sky-600 focus:outline-none"
                 />
               </div>
 
               {watchFeedback.text && (
-                <p
-                  className={`rounded-lg px-3 py-2 text-xs font-medium ${
-                    watchFeedback.type === "success"
-                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border border-red-200 bg-red-50 text-red-700"
-                  }`}
-                >
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-700">
                   {watchFeedback.text}
                 </p>
               )}
@@ -1627,7 +1397,7 @@ export default function PostDetailsView({
                 <button
                   type="submit"
                   disabled={watchSubmitting}
-                  className="rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-70"
+                  className="rounded-lg bg-gradient-to-r from-[#0f66d0] to-[#0ca37d] px-3 py-2 text-xs font-semibold text-white hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {watchSubmitting ? "Saving..." : "Enable Notification"}
                 </button>

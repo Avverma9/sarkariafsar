@@ -1,21 +1,8 @@
 import mongoose from "mongoose";
 import MegaPost from "../models/megaPost.model.mjs";
 import PostDetail from "../models/postdetail.model.mjs";
-import { buildContentHashes } from "../utils/contentHash.mjs";
-import { buildCompactAiInput } from "../utils/aiInputFormatter.mjs";
-import {
-  buildPageHashFromSnapshot,
-  buildPostSnapshotFromRaw,
-} from "../utils/postSnapshot.mjs";
-import { sendPostUpdateNotification } from "../services/email.service.mjs";
 import { runPostUpdateBatch, updateSinglePostById } from "../services/postUpdate.service.mjs";
-import {
-  buildPreparedHtmlChanges,
-  buildReadyPostHtml,
-  diffPreparedHtml,
-} from "../utils/postHtmlTransform.mjs";
-import { refinePreparedHtmlWithGemini } from "../services/geminiHtmlRefine.service.mjs";
-import { extractRecruitmentJsonFromContentHtml } from "../services/geminiExtract.service.mjs";
+import { buildReadyPostHtml } from "../utils/postHtmlTransform.mjs";
 import { clearFrontApiCacheBestEffort } from "../services/frontCache.service.mjs";
 
 function isValidObjectId(id) {
@@ -26,39 +13,22 @@ function escapeRegex(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function isPlainObject(value) {
-  return !!value && typeof value === "object" && !Array.isArray(value);
-}
-
-function ensureRecruitmentPayload(payload, { title = "", sourceUrl = "" } = {}) {
-  const root = isPlainObject(payload) ? { ...payload } : {};
-  const recruitment = isPlainObject(root.recruitment) ? { ...root.recruitment } : {};
-
-  recruitment.title = String(recruitment.title || title || "").trim();
-  recruitment.sourceUrl = String(recruitment.sourceUrl || sourceUrl || "").trim();
-
-  if (!isPlainObject(recruitment.organization)) recruitment.organization = {};
-  if (!isPlainObject(recruitment.importantDates)) recruitment.importantDates = {};
-  if (!isPlainObject(recruitment.vacancyDetails)) recruitment.vacancyDetails = {};
-  if (!isPlainObject(recruitment.applicationFee)) recruitment.applicationFee = {};
-  if (!isPlainObject(recruitment.ageLimit)) recruitment.ageLimit = {};
-  if (!isPlainObject(recruitment.eligibility)) recruitment.eligibility = {};
-  if (!isPlainObject(recruitment.physicalStandards)) recruitment.physicalStandards = {};
-  if (!isPlainObject(recruitment.physicalEfficiencyTest)) recruitment.physicalEfficiencyTest = {};
-  if (!Array.isArray(recruitment.selectionProcess)) recruitment.selectionProcess = [];
-  if (!isPlainObject(recruitment.importantLinks)) recruitment.importantLinks = {};
-  if (!isPlainObject(recruitment.importantLinks.other)) recruitment.importantLinks.other = {};
-  if (!Array.isArray(recruitment.documentation)) recruitment.documentation = [];
-  if (!isPlainObject(recruitment.content)) recruitment.content = {};
-  if (!isPlainObject(recruitment.extraFields)) recruitment.extraFields = {};
-  if (!isPlainObject(recruitment.extraFields.unmappedKeyValues)) {
-    recruitment.extraFields.unmappedKeyValues = {};
-  }
-  if (!Array.isArray(recruitment.extraFields.links)) recruitment.extraFields.links = [];
-  if (!Array.isArray(recruitment.extraFields.keyValues)) recruitment.extraFields.keyValues = [];
-
-  root.recruitment = recruitment;
-  return root;
+function getPostDetailLegacyUnsetPayload() {
+  return {
+    contentHtml: "",
+    newHtml: "",
+    formattedData: "",
+    recruitment: "",
+    modelUsed: "",
+    aiData: "",
+    aiModel: "",
+    aiScraped: "",
+    aiScrapedAt: "",
+    pageHash: "",
+    htmlStableHash: "",
+    textHash: "",
+    updateSnapshot: "",
+  };
 }
 
 async function findPostAndDetailByAggregation({ postId = "", canonicalKey = "", megaSlug = "" }) {
@@ -94,6 +64,27 @@ async function findPostAndDetailByAggregation({ postId = "", canonicalKey = "", 
 
   const rows = await MegaPost.aggregate(pipeline);
   return rows?.[0] || null;
+}
+
+async function upsertPostDetailMetaOnly({ megaPostId, postTitle = "", sourceUrl = "" }) {
+  return PostDetail.findOneAndUpdate(
+    { megaPostId },
+    {
+      $set: {
+        megaPostId,
+        postTitle: String(postTitle || "").trim(),
+        sourceUrl: String(sourceUrl || "").trim(),
+        lastScrapedAt: new Date(),
+      },
+      $unset: {
+        ...getPostDetailLegacyUnsetPayload(),
+      },
+    },
+    {
+      upsert: true,
+      returnDocument: "after",
+    },
+  );
 }
 
 export const checkPostDetail = async (req, res, next) => {
@@ -158,8 +149,25 @@ export const patchPostDetail = async (req, res, next) => {
       });
     }
 
+    const allowedUpdateKeys = new Set(["postTitle", "sourceUrl"]);
+    const blockedAiOrHtmlKeys = new Set([
+      "formattedData",
+      "recruitment",
+      "modelUsed",
+      "contentHtml",
+      "newHtml",
+      "aiData",
+      "aiModel",
+      "aiScraped",
+      "aiScrapedAt",
+      "pageHash",
+      "htmlStableHash",
+      "textHash",
+      "updateSnapshot",
+    ]);
     const setPayload = {};
     const updatedPaths = [];
+    const rejectedPaths = [];
     for (const [path, value] of entries) {
       const key = String(path || "").trim();
       if (!key) continue;
@@ -169,11 +177,30 @@ export const patchPostDetail = async (req, res, next) => {
           message: `Invalid update path: ${key}`,
         });
       }
-      setPayload[`formattedData.${key}`] = value;
-      if (key === "recruitment" || key.startsWith("recruitment.")) {
-        setPayload[key] = value;
+      const rootKey = key.split(".")[0];
+      if (blockedAiOrHtmlKeys.has(rootKey)) {
+        rejectedPaths.push(key);
+        continue;
+      }
+      if (!allowedUpdateKeys.has(rootKey) || key.includes(".")) {
+        rejectedPaths.push(key);
+        continue;
+      }
+      if (rootKey === "postTitle") {
+        setPayload.postTitle = String(value || "").trim();
+      } else if (rootKey === "sourceUrl") {
+        setPayload.sourceUrl = String(value || "").trim();
       }
       updatedPaths.push(key);
+    }
+
+    if (rejectedPaths.length && !updatedPaths.length) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "PostDetail only allows 'postTitle' and 'sourceUrl'. HTML/AI/formatted fields are stored in MegaPost.",
+        rejectedPaths,
+      });
     }
 
     if (!updatedPaths.length) {
@@ -212,6 +239,7 @@ export const patchPostDetail = async (req, res, next) => {
         postDetailId: String(updated._id),
         megaPostId: String(updated.megaPostId),
         updatedPaths,
+        rejectedPaths,
       },
     });
   } catch (err) {
@@ -345,16 +373,32 @@ export const scrapePost = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "MegaPost not found" });
     }
 
-    // Cache hit: return directly without AI call.
-    if (row.postDetail?.formattedData && typeof row.postDetail.formattedData === "object") {
+    const cachedContentHtml = String(row.contentHtml || "");
+    const cachedNewHtml = String(row.newHtml || "");
+
+    // Cache hit from MegaPost: return directly when transformed HTML is already available.
+    if (cachedNewHtml.trim()) {
+      let postDetailId = row.postDetail?._id ? String(row.postDetail._id) : "";
+      if (!postDetailId || row.postDetail?.contentHtml || row.postDetail?.newHtml) {
+        const detail = await upsertPostDetailMetaOnly({
+          megaPostId: row._id,
+          postTitle: row.title || "",
+          sourceUrl: row.originalUrl || "",
+        });
+        postDetailId = String(detail?._id || "");
+      }
+
       return res.json({
         success: true,
         cached: true,
-        message: "PostDetail already exists. Returned cached formatted data without AI call.",
-        data: row.postDetail.formattedData,
+        message: "Returned cached transformed HTML from MegaPost.",
+        data: {
+          contentHtml: cachedContentHtml,
+          newHtml: cachedNewHtml,
+        },
         meta: {
           postId: String(row._id),
-          postDetailId: String(row.postDetail._id),
+          postDetailId,
           canonicalKey: row.canonicalKey || "",
           megaSlug: row.megaSlug || "",
           sourceUrl: row.originalUrl || "",
@@ -368,102 +412,60 @@ export const scrapePost = async (req, res, next) => {
     }
 
     const contentHtml = String(post.contentHtml || "").trim();
-    if (!contentHtml) {
+    const incomingNewHtml = String(post.newHtml || "").trim();
+    if (!contentHtml && !incomingNewHtml) {
       return res.status(400).json({
         success: false,
-        message: "contentHtml is missing in db.megaposts for this post",
+        message: "contentHtml/newHtml is missing in db.megaposts for this post",
       });
     }
 
-    const compactInput = buildCompactAiInput({
-      title: post.title,
-      sourceUrl: post.originalUrl,
-      contentHtml: post.contentHtml || "",
-      fallbackText: post.contentText || "",
-    });
+    let formattedNewHtml = incomingNewHtml;
+    if (contentHtml) {
+      try {
+        const transformed = buildReadyPostHtml({
+          title: post.title || "",
+          sourceUrl: post.originalUrl || "",
+          contentHtml: post.contentHtml || "",
+        });
+        formattedNewHtml = String(
+          transformed?.reactHtml || transformed?.newHtml || "",
+        ).trim();
+      } catch {
+        formattedNewHtml = incomingNewHtml || contentHtml;
+      }
+    }
 
-    const { data, modelName } = await extractRecruitmentJsonFromContentHtml({
-      contentHtml: compactInput,
-      sourceUrl: post.originalUrl || "",
-      // optional: postTitle: post.title
-    });
-
-    const normalizedData = ensureRecruitmentPayload(data, {
-      title: post.title,
-      sourceUrl: post.originalUrl || "",
-    });
-
-    // Build snapshot for hash (from existing content)
-    const snapshot = buildPostSnapshotFromRaw({
-      title: post.title,
-      metaDesc: post.metaDesc || "",
-      sourceUrl: post.originalUrl || "",
-      siteHost: post.siteHost || "",
-      contentText: post.contentText || "",
-      contentHtml: post.contentHtml || "",
-      applyLinks: post.applyLinks || [],
-      importantLinks: post.importantLinks || [],
-      dates: post.dates || {},
-    });
-
-    const hashInfo = buildPageHashFromSnapshot(snapshot);
-    const contentHashes = buildContentHashes({ contentHtml: post.contentHtml || "" });
-
-    // Save
-    post.aiData = normalizedData;
-    post.updateSnapshot = {
-      ...snapshot,
-      _hash: {
-        htmlStableHash: contentHashes.htmlStableHash,
-        textHash: contentHashes.textHash,
-      },
-    };
-    post.pageHash = hashInfo.pageHash;
-    post.aiScraped = true;
-    post.aiModel = String(modelName || "").trim();
-    post.aiScrapedAt = new Date();
-
+    // Keep MegaPost state non-AI for this endpoint.
+    post.aiScraped = false;
+    post.aiScrapedAt = null;
+    post.aiModel = "";
+    post.aiData = null;
+    post.newHtml = String(formattedNewHtml || "");
     await post.save();
 
-    const postDetail = await PostDetail.findOneAndUpdate(
-      { megaPostId: post._id },
-      {
-        $set: {
-          megaPostId: post._id,
-          postTitle: post.title || "",
-          sourceUrl: post.originalUrl || "",
-          pageHash: hashInfo.pageHash,
-          htmlStableHash: contentHashes.htmlStableHash,
-          textHash: contentHashes.textHash,
-          modelUsed: post.aiModel,
-          lastScrapedAt: new Date(),
-          formattedData: normalizedData,
-          updateSnapshot: post.updateSnapshot,
-          recruitment: normalizedData?.recruitment || normalizedData,
-        },
-      },
-      {
-        upsert: true,
-        returnDocument: "after",
-        setDefaultsOnInsert: true,
-      },
-    );
+    const postDetail = await upsertPostDetailMetaOnly({
+      megaPostId: post._id,
+      postTitle: post.title || "",
+      sourceUrl: post.originalUrl || "",
+    });
 
     void clearFrontApiCacheBestEffort({ reason: "post-scrape" });
 
     return res.json({
       success: true,
       cached: false,
-      message: "Recruitment data extracted with Gemini and saved to db.megaposts",
-      data: normalizedData,
+      message: "Transformed HTML saved in MegaPost and returned from MegaPost.",
+      data: {
+        contentHtml: String(post.contentHtml || ""),
+        newHtml: String(formattedNewHtml || ""),
+      },
       meta: {
         postId: String(post._id),
         postDetailId: String(postDetail?._id || ""),
-        model: post.aiModel,
-        pageHash: hashInfo.pageHash,
-        comparableFields: hashInfo.comparableCount,
-        htmlStableHash: contentHashes.htmlStableHash,
-        textHash: contentHashes.textHash,
+        canonicalKey: row.canonicalKey || "",
+        megaSlug: row.megaSlug || "",
+        sourceUrl: post.originalUrl || "",
       },
     });
   } catch (err) {
@@ -486,6 +488,12 @@ export const postUpdate = async (req, res, next) => {
       force,
       ...(Number.isFinite(matchThreshold) ? { matchThreshold } : {}),
       ...(Number.isFinite(maxCandidates) ? { maxCandidates } : {}),
+      ...(typeof req.body?.refreshRecruitment === "boolean"
+        ? { refreshRecruitment: req.body.refreshRecruitment }
+        : {}),
+      ...(req.body?.forceRecruitmentRefresh === true
+        ? { forceRecruitmentRefresh: true }
+        : {}),
       ...(req.body?.sourceSectionUrl
         ? { sourceSectionUrl: String(req.body.sourceSectionUrl).trim() }
         : {}),
@@ -499,6 +507,13 @@ export const postUpdate = async (req, res, next) => {
       }
 
       const result = await updateSinglePostById(postId, options);
+      await PostDetail.updateOne(
+        { megaPostId: new mongoose.Types.ObjectId(postId) },
+        {
+          $unset: getPostDetailLegacyUnsetPayload(),
+          $set: { lastScrapedAt: new Date() },
+        },
+      );
       void clearFrontApiCacheBestEffort({ reason: "post-update-single" });
       return res.json({ success: true, mode: "single", ...result });
     }
@@ -506,6 +521,21 @@ export const postUpdate = async (req, res, next) => {
     // Batch
     const limit = Math.max(1, Math.min(200, Number(req.body?.limit || 20)));
     const batch = await runPostUpdateBatch({ ...options, limit });
+    const batchMegaPostIds = Array.isArray(batch?.report)
+      ? batch.report
+          .map((x) => String(x?.postId || "").trim())
+          .filter((x) => mongoose.Types.ObjectId.isValid(x))
+          .map((x) => new mongoose.Types.ObjectId(x))
+      : [];
+    if (batchMegaPostIds.length) {
+      await PostDetail.updateMany(
+        { megaPostId: { $in: batchMegaPostIds } },
+        {
+          $unset: getPostDetailLegacyUnsetPayload(),
+          $set: { lastScrapedAt: new Date() },
+        },
+      );
+    }
     void clearFrontApiCacheBestEffort({ reason: "post-update-batch" });
 
     return res.json({ success: true, mode: "batch", ...batch });

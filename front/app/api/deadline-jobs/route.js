@@ -1,7 +1,5 @@
 import { baseUrl } from "@/app/lib/baseUrl";
 import { withApiJsonCache } from "@/app/lib/apiCache";
-import http from "node:http";
-import https from "node:https";
 
 const DEFAULT_DAYS = 5;
 const DEFAULT_PAGE = 1;
@@ -9,13 +7,6 @@ const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 200;
 const CACHE_NAMESPACE = "deadline-jobs";
 const CACHE_TTL_MS = 60 * 1000;
-
-function normalizeBaseUrl(value) {
-  return String(value || "")
-    .trim()
-    .replace(/^["']|["']$/g, "")
-    .replace(/\/+$/, "");
-}
 
 function parsePositiveInt(value, fallback) {
   const num = Number(value);
@@ -47,7 +38,12 @@ export async function POST(request) {
 }
 
 async function fetchDeadlineJobs(body) {
-  const upstreamUrl = `${baseUrl}/site/deadline-jobs`;
+  const params = new URLSearchParams({
+    days: String(body.days),
+    page: String(body.page),
+    limit: String(body.limit),
+  });
+  const upstreamUrl = `${baseUrl}/site/deadline-jobs?${params.toString()}`;
 
   return withApiJsonCache({
     namespace: CACHE_NAMESPACE,
@@ -55,8 +51,14 @@ async function fetchDeadlineJobs(body) {
     ttlMs: CACHE_TTL_MS,
     loader: async () => {
       try {
-        const response = await sendGetWithBody(upstreamUrl, body);
-        const payload = JSON.parse(response.bodyText || "null");
+        const response = await fetch(upstreamUrl, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+          cache: "no-store",
+        });
+        const payload = await response.json().catch(() => null);
         if (!payload) {
           return {
             status: 502,
@@ -69,7 +71,7 @@ async function fetchDeadlineJobs(body) {
         }
 
         return {
-          status: response.statusCode,
+          status: response.status,
           payload,
         };
       } catch {
@@ -83,43 +85,5 @@ async function fetchDeadlineJobs(body) {
         };
       }
     },
-  });
-}
-
-function sendGetWithBody(urlString, body) {
-  return new Promise((resolve, reject) => {
-    const url = new URL(urlString);
-    const isHttps = url.protocol === "https:";
-    const client = isHttps ? https : http;
-    const bodyText = JSON.stringify(body || {});
-
-    const req = client.request(
-      url,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(bodyText),
-        },
-      },
-      (res) => {
-        let raw = "";
-        res.setEncoding("utf8");
-        res.on("data", (chunk) => {
-          raw += chunk;
-        });
-        res.on("end", () => {
-          resolve({
-            statusCode: Number(res.statusCode || 500),
-            bodyText: raw,
-          });
-        });
-      },
-    );
-
-    req.on("error", reject);
-    req.write(bodyText);
-    req.end();
   });
 }

@@ -16,13 +16,17 @@ export function normalizePostDetails(payload) {
   if (Array.isArray(base)) base = base[0] || {};
   const parsedBase = readMaybeJson(base) || base || {};
   const parsedFormatted = readMaybeJson(parsedBase?.formattedData) || parsedBase?.formattedData;
+  const normalizedRaw =
+    parsedFormatted && typeof parsedFormatted === "object" && !Array.isArray(parsedFormatted)
+      ? { ...parsedBase, ...parsedFormatted }
+      : parsedBase;
 
   const recruitment =
-    parsedBase?.recruitment ||
+    normalizedRaw?.recruitment ||
     parsedFormatted?.recruitment ||
-    parsedBase?.content?.recruitment ||
-    (parsedBase?.importantDates ? parsedBase : null) ||
+    normalizedRaw?.content?.recruitment ||
+    (normalizedRaw?.importantDates ? normalizedRaw : null) ||
     {};
 
-  return { raw: parsedBase, recruitment };
+  return { raw: normalizedRaw, recruitment };
 }
