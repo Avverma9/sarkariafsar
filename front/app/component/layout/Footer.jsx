@@ -37,9 +37,9 @@ const infoLinks = [
 
 const toolLinks = [
   { label: "Image Resizer", href: "/guides", icon: Wrench },
-  { label: "Resume Maker", href: "/guides", icon: FileText },
+  { label: "Resume Maker", href: "/resume-maker", icon: FileText },
   { label: "Typing Test", href: "/mock-test", icon: Keyboard },
-  { label: "Age Calculator", href: "/guides", icon: Calculator },
+  { label: "Age Calculator", href: "/age-calculator", icon: Calculator },
   { label: "Mock Tests", href: "/mock-test", icon: BookOpen },
 ];
 

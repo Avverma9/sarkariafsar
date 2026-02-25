@@ -4,7 +4,7 @@ const tools = [
   {
     id: "resume-maker",
     title: "Resume Maker",
-    href: "#",
+    href: "/resume-maker",
     icon: FileText,
     iconWrapClass: "bg-blue-100 text-blue-600",
     accentColor: "#3b82f6",
@@ -12,7 +12,7 @@ const tools = [
   {
     id: "image-resizer",
     title: "Image Resizer",
-    href: "#",
+    href: "/image-resizer",
     icon: Crop,
     iconWrapClass: "bg-purple-100 text-purple-600",
     accentColor: "#a855f7",
@@ -20,7 +20,7 @@ const tools = [
   {
     id: "typing-test",
     title: "Typing Test",
-    href: "#",
+    href: "/typing-test",
     icon: Keyboard,
     iconWrapClass: "bg-orange-100 text-orange-600",
     accentColor: "#f97316",
@@ -28,7 +28,7 @@ const tools = [
   {
     id: "mock-test",
     title: "Mock Test",
-    href: "#",
+    href: "/mock-test",
     icon: Laptop2,
     iconWrapClass: "bg-green-100 text-green-600",
     accentColor: "#22c55e",
