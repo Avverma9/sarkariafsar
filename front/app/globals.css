@@ -25,90 +25,62 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.glass-header {
-  background: rgba(255, 255, 255, 0.9);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
-.news-ticker {
-  min-width: max-content;
-  animation: ticker-scroll 24s linear infinite;
-  will-change: transform;
-}
-
-.news-ticker-container:hover .news-ticker {
-  animation-play-state: paused;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .news-ticker {
-    animation: none;
-    transform: translateX(0);
-  }
-}
-
-@keyframes ticker-scroll {
+@keyframes skeletonShimmer {
   0% {
-    transform: translateX(0);
+    transform: translateX(-120%);
   }
   100% {
-    transform: translateX(-50%);
+    transform: translateX(120%);
   }
 }
 
-.hover-accent-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.hover-accent-card::after {
-  content: "";
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 0;
-  height: 3px;
-  border-radius: 9999px;
-  background: var(--hover-accent, #f97316);
-  transform: scaleX(0);
-  transform-origin: center;
-  transition: transform 0.2s ease;
-}
-
-@media (hover: hover) {
-  .hover-accent-card:hover::after,
-  .hover-accent-card:focus-visible::after {
-    transform: scaleX(1);
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.92;
   }
-}
-
-.hover-accent-card:active::after {
-  transform: scaleX(1);
+  50% {
+    opacity: 1;
+  }
 }
 
 .skeleton-shimmer {
   position: relative;
   overflow: hidden;
-  background: linear-gradient(
-    110deg,
-    rgb(226 232 240 / 1) 8%,
-    rgb(241 245 249 / 1) 18%,
-    rgb(226 232 240 / 1) 33%
-  );
-  background-size: 220% 100%;
-  animation: skeleton-shimmer 1.3s linear infinite;
+  background-color: #e2e8f0;
+  animation: skeletonPulse 1.8s ease-in-out infinite;
 }
 
-@keyframes skeleton-shimmer {
-  100% {
-    background-position-x: -220%;
-  }
+.skeleton-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgba(255, 255, 255, 0.72) 50%,
+    transparent 80%
+  );
+  animation: skeletonShimmer 1.45s ease-in-out infinite;
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgba(255, 255, 255, 0.08) 0px,
+    rgba(255, 255, 255, 0.08) 2px,
+    transparent 2px,
+    transparent 8px
+  );
+  opacity: 0.35;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton-shimmer {
+  .skeleton-shimmer,
+  .skeleton-shimmer::before {
     animation: none;
-    background: rgb(226 232 240 / 1);
   }
 }

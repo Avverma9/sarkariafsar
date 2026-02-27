@@ -1,6 +1,4 @@
-import { SITE_BASE_URL } from "./lib/site-config";
-
-const siteUrl = SITE_BASE_URL.toString().replace(/\/$/, "");
+import { absoluteUrl, getSiteUrl } from "./lib/seo";
 
 export default function robots() {
   return {
@@ -8,9 +6,10 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/", "/search"],
+        disallow: ["/post/*/full-content"],
       },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`,
+    sitemap: absoluteUrl("/sitemap.xml"),
+    host: getSiteUrl(),
   };
 }

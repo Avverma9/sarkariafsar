@@ -1,232 +1,149 @@
 import {
-  BookOpen,
-  BriefcaseBusiness,
-  Calculator,
-  ChevronRight,
-  Download,
-  FileText,
   Facebook,
   Instagram,
-  Keyboard,
+  Landmark,
   Mail,
-  MessageCircle,
-  Send,
   Twitter,
-  Wrench,
+  Youtube,
 } from "lucide-react";
-import Link from "next/link";
-import { buildSectionHref } from "../../lib/sectionRouting";
-
-const quickLinks = [
-  { label: "Home", href: "/" },
-  { label: "Latest Jobs", href: buildSectionHref("Latest Gov Jobs") },
-  { label: "Results", href: buildSectionHref("Recent Results") },
-  { label: "Admit Card", href: buildSectionHref("Admit Cards") },
-  { label: "Answer Key", href: buildSectionHref("Answer Keys") },
-];
-
-const infoLinks = [
-  { label: "About Us", href: "/about" },
-  { label: "Contact Us", href: "/contact" },
-  { label: "Privacy Policy", href: "/privacy-policy" },
-  { label: "Terms of Service", href: "/terms-of-service" },
-  { label: "Blogs", href: "/blog" },
-  { label: "Guides", href: "/guides" },
-
-];
-
-const toolLinks = [
-  { label: "Image Resizer", href: "/guides", icon: Wrench },
-  { label: "Resume Maker", href: "/resume-maker", icon: FileText },
-  { label: "Typing Test", href: "/mock-test", icon: Keyboard },
-  { label: "Age Calculator", href: "/age-calculator", icon: Calculator },
-  { label: "Mock Tests", href: "/mock-test", icon: BookOpen },
-];
-
-const socialLinks = [
-  {
-    label: "Facebook",
-    href: "https://facebook.com",
-    icon: Facebook,
-    hover: "hover:bg-blue-600",
-  },
-  {
-    label: "Twitter",
-    href: "https://x.com",
-    icon: Twitter,
-    hover: "hover:bg-sky-500",
-  },
-  {
-    label: "Instagram",
-    href: "https://instagram.com",
-    icon: Instagram,
-    hover: "hover:bg-pink-600",
-  },
-  {
-    label: "Telegram",
-    href: "https://t.me",
-    icon: Send,
-    hover: "hover:bg-blue-500",
-  },
-  {
-    label: "WhatsApp",
-    href: "https://wa.me/919153630507",
-    icon: MessageCircle,
-    hover: "hover:bg-green-500",
-  },
-];
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
-
   return (
-    <footer className="border-t-4 border-indigo-600 bg-slate-900 pb-8 pt-16 text-slate-300">
+    <footer className="border-t border-slate-800 bg-slate-950 pt-20 pb-10 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-4">
-            <div className="mb-2 flex items-center gap-2">
-              <div className="rounded-lg bg-indigo-600 p-2 text-white">
-                <BriefcaseBusiness className="h-5 w-5" aria-hidden="true" />
+        <div className="mb-16 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-indigo-600 p-2">
+                <Landmark className="h-6 w-6 text-white" />
               </div>
-              <span className="text-2xl font-bold text-white">
-                Sarkari<span className="text-indigo-400">Afsar</span>
+              <span className="text-2xl font-black tracking-tight text-white">
+                Sarkari<span className="text-indigo-500">Afsar</span>
               </span>
             </div>
 
-            <p className="text-sm leading-relaxed text-slate-400">
-              India&apos;s most trusted portal for Sarkari Naukri, Admit Cards,
-              Results, and Exam Preparation tools. We provide the fastest and
-              most accurate updates.
+            <p className="text-sm font-medium leading-relaxed text-slate-400">
+              Bharat ki sabse bharosemand website jahan aapko milti hai Sarkari
+              Naukri, Results, Admit Cards aur sabhi Sarkari Yojanao ki sabse
+              pehle aur sateek jankari.
             </p>
 
-            <div className="flex space-x-4 pt-2">
-              {socialLinks.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label={item.label}
-                    className={`flex h-8 w-8 items-center justify-center rounded bg-slate-800 transition hover:text-white ${item.hover}`}
-                  >
-                    <Icon className="h-4 w-4" aria-hidden="true" />
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-6 border-l-4 border-indigo-500 pl-3 text-lg font-semibold text-white">
-              Quick Links
-            </h3>
-            <ul className="space-y-3 text-sm">
-              {quickLinks.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className="flex items-center transition hover:text-indigo-400"
-                  >
-                    <ChevronRight
-                      className="mr-2 h-3 w-3 text-slate-600"
-                      aria-hidden="true"
-                    />
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="mb-6 border-l-4 border-indigo-500 pl-3 text-lg font-semibold text-white">
-              Student Tools
-            </h3>
-            <ul className="space-y-3 text-sm">
-              {toolLinks.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.label}>
-                    <Link
-                      href={item.href}
-                      className="flex items-center transition hover:text-indigo-400"
-                    >
-                      <Icon
-                        className="mr-2 h-3.5 w-3.5 text-slate-600"
-                        aria-hidden="true"
-                      />
-                      {item.label}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-
-          <div>
-            <h3 className="mb-6 border-l-4 border-indigo-500 pl-3 text-lg font-semibold text-white">
-              Info
-            </h3>
-
-            <ul className="space-y-3 text-sm">
-              {infoLinks.map((item) => (
-                <li key={item.label}>
-                  <Link
-                    href={item.href}
-                    className="flex items-center transition hover:text-indigo-400"
-                  >
-                    <ChevronRight
-                      className="mr-2 h-3 w-3 text-slate-600"
-                      aria-hidden="true"
-                    />
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            <div className="mt-6">
-              <h4 className="mb-2 text-sm font-semibold text-white">Support</h4>
+            <div className="flex gap-4">
               <a
-                href="mailto:support@sarkariafsar.com"
-                className="flex items-center text-sm text-indigo-400 transition hover:text-white"
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-blue-600 hover:bg-blue-600 hover:text-white"
               >
-                <Mail className="mr-2 h-4 w-4" aria-hidden="true" />
-                support@sarkariafsar.com
+                <Facebook className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-sky-500 hover:bg-sky-500 hover:text-white"
+              >
+                <Twitter className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-red-600 hover:bg-red-600 hover:text-white"
+              >
+                <Youtube className="h-5 w-5" />
+              </a>
+              <a
+                href="#"
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-pink-600 hover:bg-pink-600 hover:text-white"
+              >
+                <Instagram className="h-5 w-5" />
               </a>
             </div>
           </div>
-        </div>
 
-        <div className="flex flex-col items-center justify-between border-t border-slate-800 pt-8 text-xs text-slate-500 md:flex-row">
-          <p>&copy; {currentYear} SarkariAfsar. All rights reserved.</p>
-          <div className="mt-4 flex space-x-6 md:mt-0">
-            <Link
-              href="/privacy-policy"
-              className="transition hover:text-white"
-            >
-              Privacy Policy
-            </Link>
-            <Link
-              href="/terms-of-service"
-              className="transition hover:text-white"
-            >
-              Terms of Service
-            </Link>
-            <Link href="/about" className="transition hover:text-white">
-              Disclaimer
-            </Link>
-            <Link href="/sitemap.xml" className="transition hover:text-white">
-              Sitemap
-            </Link>
+          <div>
+            <h3 className="mb-6 text-lg font-black tracking-wide text-white uppercase">
+              Quick Links
+            </h3>
+            <ul className="space-y-4 text-sm font-medium text-slate-400">
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  Latest Jobs 2026
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  All Exam Results
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  Download Admit Cards
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  Kendra Sarkar Yojanyein
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="mb-6 text-lg font-black tracking-wide text-white uppercase">
+              Popular States
+            </h3>
+            <ul className="space-y-4 text-sm font-medium text-slate-400">
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  UP Govt Jobs
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  Bihar Jobs
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  MP Vyapam
+                </a>
+              </li>
+              <li>
+                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                  Rajasthan RSMSSB
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h3 className="mb-6 text-lg font-black tracking-wide text-white uppercase">
+              Contact Us
+            </h3>
+            <ul className="space-y-5 text-sm font-medium">
+              <li className="flex items-start gap-4 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+                <Mail className="h-6 w-6 flex-shrink-0 text-indigo-500" />
+                <div>
+                  <span className="mb-1 block text-xs tracking-wider text-slate-500 uppercase">
+                    Email Support
+                  </span>
+                  <a href="#" className="text-white hover:text-indigo-400">
+                    help@sarkariafsar.com
+                  </a>
+                </div>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div className="mt-4 text-center text-[10px] text-slate-600">
-          Disclaimer: SarkariAfsar is not affiliated with any government
-          organization. All information is gathered from official sources.
+        <div className="flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-8 text-center md:flex-row">
+          <p className="text-sm font-medium text-slate-500">
+            © 2026 Sarkariafsar.com. All Rights Reserved.
+          </p>
+          <div className="flex gap-6 text-sm font-medium text-slate-500">
+            <a href="#" className="hover:text-white">
+              Privacy Policy
+            </a>
+            <a href="#" className="hover:text-white">
+              Terms of Service
+            </a>
+          </div>
         </div>
       </div>
     </footer>

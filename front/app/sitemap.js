@@ -1,179 +1,140 @@
-import path from "node:path";
-import { readdir } from "node:fs/promises";
-import { baseUrl } from "./lib/baseUrl";
-import { SITE_BASE_URL } from "./lib/site-config";
-import { blogPosts } from "./lib/blog-posts";
+import { buildCanonicalKey } from "./lib/postFormatter";
+import { getAllGovSchemes } from "./lib/govSchemesApi";
+import { buildSchemeSlug } from "./lib/schemeSlug";
+import { getStoredJobLists } from "./lib/siteApi";
+import { absoluteUrl } from "./lib/seo";
 
-export const revalidate = 3600;
-
-const siteUrl = SITE_BASE_URL.toString().replace(/\/$/, "");
-const appDir = path.join(process.cwd(), "app");
-const pageFilePattern = /^page\.(js|jsx|ts|tsx)$/;
-const EXCLUDED_STATIC_ROUTES = new Set([
-  "/post",
-  "/search",
-  "/terms-and-condition",
-]);
-const ROUTE_PRIORITY = new Map([
-  ["/", { changeFrequency: "hourly", priority: 1 }],
-  ["/latest-jobs", { changeFrequency: "hourly", priority: 0.95 }],
-  ["/results", { changeFrequency: "hourly", priority: 0.9 }],
-  ["/admit-card", { changeFrequency: "hourly", priority: 0.9 }],
-  ["/answer-key", { changeFrequency: "hourly", priority: 0.9 }],
-  ["/blog", { changeFrequency: "daily", priority: 0.85 }],
-  ["/guides", { changeFrequency: "weekly", priority: 0.8 }],
-]);
-
-function isNonDynamicSegment(segment) {
-  return (
-    segment &&
-    !segment.startsWith("[") &&
-    !segment.startsWith("(") &&
-    !segment.startsWith("@")
-  );
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
-function toValidDate(value, fallbackDate) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? fallbackDate : date;
+function toValidDate(value, fallback = new Date()) {
+  const date = new Date(value || "");
+  return Number.isNaN(date.getTime()) ? fallback : date;
 }
 
-async function collectStaticRoutes(relativeDir = "") {
-  const absoluteDir = path.join(appDir, relativeDir);
-  const entries = await readdir(absoluteDir, { withFileTypes: true });
-  const routes = [];
+function createEntry(path, { changeFrequency, priority, lastModified } = {}) {
+  return {
+    url: absoluteUrl(path),
+    changeFrequency,
+    priority,
+    lastModified: toValidDate(lastModified),
+  };
+}
 
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (entry.name === "api" || entry.name.startsWith("_")) continue;
-      const nestedRoutes = await collectStaticRoutes(path.join(relativeDir, entry.name));
-      routes.push(...nestedRoutes);
-      continue;
+function dedupeEntries(entries = []) {
+  const seen = new Set();
+  const result = [];
+
+  asArray(entries).forEach((entry) => {
+    const url = String(entry?.url || "");
+
+    if (!url || seen.has(url)) {
+      return;
     }
 
-    if (!entry.isFile() || !pageFilePattern.test(entry.name)) continue;
-
-    const routeSegments = relativeDir
-      .split(path.sep)
-      .map((segment) => segment.trim())
-      .filter(Boolean);
-
-    if (routeSegments.some((segment) => !isNonDynamicSegment(segment))) continue;
-
-    const routePath = routeSegments.length === 0 ? "/" : `/${routeSegments.join("/")}`;
-    routes.push(routePath);
-  }
-
-  return routes;
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url, {
-    method: "GET",
-    headers: { Accept: "application/json" },
-    cache: "no-store",
-    signal: AbortSignal.timeout(15000),
+    seen.add(url);
+    result.push(entry);
   });
 
-  if (!response.ok) return null;
-  return response.json().catch(() => null);
+  return result;
 }
 
-function parseMegaTitles(payload) {
-  const data = Array.isArray(payload?.data) ? payload.data : [];
-  return Array.from(
-    new Set(
-      data
-        .map((item) => String(item?.title || "").trim())
-        .filter(Boolean),
-    ),
-  );
+function extractSchemes(payload) {
+  if (Array.isArray(payload?.schemes)) {
+    return payload.schemes;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  return asArray(payload);
 }
 
-async function fetchSectionTitles() {
+async function getSchemeEntries() {
   try {
-    const payload = await fetchJson(`${baseUrl}/site/mega-sections`);
-    return parseMegaTitles(payload);
+    const payload = await getAllGovSchemes();
+    const schemes = extractSchemes(payload);
+
+    return schemes
+      .map((scheme) => {
+        const slug = buildSchemeSlug(scheme);
+
+        if (!slug) {
+          return null;
+        }
+
+        return createEntry(`/yojana/${slug}`, {
+          changeFrequency: "daily",
+          priority: 0.7,
+          lastModified:
+            scheme?.updatedAt || scheme?.schemeLastDate || scheme?.createdAt || new Date(),
+        });
+      })
+      .filter(Boolean);
   } catch {
     return [];
   }
 }
 
-async function fetchPostPage(megaTitle, page, limit) {
-  const params = new URLSearchParams({
-    megaTitle: String(megaTitle || "").trim(),
-    page: String(page),
-    limit: String(limit),
-  });
-  return fetchJson(`${baseUrl}/site/post-list-by-section-url?${params.toString()}`);
-}
+async function getPostEntries() {
+  try {
+    const payload = await getStoredJobLists();
+    const jobLists = asArray(payload?.jobLists);
+    const allPosts = jobLists.flatMap((list) => asArray(list?.postList));
 
-async function fetchAllPostEntries(now) {
-  const sectionTitles = await fetchSectionTitles();
-  if (sectionTitles.length === 0) return [];
+    return allPosts
+      .map((post) => {
+        const title = String(post?.title || "").trim();
+        const jobUrl = String(post?.jobUrl || "").trim();
+        const canonicalKey = buildCanonicalKey({ title, jobUrl });
 
-  const postByCanonical = new Map();
-  const perPageLimit = 200;
+        if (!canonicalKey) {
+          return null;
+        }
 
-  for (const megaTitle of sectionTitles) {
-    const firstPage = await fetchPostPage(megaTitle, 1, perPageLimit).catch(() => null);
-    if (!firstPage) continue;
-
-    const totalPages = Math.max(1, Number(firstPage?.pagination?.pages || 1));
-    const allRows = Array.isArray(firstPage?.data) ? [...firstPage.data] : [];
-
-    for (let page = 2; page <= totalPages; page += 1) {
-      const pagePayload = await fetchPostPage(megaTitle, page, perPageLimit).catch(() => null);
-      if (!pagePayload) continue;
-      const rows = Array.isArray(pagePayload?.data) ? pagePayload.data : [];
-      allRows.push(...rows);
-    }
-
-    for (const row of allRows) {
-      const canonicalKey = String(row?.canonicalKey || row?.canonical || "").trim();
-      if (!canonicalKey || postByCanonical.has(canonicalKey)) continue;
-
-      postByCanonical.set(canonicalKey, {
-        url: `${siteUrl}/post/${encodeURIComponent(canonicalKey)}`,
-        lastModified: toValidDate(row?.postDate || row?.updatedAt, now),
-        changeFrequency: "daily",
-        priority: 0.7,
-      });
-    }
+        return createEntry(`/post/${canonicalKey}`, {
+          changeFrequency: "hourly",
+          priority: 0.8,
+          lastModified: post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date(),
+        });
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
   }
-
-  return Array.from(postByCanonical.values());
 }
 
 export default async function sitemap() {
   const now = new Date();
+  const staticEntries = [
+    createEntry("/", { changeFrequency: "hourly", priority: 1.0, lastModified: now }),
+    createEntry("/jobs", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
+    createEntry("/jobs/new-jobs", {
+      changeFrequency: "hourly",
+      priority: 0.9,
+      lastModified: now,
+    }),
+    createEntry("/jobs/admissions", {
+      changeFrequency: "daily",
+      priority: 0.8,
+      lastModified: now,
+    }),
+    createEntry("/results", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
+    createEntry("/admit-cards", {
+      changeFrequency: "hourly",
+      priority: 0.9,
+      lastModified: now,
+    }),
+    createEntry("/schemes", { changeFrequency: "daily", priority: 0.9, lastModified: now }),
+  ];
 
-  const staticRoutes = await collectStaticRoutes().catch(() => ["/"]);
-  const staticEntries = Array.from(new Set(staticRoutes))
-    .filter((route) => !EXCLUDED_STATIC_ROUTES.has(route))
-    .map((route) => {
-      const routeMeta = ROUTE_PRIORITY.get(route) || {};
-      return {
-        url: `${siteUrl}${route === "/" ? "" : route}`,
-        lastModified: now,
-        changeFrequency: routeMeta.changeFrequency || "weekly",
-        priority: Number(routeMeta.priority || 0.8),
-      };
-    });
+  const [schemeEntries, postEntries] = await Promise.all([
+    getSchemeEntries(),
+    getPostEntries(),
+  ]);
 
-  const blogEntries = blogPosts.map((post) => ({
-    url: `${siteUrl}/blog/${post.slug}`,
-    lastModified: now,
-    changeFrequency: "weekly",
-    priority: 0.75,
-  }));
-
-  const postEntries = await fetchAllPostEntries(now);
-
-  const uniqueByUrl = new Map();
-  for (const entry of [...staticEntries, ...blogEntries, ...postEntries]) {
-    uniqueByUrl.set(entry.url, entry);
-  }
-
-  return Array.from(uniqueByUrl.values());
+  return dedupeEntries([...staticEntries, ...schemeEntries, ...postEntries]);
 }
+
