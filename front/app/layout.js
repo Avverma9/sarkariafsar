@@ -1,24 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import Script from "next/script";
-import Breadcrumbs from "./component/layout/Breadcrumbs";
-import ExternalLinkGuard from "./component/layout/ExternalLinkGuard";
-import Footer from "./component/layout/Footer";
-import Header from "./component/layout/Header";
-import { getTickerUpdates } from "./lib/server-home-data";
-import {
-  DEFAULT_DESCRIPTION,
-  DEFAULT_IMAGE,
-  DEFAULT_KEYWORDS,
-  DEFAULT_TITLE,
-  SITE_BASE_URL,
-  SITE_EMAIL,
-  SITE_NAME,
-} from "./lib/site-config";
 import "./globals.css";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
+import { BRAND_NAME, DEFAULT_DESCRIPTION, SITE_ICON_PATH, getSiteUrl } from "./lib/seo";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -30,41 +12,46 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = SITE_BASE_URL.toString();
-const adsenseClient = String(process.env.NEXT_PUBLIC_ADSENSE_CLIENT_ID || "").trim();
-const hasAdsenseClient = adsenseClient.startsWith("ca-pub-");
-
 export const metadata = {
-  metadataBase: SITE_BASE_URL,
+  metadataBase: new URL(getSiteUrl()),
   title: {
-    default: DEFAULT_TITLE,
-    template: `%s | ${SITE_NAME}`,
+    default: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
+    template: `%s | ${BRAND_NAME}`,
   },
   description: DEFAULT_DESCRIPTION,
-  keywords: DEFAULT_KEYWORDS,
+  applicationName: BRAND_NAME,
   alternates: {
     canonical: "/",
   },
+  manifest: "/manifest.webmanifest",
+  keywords: [
+    "sarkari naukri",
+    "latest government jobs",
+    "exam results",
+    "admit cards",
+    "sarkari yojana",
+  ],
   openGraph: {
     type: "website",
-    url: siteUrl,
-    siteName: SITE_NAME,
-    title: DEFAULT_TITLE,
+    url: "/",
+    title: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
     description: DEFAULT_DESCRIPTION,
+    siteName: BRAND_NAME,
+    locale: "en_IN",
     images: [
       {
-        url: DEFAULT_IMAGE,
-        width: 1200,
-        height: 630,
-        alt: `${SITE_NAME} logo`,
+        url: SITE_ICON_PATH,
+        width: 256,
+        height: 256,
+        alt: BRAND_NAME,
       },
     ],
   },
   twitter: {
-    card: "summary_large_image",
-    title: DEFAULT_TITLE,
+    card: "summary",
+    title: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
     description: DEFAULT_DESCRIPTION,
-    images: [DEFAULT_IMAGE],
+    images: [SITE_ICON_PATH],
   },
   robots: {
     index: true,
@@ -72,57 +59,37 @@ export const metadata = {
     googleBot: {
       index: true,
       follow: true,
-      "max-video-preview": -1,
       "max-image-preview": "large",
       "max-snippet": -1,
+      "max-video-preview": -1,
     },
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/favicon_io/apple-touch-icon.png",
+    icon: [{ url: SITE_ICON_PATH, type: "image/svg+xml" }],
+    shortcut: [SITE_ICON_PATH],
+    apple: [{ url: SITE_ICON_PATH }],
+  },
+  formatDetection: {
+    telephone: false,
+    email: false,
+    address: false,
   },
 };
 
-const organizationSchema = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: SITE_NAME,
-  url: siteUrl,
-  logo: DEFAULT_IMAGE,
-  contactPoint: {
-    "@type": "ContactPoint",
-    contactType: "customer support",
-    email: SITE_EMAIL,
-  },
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0f172a",
 };
 
-export default async function RootLayout({ children }) {
-  const tickerUpdates = await getTickerUpdates();
-
+export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en-IN">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {hasAdsenseClient ? (
-          <Script
-            id="adsense-auto-ads"
-            async
-            strategy="afterInteractive"
-            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${adsenseClient}`}
-            crossOrigin="anonymous"
-          />
-        ) : null}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
-        />
-        <ExternalLinkGuard />
-        <Header initialTickerUpdates={tickerUpdates} />
-        <Breadcrumbs />
         {children}
-        <Footer />
       </body>
     </html>
   );
