@@ -17,6 +17,18 @@ const BASE_KEYWORDS = [
   ...TRENDING_SEARCH_KEYWORDS,
 ];
 
+function isLocalHostname(hostname = "") {
+  const normalized = String(hostname || "").trim().toLowerCase();
+
+  return (
+    normalized === "localhost" ||
+    normalized === "127.0.0.1" ||
+    normalized === "::1" ||
+    normalized === "[::1]" ||
+    normalized.endsWith(".localhost")
+  );
+}
+
 function normalizeSiteUrl(value) {
   const text = String(value || "").trim();
 
@@ -28,7 +40,17 @@ function normalizeSiteUrl(value) {
     return "";
   }
 
-  return text.replace(/\/+$/g, "");
+  try {
+    const parsed = new URL(text);
+
+    if (isLocalHostname(parsed.hostname)) {
+      return "";
+    }
+
+    return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/g, "");
+  } catch {
+    return "";
+  }
 }
 
 function normalizePath(path = "/") {
