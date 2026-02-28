@@ -113,6 +113,30 @@ function buildJobUrlCandidates(value) {
   return Array.from(candidates).filter(Boolean);
 }
 
+function extractSearchResults(payload) {
+  if (Array.isArray(payload?.results)) {
+    return payload.results;
+  }
+
+  if (Array.isArray(payload?.data?.results)) {
+    return payload.data.results;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  return [];
+}
+
+function slugToSearchKeyword(slug) {
+  return String(slug || "")
+    .replace(/-[a-z0-9]{4,8}$/i, "")
+    .replace(/-/g, " ")
+    .trim()
+    .slice(0, 120);
+}
+
 export function getJobUrlFromSearchParams(searchParams) {
   const rawJobUrl = getFirstValue(searchParams?.jobUrl);
   return normalizeJobUrl(rawJobUrl);
@@ -153,6 +177,50 @@ async function resolveJobUrlBySlug(slug) {
         return normalizedUrl;
       }
     }
+  }
+
+  const keyword = slugToSearchKeyword(slug);
+
+  if (keyword.length < 3) {
+    return "";
+  }
+
+  try {
+    const query = new URLSearchParams({ keyword });
+    const response = await fetch(
+      `${baseUrl}/find-by-title-job-and-scheme?${query.toString()}`,
+      {
+        method: "GET",
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) {
+      return "";
+    }
+
+    const payload = await response.json();
+    const candidates = extractSearchResults(payload).filter(
+      (item) => String(item?.type || "").toLowerCase() === "job" && item?.jobUrl,
+    );
+
+    for (const candidate of candidates) {
+      const normalizedUrl = normalizeJobUrl(candidate?.jobUrl);
+
+      if (!normalizedUrl) {
+        continue;
+      }
+
+      if (isSlugMatch(slug, { title: candidate?.title, jobUrl: normalizedUrl })) {
+        return normalizedUrl;
+      }
+    }
+
+    if (candidates.length > 0) {
+      return normalizeJobUrl(candidates[0]?.jobUrl);
+    }
+  } catch {
+    return "";
   }
 
   return "";
