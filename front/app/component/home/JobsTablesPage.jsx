@@ -8,7 +8,7 @@ import {
   GraduationCap,
   Search,
 } from "lucide-react";
-import { buildCanonicalKey } from "../../lib/postFormatter";
+import { buildPostDetailsHref } from "../../lib/postLink";
 
 function getStyleByType(type) {
   if (type === "admission") {
@@ -63,12 +63,15 @@ function getSectionListingHref(type) {
 }
 
 function JobRow({ item }) {
-  const canonical = buildCanonicalKey({ title: item?.title, jobUrl: item?.jobUrl });
+  const detailsHref = buildPostDetailsHref({
+    title: item?.title,
+    jobUrl: item?.jobUrl,
+  });
 
   return (
     <div className="rounded-lg border border-slate-100 bg-white px-3 py-2">
       <Link
-        href={`/post/${canonical}`}
+        href={detailsHref}
         className="group inline-flex w-full items-start gap-2 text-left"
       >
         <ChevronRight className="mt-0.5 h-4 w-4 flex-shrink-0 text-slate-400 transition-transform group-hover:translate-x-1 group-hover:text-indigo-600" />

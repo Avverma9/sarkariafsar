@@ -4,6 +4,7 @@ import { getFirstValue, loadPostDetailPageData } from "../../../lib/postDetailPa
 import { redirect } from "next/navigation";
 import { cache } from "react";
 import { buildPageMetadata } from "../../../lib/seo";
+import Link from "next/link";
 
 const loadPostDataByKey = cache((slug, rawJobUrl) =>
   loadPostDetailPageData({
@@ -47,6 +48,11 @@ export default async function FullContentPage({ params, searchParams }) {
   } = await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
+  const fallbackQuery = String(slug || "")
+    .replace(/-[a-z0-9]{4,8}$/i, "")
+    .replace(/-/g, " ")
+    .trim();
+  const fallbackHref = fallbackQuery ? `/jobs?q=${encodeURIComponent(fallbackQuery)}` : "/jobs";
 
   if (slug !== resolvedCanonicalKey || hasJobUrlParam) {
     redirect(`/post/${resolvedCanonicalKey}/full-content`);
@@ -62,7 +68,23 @@ export default async function FullContentPage({ params, searchParams }) {
       {!jobUrl ? (
         <div className="px-4 py-12">
           <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
-            <p className="text-sm font-semibold">Missing jobUrl. Please open post from job list.</p>
+            <p className="text-sm font-semibold">
+              Yeh post full-content mode me available nahi hai. Related jobs list se dubara open karein.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Link
+                href={fallbackHref}
+                className="rounded-full border border-rose-300 bg-white px-4 py-1.5 text-xs font-bold text-rose-700"
+              >
+                Related Jobs Dekhein
+              </Link>
+              <Link
+                href={backHref}
+                className="rounded-full border border-rose-300 bg-white px-4 py-1.5 text-xs font-bold text-rose-700"
+              >
+                Back To Summary
+              </Link>
+            </div>
           </div>
         </div>
       ) : fetchError || !formattedHtml ? (

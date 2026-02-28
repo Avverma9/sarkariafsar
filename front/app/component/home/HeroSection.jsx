@@ -1,7 +1,7 @@
 import { ArrowRight, Briefcase, Landmark, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { buildCanonicalKey } from "../../lib/postFormatter";
+import { buildPostDetailsHref } from "../../lib/postLink";
 import { buildSchemeSlug } from "../../lib/schemeSlug";
 
 function normalizeSearchType(value) {
@@ -188,7 +188,7 @@ export default function HeroSection({
                   const isJob = type === "job";
                   const isScheme = type === "scheme";
                   const jobHref = item?.jobUrl
-                    ? `/post/${buildCanonicalKey({ title, jobUrl: item.jobUrl })}`
+                    ? buildPostDetailsHref({ title, jobUrl: item.jobUrl })
                     : "";
                   const schemeHref = isScheme ? `/yojana/${buildSchemeSlug(item)}` : "";
                   const Icon = isScheme ? Landmark : Briefcase;

@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { updateBlocks as fallbackUpdateBlocks } from "./data";
 import baseUrl from "../../lib/baseUrl";
 import { buildCanonicalKey } from "../../lib/postFormatter";
+import { buildPostDetailsHref } from "../../lib/postLink";
 import UpdatesSectionSkeleton from "../skeletons/UpdatesSectionSkeleton";
 
 const PAGE_SIZE = 10;
@@ -330,12 +331,12 @@ export default function UpdatesSection({ filteredUpdates, onSelectItem }) {
         closeViewAllModal();
       }
 
-      const canonicalKey = buildCanonicalKey({
+      const href = buildPostDetailsHref({
         title: item?.title,
         jobUrl: item?.jobUrl,
       });
 
-      router.push(`/post/${canonicalKey}`);
+      router.push(href);
     },
     [closeViewAllModal, router],
   );

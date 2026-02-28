@@ -1,5 +1,6 @@
 import { Landmark, MapPin, Menu, X } from "lucide-react";
 import Link from "next/link";
+import LanguageTranslator from "./LanguageTranslator";
 
 export default function Header({
   scrolled,
@@ -86,6 +87,8 @@ export default function Header({
                 </select>
               )}
             </div>
+
+            <LanguageTranslator scrolled={scrolled} />
           </div>
 
           <button
@@ -142,6 +145,8 @@ export default function Header({
                 </Link>
               ))}
             </div>
+
+            <LanguageTranslator mobile />
           </div>
         </div>
       )}

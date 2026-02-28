@@ -9,7 +9,7 @@ import {
   Search,
   SearchX,
 } from "lucide-react";
-import { buildCanonicalKey } from "../../lib/postFormatter";
+import { buildPostDetailsHref } from "../../lib/postLink";
 
 function getSourceHost(url) {
   try {
@@ -54,8 +54,7 @@ function getPaginationItems(currentPage, totalPages) {
 function JobCard({ job, index }) {
   const jobTitle = job?.title || "Untitled Job";
   const jobUrl = job?.jobUrl || "";
-  const canonicalKey = buildCanonicalKey({ title: jobTitle, jobUrl });
-  const detailsHref = `/post/${canonicalKey}`;
+  const detailsHref = buildPostDetailsHref({ title: jobTitle, jobUrl });
   const sourceHost = getSourceHost(jobUrl);
 
   return (
@@ -93,8 +92,7 @@ function JobCard({ job, index }) {
 function JobListItem({ job, index }) {
   const jobTitle = job?.title || "Untitled Job";
   const jobUrl = job?.jobUrl || "";
-  const canonicalKey = buildCanonicalKey({ title: jobTitle, jobUrl });
-  const detailsHref = `/post/${canonicalKey}`;
+  const detailsHref = buildPostDetailsHref({ title: jobTitle, jobUrl });
   const sourceHost = getSourceHost(jobUrl);
 
   return (

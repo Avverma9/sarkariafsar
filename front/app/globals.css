@@ -84,3 +84,22 @@ body {
     animation: none;
   }
 }
+
+/* Keep Google Translate overlays from shifting layout when using custom language buttons. */
+.goog-te-banner-frame.skiptranslate {
+  display: none !important;
+}
+
+body {
+  top: 0 !important;
+}
+
+#goog-gt-tt,
+.goog-te-balloon-frame {
+  display: none !important;
+}
+
+.goog-text-highlight {
+  background: transparent !important;
+  box-shadow: none !important;
+}
