@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import Header from "./layout/Header";
 import Footer from "./layout/Footer";
+import Breadcrumbs from "./layout/Breadcrumbs";
 import HeroSection from "./home/HeroSection";
 import UpdatesSection from "./home/UpdatesSection";
 import SchemesSection from "./home/SchemesSection";
+import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
 import baseUrl from "../lib/baseUrl";
@@ -468,6 +470,7 @@ export default function PortalApp() {
       />
 
       <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-40 pb-20 sm:px-6 md:pt-36 lg:px-8">
+        <Breadcrumbs className="mb-8" />
         <UpdatesSection filteredUpdates={filteredUpdates} onSelectItem={setSelectedItem} />
 
         <SchemesSection
@@ -476,6 +479,8 @@ export default function PortalApp() {
           hasLoaded={hasLoadedSchemes}
           error={schemesError}
         />
+
+        <PlatformInfoSection />
       </main>
 
       <Footer />

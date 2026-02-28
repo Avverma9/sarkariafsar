@@ -3,6 +3,7 @@ import { getAllGovSchemes } from "./lib/govSchemesApi";
 import { buildSchemeSlug } from "./lib/schemeSlug";
 import { getStoredJobLists } from "./lib/siteApi";
 import { absoluteUrl } from "./lib/seo";
+import { getBlogSlugs } from "./lib/blogs";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -108,6 +109,14 @@ async function getPostEntries() {
 
 export default async function sitemap() {
   const now = new Date();
+  const blogEntries = getBlogSlugs().map((slug) =>
+    createEntry(`/blog/${slug}`, {
+      changeFrequency: "weekly",
+      priority: 0.6,
+      lastModified: now,
+    }),
+  );
+
   const staticEntries = [
     createEntry("/", { changeFrequency: "hourly", priority: 1.0, lastModified: now }),
     createEntry("/jobs", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
@@ -128,6 +137,29 @@ export default async function sitemap() {
       lastModified: now,
     }),
     createEntry("/schemes", { changeFrequency: "daily", priority: 0.9, lastModified: now }),
+    createEntry("/blog", { changeFrequency: "weekly", priority: 0.75, lastModified: now }),
+    createEntry("/about", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),
+    createEntry("/contact-us", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),
+    createEntry("/privacy-policy", {
+      changeFrequency: "monthly",
+      priority: 0.4,
+      lastModified: now,
+    }),
+    createEntry("/terms-and-conditions", {
+      changeFrequency: "monthly",
+      priority: 0.4,
+      lastModified: now,
+    }),
+    createEntry("/cookie-policy", {
+      changeFrequency: "monthly",
+      priority: 0.4,
+      lastModified: now,
+    }),
+    createEntry("/disclaimer", {
+      changeFrequency: "monthly",
+      priority: 0.4,
+      lastModified: now,
+    }),
   ];
 
   const [schemeEntries, postEntries] = await Promise.all([
@@ -135,6 +167,5 @@ export default async function sitemap() {
     getPostEntries(),
   ]);
 
-  return dedupeEntries([...staticEntries, ...schemeEntries, ...postEntries]);
+  return dedupeEntries([...staticEntries, ...blogEntries, ...schemeEntries, ...postEntries]);
 }
-

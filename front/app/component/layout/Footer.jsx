@@ -6,6 +6,7 @@ import {
   Twitter,
   Youtube,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function Footer() {
   return (
@@ -62,52 +63,73 @@ export default function Footer() {
             </h3>
             <ul className="space-y-4 text-sm font-medium text-slate-400">
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                <Link href="/jobs" className="flex items-center gap-2 hover:text-indigo-400">
                   Latest Jobs 2026
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                <Link href="/results" className="flex items-center gap-2 hover:text-indigo-400">
                   All Exam Results
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                <Link
+                  href="/admit-cards"
+                  className="flex items-center gap-2 hover:text-indigo-400"
+                >
                   Download Admit Cards
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
+                <Link href="/schemes" className="flex items-center gap-2 hover:text-indigo-400">
                   Kendra Sarkar Yojanyein
-                </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="flex items-center gap-2 hover:text-indigo-400">
+                  Latest Blogs
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="flex items-center gap-2 hover:text-indigo-400">
+                  About Us
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact-us" className="flex items-center gap-2 hover:text-indigo-400">
+                  Contact Us
+                </Link>
               </li>
             </ul>
           </div>
 
           <div>
             <h3 className="mb-6 text-lg font-black tracking-wide text-white uppercase">
-              Popular States
+              Legal Pages
             </h3>
             <ul className="space-y-4 text-sm font-medium text-slate-400">
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
-                  UP Govt Jobs
-                </a>
+                <Link href="/privacy-policy" className="flex items-center gap-2 hover:text-indigo-400">
+                  Privacy Policy
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
-                  Bihar Jobs
-                </a>
+                <Link
+                  href="/terms-and-conditions"
+                  className="flex items-center gap-2 hover:text-indigo-400"
+                >
+                  Terms and Conditions
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
-                  MP Vyapam
-                </a>
+                <Link href="/disclaimer" className="flex items-center gap-2 hover:text-indigo-400">
+                  Disclaimer
+                </Link>
               </li>
               <li>
-                <a href="#" className="flex items-center gap-2 hover:text-indigo-400">
-                  Rajasthan RSMSSB
-                </a>
+                <Link href="/cookie-policy" className="flex items-center gap-2 hover:text-indigo-400">
+                  Cookie Policy
+                </Link>
               </li>
             </ul>
           </div>
@@ -123,7 +145,7 @@ export default function Footer() {
                   <span className="mb-1 block text-xs tracking-wider text-slate-500 uppercase">
                     Email Support
                   </span>
-                  <a href="#" className="text-white hover:text-indigo-400">
+                  <a href="mailto:help@sarkariafsar.com" className="text-white hover:text-indigo-400">
                     help@sarkariafsar.com
                   </a>
                 </div>
@@ -137,12 +159,21 @@ export default function Footer() {
             © 2026 Sarkariafsar.com. All Rights Reserved.
           </p>
           <div className="flex gap-6 text-sm font-medium text-slate-500">
-            <a href="#" className="hover:text-white">
+            <Link href="/about" className="hover:text-white">
+              About
+            </Link>
+            <Link href="/privacy-policy" className="hover:text-white">
               Privacy Policy
-            </a>
-            <a href="#" className="hover:text-white">
-              Terms of Service
-            </a>
+            </Link>
+            <Link href="/terms-and-conditions" className="hover:text-white">
+              Terms & Conditions
+            </Link>
+            <Link href="/blog" className="hover:text-white">
+              Blogs
+            </Link>
+            <Link href="/disclaimer" className="hover:text-white">
+              Disclaimer
+            </Link>
           </div>
         </div>
       </div>
