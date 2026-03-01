@@ -19,6 +19,20 @@ const nextConfig = {
       },
     ],
   },
+  async redirects() {
+    return [
+      {
+        source: "/yojana/:slug*",
+        destination: "/schemes/:slug*",
+        permanent: true,
+      },
+      {
+        source: "/terms-condition",
+        destination: "/terms-and-conditions",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

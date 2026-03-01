@@ -24,9 +24,8 @@ export default function Footer() {
             </div>
 
             <p className="text-sm font-medium leading-relaxed text-slate-400">
-              Bharat ki sabse bharosemand website jahan aapko milti hai Sarkari
-              Naukri, Results, Admit Cards aur sabhi Sarkari Yojanao ki sabse
-              pehle aur sateek jankari.
+              Reliable information on Government Jobs, Results, Admit Cards and government
+              schemes — timely and accurate updates for applicants across India.
             </p>
 
             <div className="flex gap-4">
@@ -82,7 +81,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link href="/schemes" className="flex items-center gap-2 hover:text-indigo-400">
-                  Kendra Sarkar Yojanyein
+                  Central Government Schemes
                 </Link>
               </li>
               <li>

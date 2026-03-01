@@ -3,16 +3,16 @@ import { TRENDING_SEARCH_KEYWORDS } from "./trendingKeywords";
 const DEFAULT_SITE_URL = "https://sarkariafsar.com";
 export const BRAND_NAME = "Sarkari Afsar";
 export const DEFAULT_DESCRIPTION =
-  "Sarkari jobs, results, admit cards aur government schemes ki latest jankari ek jagah.";
+  "Latest information about government jobs, results, admit cards, and government schemes in one place.";
 export const SITE_ICON_PATH = "/sa-favicon.svg";
 const BASE_KEYWORDS = [
-  "sarkari result",
-  "sarkari naukri",
+  "government jobs",
+  "government results",
   "latest jobs",
   "admit card",
-  "exam result",
+  "exam results",
   "government schemes",
-  "yojana",
+  "schemes",
   "india jobs",
   ...TRENDING_SEARCH_KEYWORDS,
 ];
@@ -119,7 +119,7 @@ export function buildPageMetadata({
       title: `${title} | ${BRAND_NAME}`,
       description,
       siteName: BRAND_NAME,
-      locale: "en_IN",
+      locale: "en-IN",
       images: [
         {
           url: absoluteUrl(SITE_ICON_PATH),

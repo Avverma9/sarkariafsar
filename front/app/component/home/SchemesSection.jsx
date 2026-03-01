@@ -32,15 +32,15 @@ export default function SchemesSection({
   }
 
   return (
-    <div id="yojana-section">
+    <div id="schemes-section">
       <div className="mb-8 flex items-center justify-between px-2">
         <div>
           <h2 className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
             <Landmark className="h-8 w-8 rounded-lg bg-emerald-100 p-1.5 text-emerald-600" />
-            Pramukh Yojanyein
+            Featured Schemes
           </h2>
           <p className="mt-1 font-medium text-slate-500">
-            Sarkar ki sabse labhkari yojanayein
+            Most beneficial government schemes and programs
           </p>
         </div>
 
@@ -48,14 +48,14 @@ export default function SchemesSection({
           href="/schemes"
           className="inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-600 transition-colors hover:text-indigo-800 md:px-5 md:py-2.5 md:text-base"
         >
-          Sabhi Dekhein <ArrowRight className="h-4 w-4" />
+          View All <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {error ? (
           <div className="col-span-full rounded-3xl border border-rose-200 bg-rose-50 p-10 text-center shadow-sm">
-            <h3 className="mb-2 text-xl font-black text-rose-700">Schemes load nahi ho payi</h3>
+            <h3 className="mb-2 text-xl font-black text-rose-700">Unable to load schemes</h3>
             <p className="font-medium text-rose-600">{error}</p>
           </div>
         ) : safeSchemes.length > 0 ? (
@@ -66,7 +66,7 @@ export default function SchemesSection({
             return (
               <Link
                 key={scheme.id}
-                href={`/yojana/${schemeSlug}`}
+                href={`/schemes/${schemeSlug}`}
                 className="group flex cursor-pointer flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl"
               >
                 <div className="mb-6 flex items-start justify-between">
@@ -93,7 +93,7 @@ export default function SchemesSection({
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-4">
                   <span className="text-sm font-bold text-slate-400">
-                    Puri Jankari Padhein
+                    Read full details
                   </span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 transition-colors group-hover:bg-indigo-600">
                     <ArrowRight className="h-5 w-5 text-slate-400 transition-colors group-hover:text-white" />
@@ -108,10 +108,10 @@ export default function SchemesSection({
               <Search className="h-10 w-10 text-slate-300" />
             </div>
             <h3 className="mb-2 text-2xl font-black text-slate-900">
-              Koi Yojana Nahi Mili
+              No schemes found
             </h3>
             <p className="font-medium text-slate-500">
-              Kripya search box mein dusra shabd dalein.
+              Please try a different search term.
             </p>
           </div>
         )}

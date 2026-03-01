@@ -1,6 +1,6 @@
 import { Landmark, MapPin, Menu, X } from "lucide-react";
 import Link from "next/link";
-import LanguageTranslator from "./LanguageTranslator";
+ 
 
 export default function Header({
   scrolled,
@@ -15,7 +15,7 @@ export default function Header({
     { label: "Jobs", href: "/jobs" },
     { label: "Results", href: "/results" },
     { label: "Admit Cards", href: "/admit-cards" },
-    { label: "Yojanyein", href: "/schemes" },
+    { label: "Schemes", href: "/schemes" },
   ];
 
   return (
@@ -66,7 +66,7 @@ export default function Header({
             ))}
           </nav>
 
-          <div className="hidden items-center gap-3 md:flex">
+            <div className="hidden items-center gap-3 md:flex">
             <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/20 px-4 py-2 backdrop-blur-md">
               <MapPin className={`h-4 w-4 ${scrolled ? "text-indigo-600" : "text-white"}`} />
               {statesLoading ? (
@@ -81,14 +81,14 @@ export default function Header({
                 >
                   {statesList.map((state) => (
                     <option key={state} value={state}>
-                      {state === "Sabhi" ? "All India" : state}
+                      {state === "Sabhi" || state === "All" || state === "All India" ? "All India" : state}
                     </option>
                   ))}
                 </select>
               )}
             </div>
 
-            <LanguageTranslator scrolled={scrolled} />
+            
           </div>
 
           <button
@@ -126,7 +126,7 @@ export default function Header({
                 >
                   {statesList.map((state) => (
                     <option key={state} value={state}>
-                      {state === "Sabhi" ? "All India" : state}
+                      {state === "Sabhi" || state === "All" || state === "All India" ? "All India" : state}
                     </option>
                   ))}
                 </select>
@@ -146,7 +146,7 @@ export default function Header({
               ))}
             </div>
 
-            <LanguageTranslator mobile />
+            
           </div>
         </div>
       )}

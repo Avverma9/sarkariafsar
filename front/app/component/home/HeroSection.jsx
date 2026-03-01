@@ -187,15 +187,17 @@ export default function HeroSection({
                   const key = `${type}-${title}-${index}`;
                   const isJob = type === "job";
                   const isScheme = type === "scheme";
+                  const isAdmitCard = type === "admit-card";
                   const jobHref = item?.jobUrl
                     ? buildPostDetailsHref({ title, jobUrl: item.jobUrl })
                     : "";
-                  const schemeHref = isScheme ? `/yojana/${buildSchemeSlug(item)}` : "";
+                  const schemeHref = isScheme ? `/schemes/${buildSchemeSlug(item)}` : "";
                   const Icon = isScheme ? Landmark : Briefcase;
-                  const badgeClass = isScheme
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-indigo-200 bg-indigo-50 text-indigo-700";
-                  const badgeLabel = isScheme ? "SCHEME" : "JOB";
+                  const badgeClass =
+                    isScheme || isAdmitCard
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-indigo-200 bg-indigo-50 text-indigo-700";
+                  const badgeLabel = isScheme ? "SCHEME" : isAdmitCard ? "ADMIT CARD" : "JOB";
                   const itemClass =
                     "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50";
 
@@ -217,6 +219,14 @@ export default function HeroSection({
                   );
 
                   if (isJob && jobHref) {
+                    return (
+                      <Link key={key} href={jobHref} className={itemClass}>
+                        {content}
+                      </Link>
+                    );
+                  }
+
+                  if (isAdmitCard && jobHref) {
                     return (
                       <Link key={key} href={jobHref} className={itemClass}>
                         {content}

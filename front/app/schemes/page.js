@@ -11,7 +11,7 @@ export const metadata = buildPageMetadata({
   description:
     "Central aur state level government schemes ka searchable listing page with state-wise filters.",
   path: "/schemes",
-  keywords: ["government schemes", "yojana listing", "state schemes"],
+  keywords: ["government schemes", "schemes listing", "state schemes"],
 });
 
 export default async function SchemesPage({ searchParams }) {

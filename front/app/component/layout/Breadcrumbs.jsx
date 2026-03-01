@@ -7,14 +7,14 @@ const SEGMENT_LABELS = {
   jobs: "Jobs",
   results: "Results",
   schemes: "Schemes",
-  yojana: "Yojana",
+
   post: "Post",
   blog: "Blog",
   about: "About",
   "contact-us": "Contact Us",
   "privacy-policy": "Privacy Policy",
   "terms-and-conditions": "Terms and Conditions",
-  "terms-condition": "Terms and Conditions",
+
   disclaimer: "Disclaimer",
   "cookie-policy": "Cookie Policy",
   "admit-cards": "Admit Cards",
