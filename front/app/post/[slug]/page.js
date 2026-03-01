@@ -104,3 +104,5 @@ export default async function PostDetailPage({ params, searchParams }) {
     </PostPageShell>
   );
 }
+
+export const revalidate = 3600;
