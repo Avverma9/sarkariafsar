@@ -1443,7 +1443,7 @@
       ],
       "importantLinks": [
         {
-          "label": "Interested candidates who wish to apply for the Bihar Police CSBC post can submit their application online before 05 March 2026. Use the click here link provided below under important link section to apply directly. Alternatively, visit the official website of Bihar Police CSBC to complete the application process online. Make sure to complete the application before the deadline 05 March 2026. Note – छात्रो से ये अनुरोध किया जाता है की वो अपना फॉर्म भरने से पहले Official Notification को ध्यान से जरूर पढे उसके बाद ही अपना फॉर्म भरे । (Last Date, Age Limit, & Education Qualification)",
+          "label": "Interested candidates who wish to apply for the Bihar Police CSBC post can submit their application online before 05 March 2026. Use the click here link provided below under important link section to apply directly. Alternatively, visit the official website of Bihar Police CSBC to complete the application process online. Make sure to complete the application before the deadline 05 March 2026. Note – Candidates are requested to read the Official Notification carefully before filling the form. (Last Date, Age Limit, & Education Qualification)",
           "url": "https://csbc.bihar.gov.in/"
         },
         {

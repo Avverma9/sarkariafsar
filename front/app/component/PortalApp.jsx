@@ -39,7 +39,7 @@ function firstNonEmpty(values = []) {
 function normalizeStateName(value) {
   const state = String(value || "").trim();
 
-  if (!state || state.toLowerCase() === "sabhi") {
+  if (!state || state.toLowerCase() === "sabhi" || state.toLowerCase() === "all") {
     return "All India";
   }
 

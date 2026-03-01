@@ -23,7 +23,7 @@ function SchemeCardSkeleton() {
 
 export default function SchemesSectionSkeleton() {
   return (
-    <div id="yojana-section">
+    <div id="schemes-section">
       <div className="mb-8 flex items-center justify-between px-2">
         <div className="min-w-0">
           <div className="flex items-center gap-3">

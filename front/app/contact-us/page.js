@@ -17,7 +17,16 @@ const sections = [
   {
     title: "Support Email",
     paragraphs: [
-      `General support, issue reporting aur feedback ke liye humein ${SUPPORT_EMAIL} par mail karein.`,
+      `General support, issue reporting aur feedback ke liye humein <a href="mailto:${SUPPORT_EMAIL}">${SUPPORT_EMAIL}</a> par mail karein.`,
+    ],
+  },
+  {
+    title: "Office Address",
+    paragraphs: [
+      "Sarkari Afsar Office",
+      "Gali Number 5, Nai Basti",
+      "Delhi, India",
+      "Phone: +91-9876543210",
     ],
   },
   {

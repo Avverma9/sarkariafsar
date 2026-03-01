@@ -62,7 +62,7 @@ function SchemeListItem({ item }) {
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Link
-          href={`/yojana/${item?.slug}`}
+          href={`/schemes/${item?.slug}`}
           className="inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
         >
           View Scheme
@@ -91,7 +91,7 @@ function SchemeGridCard({ item }) {
 
       <div className="mt-5">
         <Link
-          href={`/yojana/${item?.slug}`}
+          href={`/schemes/${item?.slug}`}
           className="inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
         >
           View Scheme

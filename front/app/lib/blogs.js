@@ -22,9 +22,9 @@ const BLOG_POSTS = [
         "bullets": [
           "Domain spelling exactly same honi chahiye (extra hyphen, extra letter, ya .in ki jagah .com red flag ho sakta hai).",
           "URL `https://` se start ho aur browser me certificate warning/“Not secure” message na aa rahi ho.",
-          "Popup-based download prompts avoid karein (\"Allow notifications\", \"Download now\", \"Install app to view result\" type prompts suspicious hote hain).",
+          "Popup-based download prompts avoid karein (“Allow notifications”, “Download now”, “Install app to view result” type prompts suspicious hote hain).",
           "Page agar OTP, UPI PIN, payment, ya unnecessary personal info maange, to turant back karein; result dekhne ke liye itni cheezein normally required nahi hoti.",
-          "Agar site slow hai, to repeated refresh spam na karein; same official site ko new tab me open karke try karein ya off-peak time (early morning/late night) me check karein."
+          "Agar site slow hai, to repeated refresh spam na karein. Iske liye hamari guide Result Site Slow? Fast Ways To Check padhein jisme off-peak time me check karne jaise solutions hain."
         ]
       },
       {
@@ -60,7 +60,7 @@ const BLOG_POSTS = [
       {
         "heading": "2. Upload Related Problems",
         "paragraphs": [
-          "Photo aur signature ke size/dimensions notification ke hisab se hi upload karein. Sirf KB limit nahi, dimensions (px), background color, aur recent photo rule bhi matter karta hai. Upload se pehle image ko crop/resize karke preview me check karna best practice hai, taki face properly visible rahe aur signature cut na ho.",
+          "Photo aur signature ke size/dimensions notification ke hisab se hi upload karein. Sirf KB limit nahi, dimensions (px), background color, aur recent photo rule bhi matter karta hai. Iske liye hamari Photo/Signature Resize Guide follow karein. Upload se pehle image ko crop/resize karke preview me check karna best practice hai, taki face properly visible rahe aur signature cut na ho.",
           "Blurred documents ya edited files rejection trigger kar sakte hain. Over-editing (beauty filters, heavy contrast) ya low-quality scans se text unreadable lagta hai. File format (JPG/JPEG/PDF), size limit, aur orientation (upright/landscape) strictly follow karein; aur upload ke baad portal par open karke confirm karein ki file corrupted to nahi."
         ]
       },
@@ -92,8 +92,8 @@ const BLOG_POSTS = [
         "bullets": [
           "Admit card ka clear print (preferably 2 copies) + digital backup (PDF phone me offline saved).",
           "Valid photo ID ready rakhein (Aadhaar/Driving License/Voter ID jo instructions me allowed ho) + agar required ho to passport size photos.",
-          "Reporting route aur travel time pre-check karein (Google Maps + alternate route), center location pin confirm karein.",
-          "Stationery/allowed items pack karein (black/blue pen as per rules, transparent water bottle if allowed), prohibited items bag se nikal dein.",
+          "Reporting route aur travel time pre-check karein (Google Maps + alternate route), center location pin confirm karein. Iske liye hamari Exam City Selection Guide bhi padh sakte hain.",
+          "Stationery/allowed items pack karein (black/blue pen as per rules, transparent water bottle if allowed). Prohibited items ki poori list ke liye hamari Exam Center Rules Guide check karein aur unhe bag se nikal dein.",
           "Clothes and accessories simple rakhein (metal objects/extra items avoid), alarm set karein aur sleep time fix karein."
         ]
       },

@@ -66,7 +66,7 @@ async function getSchemeEntries() {
           return null;
         }
 
-        return createEntry(`/yojana/${slug}`, {
+        return createEntry(`/schemes/${slug}`, {
           changeFrequency: "daily",
           priority: 0.7,
           lastModified:
@@ -84,8 +84,9 @@ async function getPostEntries() {
     const payload = await getStoredJobLists();
     const jobLists = asArray(payload?.jobLists);
     const allPosts = jobLists.flatMap((list) => asArray(list?.postList));
+    const admitCardPosts = jobLists.flatMap((list) => asArray(list?.admitCardPostList));
 
-    return allPosts
+    const postEntries = allPosts
       .map((post) => {
         const title = String(post?.title || "").trim();
         const jobUrl = String(post?.jobUrl || "").trim();
@@ -102,6 +103,26 @@ async function getPostEntries() {
         });
       })
       .filter(Boolean);
+
+    const admitCardEntries = admitCardPosts
+      .map((post) => {
+        const title = String(post?.title || "").trim();
+        const jobUrl = String(post?.jobUrl || "").trim();
+        const canonicalKey = buildCanonicalKey({ title, jobUrl });
+
+        if (!canonicalKey) {
+          return null;
+        }
+
+        return createEntry(`/admit-cards/${canonicalKey}`, {
+          changeFrequency: "hourly",
+          priority: 0.8,
+          lastModified: post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date(),
+        });
+      })
+      .filter(Boolean);
+
+    return [...postEntries, ...admitCardEntries];
   } catch {
     return [];
   }
@@ -136,7 +157,7 @@ export default async function sitemap() {
       priority: 0.9,
       lastModified: now,
     }),
-    createEntry("/schemes", { changeFrequency: "daily", priority: 0.9, lastModified: now }),
+    createEntry("/schemes", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
     createEntry("/blog", { changeFrequency: "weekly", priority: 0.75, lastModified: now }),
     createEntry("/about", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),
     createEntry("/contact-us", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),

@@ -25,11 +25,11 @@ export const metadata = {
   },
   manifest: "/manifest.webmanifest",
   keywords: [
-    "sarkari naukri",
+    "government jobs",
     "latest government jobs",
     "exam results",
     "admit cards",
-    "sarkari yojana",
+    "government schemes",
   ],
   openGraph: {
     type: "website",
@@ -37,7 +37,7 @@ export const metadata = {
     title: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
     description: DEFAULT_DESCRIPTION,
     siteName: BRAND_NAME,
-    locale: "en_IN",
+    locale: "en-IN",
     images: [
       {
         url: SITE_ICON_PATH,

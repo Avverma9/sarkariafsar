@@ -17,7 +17,7 @@ export async function generateMetadata({ params }) {
     return buildPageMetadata({
       title: "Scheme Not Found",
       description: "Requested government scheme could not be found.",
-      path: `/yojana/${slug}`,
+      path: `/schemes/${slug}`,
       noIndex: true,
     });
   }
@@ -25,13 +25,13 @@ export async function generateMetadata({ params }) {
   return buildPageMetadata({
     title,
     description: pageData.scheme.about || "Detailed information about this government scheme.",
-    path: `/yojana/${pageData.canonicalSlug || slug}`,
-    keywords: ["yojana details", pageData.scheme.category, pageData.scheme.state],
+    path: `/schemes/${pageData.canonicalSlug || slug}`,
+    keywords: ["scheme details", pageData.scheme.category, pageData.scheme.state],
     type: "article",
   });
 }
 
-export default async function YojanaDetailPage({ params }) {
+export default async function SchemeDetailRoute({ params }) {
   const resolvedParams = await params;
   const slug = String(resolvedParams?.slug || "");
   const pageData = await loadSchemeData(slug);
@@ -41,7 +41,7 @@ export default async function YojanaDetailPage({ params }) {
   }
 
   if (pageData.canonicalSlug && slug !== pageData.canonicalSlug) {
-    redirect(`/yojana/${pageData.canonicalSlug}`);
+    redirect(`/schemes/${pageData.canonicalSlug}`);
   }
 
   return (
