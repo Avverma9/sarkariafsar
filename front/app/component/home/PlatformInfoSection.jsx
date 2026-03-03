@@ -1,7 +1,6 @@
 import { BellRing, DatabaseZap, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
 import AdBanner from "../layout/AdBanner";
-import GizokBanner from "../layout/GizokBanner";
 
 const sections = [
   {
@@ -126,13 +125,9 @@ export default function PlatformInfoSection() {
               ) : null}
               </article>
 
-              {/* Ad between info sections — alternates between two networks */}
+              {/* Ad between info sections */}
               {index < sections.length - 1 ? (
-                index % 2 === 0 ? (
-                  <AdBanner />
-                ) : (
-                  <GizokBanner />
-                )
+                <AdBanner />
               ) : null}
             </div>
           );

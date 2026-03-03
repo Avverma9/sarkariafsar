@@ -5,7 +5,6 @@ import Header from "./Header";
 import Footer from "./Footer";
 import Breadcrumbs from "./Breadcrumbs";
 import AdBanner from "./AdBanner";
-import SideRailAds from "./SideRailAds";
 import { statesList as fallbackStatesList } from "../home/data";
 import { getGovSchemeStateNameOnly } from "../../lib/govSchemesApi";
 
@@ -138,9 +137,6 @@ export default function PostPageShell({ children }) {
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
-
-      {/* Side rail ads — visible only when viewport is wide enough for true gutter */}
-      <SideRailAds />
 
       <main className="flex-grow pt-24 sm:pt-28">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
