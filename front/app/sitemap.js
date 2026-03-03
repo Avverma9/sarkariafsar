@@ -86,23 +86,30 @@ async function getPostEntries() {
     const allPosts = jobLists.flatMap((list) => asArray(list?.postList));
     const admitCardPosts = jobLists.flatMap((list) => asArray(list?.admitCardPostList));
 
-    const postEntries = allPosts
-      .map((post) => {
-        const title = String(post?.title || "").trim();
-        const jobUrl = String(post?.jobUrl || "").trim();
-        const canonicalKey = buildCanonicalKey({ title, jobUrl });
+    const postEntries = allPosts.flatMap((post) => {
+      const title = String(post?.title || "").trim();
+      const jobUrl = String(post?.jobUrl || "").trim();
+      const canonicalKey = buildCanonicalKey({ title, jobUrl });
 
-        if (!canonicalKey) {
-          return null;
-        }
+      if (!canonicalKey) {
+        return [];
+      }
 
-        return createEntry(`/post/${canonicalKey}`, {
+      const lastModified = post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date();
+
+      return [
+        createEntry(`/post/${canonicalKey}`, {
           changeFrequency: "hourly",
           priority: 0.8,
-          lastModified: post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date(),
-        });
-      })
-      .filter(Boolean);
+          lastModified,
+        }),
+        createEntry(`/post/${canonicalKey}/full-content`, {
+          changeFrequency: "hourly",
+          priority: 0.72,
+          lastModified,
+        }),
+      ];
+    });
 
     const admitCardEntries = admitCardPosts
       .map((post) => {
