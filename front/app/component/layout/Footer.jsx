@@ -145,7 +145,7 @@ export default function Footer() {
                     Email Support
                   </span>
                   <a href="mailto:help@sarkariafsar.com" className="text-white hover:text-indigo-400">
-                    help@sarkariafsar.com
+                    support@sarkariafsar.com
                   </a>
                 </div>
               </li>

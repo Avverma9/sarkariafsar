@@ -10,7 +10,7 @@ export default function StaticInfoPage({
   intro = "",
   effectiveDate = "",
   sections = [],
-  contactEmail = "help@sarkariafsar.com",
+  contactEmail = "support@sarkariafsar.com",
 }) {
   const normalizedSections = asArray(sections);
 

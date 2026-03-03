@@ -30,8 +30,7 @@ export async function generateMetadata({ params, searchParams }) {
   return buildPageMetadata({
     title: `${title} - Full Content`,
     description: "Full formatted content view for the selected post.",
-    path: `/post/${resolvedCanonicalKey}`,
-    noIndex: true,
+    path: `/post/${resolvedCanonicalKey}/full-content`,
   });
 }
 

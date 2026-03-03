@@ -6,7 +6,7 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/post/*/full-content"],
+        disallow: ["/api/revalidate"],
       },
     ],
     sitemap: absoluteUrl("/sitemap.xml"),
