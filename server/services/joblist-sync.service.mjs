@@ -2,6 +2,7 @@ import scrapperService from "./scrapper.services.mjs";
 import jobSectionsModel from "../models/jobsections.model.mjs";
 import siteModel from "../models/site.model.mjs";
 import govJobListModel from "../models/govjoblist.model.mjs";
+import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
 
 const DEFAULT_OLD_ONLINE_FORM_YEARS = [2024, 2025];
 
@@ -194,6 +195,10 @@ export const syncStoredJobLists = async ({
       created: Boolean(stored?.created),
       skipped: false,
     });
+  }
+
+  if (syncedSections > 0) {
+    await clearFrontendCache("job-lists");
   }
 
   return {
