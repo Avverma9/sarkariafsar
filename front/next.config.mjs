@@ -31,6 +31,26 @@ const nextConfig = {
         destination: "/terms-and-conditions",
         permanent: true,
       },
+      {
+        source: "/jobs",
+        destination: "/post",
+        permanent: true,
+      },
+      {
+        source: "/jobs/results",
+        destination: "/results",
+        permanent: true,
+      },
+      {
+        source: "/jobs/admit-cards",
+        destination: "/admit-cards",
+        permanent: true,
+      },
+      {
+        source: "/jobs/:path*",
+        destination: "/post/:path*",
+        permanent: true,
+      },
     ];
   },
 };

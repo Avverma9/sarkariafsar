@@ -140,13 +140,13 @@ export default async function sitemap() {
 
   const staticEntries = [
     createEntry("/", { changeFrequency: "hourly", priority: 1.0, lastModified: now }),
-    createEntry("/jobs", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
-    createEntry("/jobs/new-jobs", {
+    createEntry("/post", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
+    createEntry("/post/new-jobs", {
       changeFrequency: "hourly",
       priority: 0.9,
       lastModified: now,
     }),
-    createEntry("/jobs/admissions", {
+    createEntry("/post/admissions", {
       changeFrequency: "daily",
       priority: 0.8,
       lastModified: now,

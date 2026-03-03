@@ -62,7 +62,7 @@ export default function Footer() {
             </h3>
             <ul className="space-y-4 text-sm font-medium text-slate-400">
               <li>
-                <Link href="/jobs" className="flex items-center gap-2 hover:text-indigo-400">
+                <Link href="/post" className="flex items-center gap-2 hover:text-indigo-400">
                   Latest Jobs 2026
                 </Link>
               </li>

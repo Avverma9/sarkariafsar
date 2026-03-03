@@ -58,7 +58,7 @@ export default async function PostDetailPage({ params, searchParams }) {
     .replace(/-[a-z0-9]{4,8}$/i, "")
     .replace(/-/g, " ")
     .trim();
-  const fallbackHref = fallbackQuery ? `/jobs?q=${encodeURIComponent(fallbackQuery)}` : "/jobs";
+  const fallbackHref = fallbackQuery ? `/post?q=${encodeURIComponent(fallbackQuery)}` : "/post";
 
   if (slug !== resolvedCanonicalKey || hasJobUrlParam) {
     redirect(`/post/${resolvedCanonicalKey}`);
@@ -82,7 +82,7 @@ export default async function PostDetailPage({ params, searchParams }) {
                 Related Jobs Dekhein
               </Link>
               <Link
-                href="/jobs"
+                href="/post"
                 className="rounded-full border border-rose-300 bg-white px-4 py-1.5 text-xs font-bold text-rose-700"
               >
                 Jobs Dashboard

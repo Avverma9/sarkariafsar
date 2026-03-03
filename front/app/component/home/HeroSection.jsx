@@ -82,7 +82,7 @@ export default function HeroSection({
 
           <div className="mt-6">
             <Link
-              href="/jobs"
+              href="/post"
               className="inline-flex items-center gap-2 rounded-full border border-indigo-300/40 bg-indigo-500/20 px-6 py-3 text-sm font-extrabold text-indigo-100 transition hover:border-indigo-200/70 hover:bg-indigo-500/30 md:text-base"
             >
               Govt Job Apply <ArrowRight className="h-4 w-4" />
