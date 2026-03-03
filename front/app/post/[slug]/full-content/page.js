@@ -52,7 +52,7 @@ export default async function FullContentPage({ params, searchParams }) {
     .replace(/-[a-z0-9]{4,8}$/i, "")
     .replace(/-/g, " ")
     .trim();
-  const fallbackHref = fallbackQuery ? `/jobs?q=${encodeURIComponent(fallbackQuery)}` : "/jobs";
+  const fallbackHref = fallbackQuery ? `/post?q=${encodeURIComponent(fallbackQuery)}` : "/post";
 
   if (slug !== resolvedCanonicalKey || hasJobUrlParam) {
     redirect(`/post/${resolvedCanonicalKey}/full-content`);

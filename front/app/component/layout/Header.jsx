@@ -12,7 +12,7 @@ export default function Header({
   setIsMobileMenuOpen,
 }) {
   const menuItems = [
-    { label: "Jobs", href: "/jobs" },
+    { label: "Jobs", href: "/post" },
     { label: "Results", href: "/results" },
     { label: "Admit Cards", href: "/admit-cards" },
     { label: "Schemes", href: "/schemes" },

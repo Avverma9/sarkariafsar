@@ -48,18 +48,18 @@ function getStyleByType(type) {
 
 function getSectionListingHref(type) {
   if (type === "results") {
-    return "/jobs/results";
+    return "/results";
   }
 
   if (type === "admitcards") {
-    return "/jobs/admit-cards";
+    return "/admit-cards";
   }
 
   if (type === "admission") {
-    return "/jobs/admissions";
+    return "/post/admissions";
   }
 
-  return "/jobs/new-jobs";
+  return "/post/new-jobs";
 }
 
 function JobRow({ item }) {
