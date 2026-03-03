@@ -1,4 +1,5 @@
 import baseUrl from "./baseUrl";
+import { buildNextCacheConfig, CACHE_TAGS, HIGH_CACHE_TTL_SECONDS } from "./cacheConfig";
 import { buildCanonicalKey, formatPostDetail } from "./postFormatter";
 
 export function getFirstValue(value) {
@@ -145,7 +146,11 @@ export function getJobUrlFromSearchParams(searchParams) {
 async function fetchStoredJobLists() {
   const response = await fetch(`${baseUrl}/fetch-stored-joblist`, {
     method: "GET",
-    cache: "no-store",
+    cache: "force-cache",
+    next: buildNextCacheConfig({
+      tags: [CACHE_TAGS.JOB_LISTS],
+      revalidate: HIGH_CACHE_TTL_SECONDS,
+    }),
   });
 
   if (!response.ok) {
@@ -191,7 +196,11 @@ async function resolveJobUrlBySlug(slug) {
       `${baseUrl}/find-by-title-job-and-scheme?${query.toString()}`,
       {
         method: "GET",
-        cache: "no-store",
+        cache: "force-cache",
+        next: buildNextCacheConfig({
+          tags: [CACHE_TAGS.JOB_LISTS, CACHE_TAGS.POST_DETAILS],
+          revalidate: HIGH_CACHE_TTL_SECONDS,
+        }),
       },
     );
 
@@ -234,7 +243,11 @@ export async function fetchJobDetailByUrl(jobUrl) {
     const query = new URLSearchParams({ jobUrl: candidate });
     const response = await fetch(`${baseUrl}/fetch/job-by-url?${query.toString()}`, {
       method: "GET",
-      cache: "no-store",
+      cache: "force-cache",
+      next: buildNextCacheConfig({
+        tags: [CACHE_TAGS.POST_DETAILS],
+        revalidate: HIGH_CACHE_TTL_SECONDS,
+      }),
     });
 
     if (response.ok) {

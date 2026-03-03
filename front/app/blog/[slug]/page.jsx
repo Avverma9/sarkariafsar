@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostPageShell from "../../component/layout/PostPageShell";
+import AdBanner from "../../component/layout/AdBanner";
 import { getAllBlogPosts, getBlogPostBySlug, getBlogSlugs } from "../../lib/blogs";
 import { buildPageMetadata } from "../../lib/seo";
 
@@ -79,6 +80,9 @@ export default async function BlogDetailPage({ params }) {
             <p className="mt-4 text-sm leading-relaxed text-slate-700 sm:text-base">{post.intro}</p>
           </header>
 
+          {/* Ad after article header, before body content */}
+          <AdBanner className="border-b border-slate-100 px-6 sm:px-10" />
+
           <div className="space-y-8 px-6 py-8 sm:px-10">
             {post.sections.map((section, index) => (
               <section
@@ -127,6 +131,9 @@ export default async function BlogDetailPage({ params }) {
             </Link>
           </footer>
         </article>
+
+        {/* Ad between article and related posts */}
+        <AdBanner className="my-6" />
 
         {relatedPosts.length > 0 ? (
           <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">

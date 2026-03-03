@@ -240,11 +240,22 @@ function getItemMeta(item) {
   return "";
 }
 
-export default function UpdatesSection({ filteredUpdates, onSelectItem }) {
+export default function UpdatesSection({
+  filteredUpdates,
+  onSelectItem,
+  serverSectionBlocks = [],
+  serverJobsBySection = {},
+}) {
   const router = useRouter();
+  const hasServerData =
+    serverSectionBlocks.length > 0 && Object.keys(serverJobsBySection).length > 0;
   const fallbackBlocks = useMemo(() => mapFallbackBlocks(fallbackUpdateBlocks), []);
-  const [sectionBlocks, setSectionBlocks] = useState(fallbackBlocks);
-  const [jobsBySection, setJobsBySection] = useState({});
+  const [sectionBlocks, setSectionBlocks] = useState(
+    hasServerData ? serverSectionBlocks : fallbackBlocks,
+  );
+  const [jobsBySection, setJobsBySection] = useState(
+    hasServerData ? serverJobsBySection : {},
+  );
   const [loadingBySection, setLoadingBySection] = useState({});
   const [viewAllModal, setViewAllModal] = useState({ open: false, block: null });
   const [modalJobs, setModalJobs] = useState([]);
@@ -254,7 +265,7 @@ export default function UpdatesSection({ filteredUpdates, onSelectItem }) {
   const [modalError, setModalError] = useState("");
   const [modalSearch, setModalSearch] = useState("");
   const [isMounted, setIsMounted] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isInitialLoading, setIsInitialLoading] = useState(!hasServerData);
 
   const loadModalJobs = useCallback(
     (block, page = 1) => {
@@ -384,6 +395,9 @@ export default function UpdatesSection({ filteredUpdates, onSelectItem }) {
   }, [viewAllModal.open, closeViewAllModal]);
 
   useEffect(() => {
+    // Skip fetching if server already provided data
+    if (hasServerData) return;
+
     let active = true;
 
     async function loadSectionsAndJobs() {
@@ -457,7 +471,7 @@ export default function UpdatesSection({ filteredUpdates, onSelectItem }) {
     return () => {
       active = false;
     };
-  }, [fallbackBlocks]);
+  }, [fallbackBlocks, hasServerData]);
 
   if (isInitialLoading) {
     return <UpdatesSectionSkeleton />;

@@ -1,5 +1,7 @@
 import { BellRing, DatabaseZap, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
+import AdBanner from "../layout/AdBanner";
+import GizokBanner from "../layout/GizokBanner";
 
 const sections = [
   {
@@ -82,14 +84,14 @@ export default function PlatformInfoSection() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {sections.map((section) => {
+        {sections.map((section, index) => {
           const Icon = section.icon;
 
           return (
-            <article
-              key={section.key}
-              className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-            >
+            <div key={section.key}>
+              <article
+                className="rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+              >
               <div className="mb-5 flex items-start justify-between gap-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-50 shadow-inner">
                   <Icon className={`h-7 w-7 ${section.iconClass}`} />
@@ -122,7 +124,17 @@ export default function PlatformInfoSection() {
                   {section.cta.label}
                 </Link>
               ) : null}
-            </article>
+              </article>
+
+              {/* Ad between info sections — alternates between two networks */}
+              {index < sections.length - 1 ? (
+                index % 2 === 0 ? (
+                  <AdBanner />
+                ) : (
+                  <GizokBanner />
+                )
+              ) : null}
+            </div>
           );
         })}
       </div>

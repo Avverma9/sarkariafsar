@@ -110,7 +110,7 @@ export default async function PostSlugPage({ params, searchParams }) {
   }
 
   // Otherwise render post detail
-  const { jobUrl, fetchError, jobDetail, post, canonicalKey, hasJobUrlParam } =
+  const { jobUrl, fetchError, jobDetail, post, canonicalKey } =
     await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
@@ -120,7 +120,8 @@ export default async function PostSlugPage({ params, searchParams }) {
     .trim();
   const fallbackHref = fallbackQuery ? `/post?q=${encodeURIComponent(fallbackQuery)}` : "/post";
 
-  if (slug !== resolvedCanonicalKey || hasJobUrlParam) {
+  // Redirect only if the slug in URL doesn't match the canonical slug
+  if (slug !== resolvedCanonicalKey) {
     redirect(`/post/${resolvedCanonicalKey}`);
   }
 
