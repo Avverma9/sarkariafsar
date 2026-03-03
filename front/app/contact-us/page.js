@@ -3,7 +3,7 @@ import StaticInfoPage from "../component/legal/StaticInfoPage";
 import { buildPageMetadata } from "../lib/seo";
 
 const EFFECTIVE_DATE = "February 28, 2026";
-const SUPPORT_EMAIL = "help@sarkariafsar.com";
+const SUPPORT_EMAIL = "support@sarkariafsar.com";
 
 export const metadata = buildPageMetadata({
   title: "Contact Us",
@@ -24,9 +24,8 @@ const sections = [
     title: "Office Address",
     paragraphs: [
       "Sarkari Afsar Office",
-      "Gali Number 5, Nai Basti",
-      "Delhi, India",
-      "Phone: +91-9876543210",
+      "Bihar, Patna 803212, India",
+      "Phone: +91-9153630507",
     ],
   },
   {

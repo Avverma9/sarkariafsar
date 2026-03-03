@@ -14,6 +14,14 @@ export const metadata = buildPageMetadata({
 
 const sections = [
   {
+    title: "Contact Information",
+    paragraphs: [
+      "Email: <a href=\"mailto:support@sarkariafsar.com\">support@sarkariafsar.com</a>",
+      "Phone: +91-9153630507",
+      "Address: Bihar, Patna 803212, India",
+    ],
+  },
+  {
     title: "1. Information We Collect",
     bullets: [
       "Basic technical data jaise browser type, device type, anonymous usage logs.",
