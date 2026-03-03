@@ -6,6 +6,7 @@ import siteModel from "../models/site.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import govJobListModel from "../models/govjoblist.model.mjs";
 import govSchemeModel from "../models/govscheme.model.mjs";
+import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
 import { createHash } from "node:crypto";
 
 const getValue = (req, key, fallback = undefined) => {
@@ -233,6 +234,7 @@ export const scrapeSectionJobsController = async (req, res, next) => {
         sectionInput: requestedSection || "",
       },
     });
+    await clearFrontendCache("job-lists");
 
     const jobs = (data?.jobs || []).map((item) => ({
       title: item?.title || "",
@@ -495,6 +497,7 @@ export const upsertJobSectionController = async (req, res, next) => {
       urls: toArray(getValue(req, "urls", [])),
       isManual: toBoolean(getValue(req, "isManual"), true),
     });
+    await clearFrontendCache("job-sections");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Section created" : "Section updated",
