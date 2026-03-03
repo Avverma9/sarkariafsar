@@ -14,6 +14,8 @@ export const metadata = buildPageMetadata({
   keywords: ["exam results", "sarkari result", "answer key"],
 });
 
+export const revalidate = 3600;
+
 export default async function ResultsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);
   const pageData = await loadSectionJobsPage({

@@ -103,3 +103,5 @@ export default async function FullContentPage({ params, searchParams }) {
     </PostPageShell>
   );
 }
+
+export const revalidate = 3600;

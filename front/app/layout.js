@@ -1,6 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRAND_NAME, DEFAULT_DESCRIPTION, SITE_ICON_PATH, getSiteUrl } from "./lib/seo";
+import AdBanner from "./component/layout/AdBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -90,6 +91,13 @@ export default function RootLayout({ children }) {
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         {children}
+
+        {/* ── Sticky bottom strip — mobile only ── */}
+        <div className="fixed bottom-0 left-0 z-50 w-full sm:hidden">
+          <AdBanner height={80} className="border-t border-slate-200 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)]" />
+        </div>
+        {/* Spacer so content is never hidden behind the sticky strip */}
+        <div className="h-16 sm:hidden" aria-hidden="true" />
       </body>
     </html>
   );

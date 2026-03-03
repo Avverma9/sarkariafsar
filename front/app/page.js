@@ -1,4 +1,5 @@
 import PortalApp from "./component/PortalApp";
+import { loadHomePageData } from "./lib/homePageData";
 import { buildPageMetadata } from "./lib/seo";
 
 export const metadata = buildPageMetadata({
@@ -106,6 +107,7 @@ export const metadata = buildPageMetadata({
 
 export const revalidate = 3600;
 
-export default function Home() {
-  return <PortalApp />;
+export default async function Home() {
+  const initialData = await loadHomePageData();
+  return <PortalApp initialData={initialData} />;
 }

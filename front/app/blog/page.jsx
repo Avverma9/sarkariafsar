@@ -1,5 +1,6 @@
 import Link from "next/link";
 import PostPageShell from "../component/layout/PostPageShell";
+import AdBanner from "../component/layout/AdBanner";
 import { getAllBlogPosts } from "../lib/blogs";
 import { buildPageMetadata } from "../lib/seo";
 
@@ -25,6 +26,8 @@ function formatDate(value) {
   });
 }
 
+export const revalidate = 3600;
+
 export default function BlogListingPage() {
   const posts = getAllBlogPosts();
 
@@ -43,6 +46,9 @@ export default function BlogListingPage() {
             useful aur practical blogs.
           </p>
         </section>
+
+        {/* Ad between blog hero and post grid */}
+        <AdBanner className="mb-6" />
 
         <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {posts.map((post) => (

@@ -9,6 +9,7 @@ import UpdatesSection from "./home/UpdatesSection";
 import SchemesSection from "./home/SchemesSection";
 import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
+import AdBanner from "./layout/AdBanner";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
 import baseUrl from "../lib/baseUrl";
 import {
@@ -250,7 +251,16 @@ function normalizeScheme(scheme, index, selectedState) {
   };
 }
 
-export default function PortalApp() {
+export default function PortalApp({ initialData = {} }) {
+  const {
+    statesList: serverStatesList = [],
+    schemes: serverSchemes = [],
+    sectionBlocks: serverSectionBlocks = [],
+    jobsBySection: serverJobsBySection = {},
+  } = initialData;
+
+  const hasServerData = serverSchemes.length > 0 || serverSectionBlocks.length > 0;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -260,11 +270,13 @@ export default function PortalApp() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [statesList, setStatesList] = useState(() => getDefaultStates());
+  const [statesList, setStatesList] = useState(() =>
+    serverStatesList.length > 1 ? serverStatesList : getDefaultStates(),
+  );
   const [statesLoading, setStatesLoading] = useState(false);
-  const [schemesData, setSchemesData] = useState([]);
-  const [schemesLoading, setSchemesLoading] = useState(true);
-  const [hasLoadedSchemes, setHasLoadedSchemes] = useState(false);
+  const [schemesData, setSchemesData] = useState(serverSchemes);
+  const [schemesLoading, setSchemesLoading] = useState(!hasServerData);
+  const [hasLoadedSchemes, setHasLoadedSchemes] = useState(hasServerData);
   const [schemesError, setSchemesError] = useState("");
 
   useEffect(() => {
@@ -349,6 +361,9 @@ export default function PortalApp() {
   }, [debouncedSearchQuery]);
 
   useEffect(() => {
+    // Skip if server already provided state names
+    if (serverStatesList.length > 1) return;
+
     let active = true;
 
     async function loadStateNames() {
@@ -391,9 +406,15 @@ export default function PortalApp() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [serverStatesList]);
 
   useEffect(() => {
+    // Skip the initial "All India" load if server already provided schemes
+    if (selectedState === "All India" && hasServerData && schemesData.length > 0 && !hasLoadedSchemes) {
+      setHasLoadedSchemes(true);
+      return;
+    }
+
     let active = true;
 
     async function loadSchemesByState() {
@@ -469,9 +490,19 @@ export default function PortalApp() {
         searchError={isSearchPanelActive ? searchError : ""}
       />
 
-      <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-40 pb-20 sm:px-6 md:pt-36 lg:px-8">
+      {/* Ad below hero — full width, high visibility */}
+      <div className="relative z-30 mx-auto w-full max-w-[1500px] px-4 pt-2 sm:px-6 lg:px-8">
+        <AdBanner />
+      </div>
+
+      <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-6 pb-20 sm:px-6 lg:px-8">
         <Breadcrumbs className="mb-8" />
-        <UpdatesSection filteredUpdates={filteredUpdates} onSelectItem={setSelectedItem} />
+        <UpdatesSection
+          filteredUpdates={filteredUpdates}
+          onSelectItem={setSelectedItem}
+          serverSectionBlocks={serverSectionBlocks}
+          serverJobsBySection={serverJobsBySection}
+        />
 
         <SchemesSection
           filteredSchemes={filteredSchemes}
