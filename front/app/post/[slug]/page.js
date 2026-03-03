@@ -5,6 +5,29 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 import { buildPageMetadata } from "../../lib/seo";
 import Link from "next/link";
+import SectionJobsPage from "../../component/home/SectionJobsPage";
+import {
+  loadSectionJobsPage,
+  parseSectionJobsQuery,
+} from "../../lib/sectionJobsPage";
+
+// Known section slugs under /post/[section]
+const SECTION_CONFIGS = {
+  "new-jobs": {
+    sectionKeys: ["new_jobs", "newjob", "latest_job", "latestjobs"],
+    title: "Latest Jobs",
+    description: "All available job updates from configured source section URLs.",
+  },
+  admissions: {
+    sectionKeys: ["admission", "admissions"],
+    title: "Latest Admissions",
+    description: "All admission-related updates from configured source section URLs.",
+  },
+};
+
+function getSectionConfig(slug) {
+  return SECTION_CONFIGS[slug] || null;
+}
 
 const loadPostDataByKey = cache((slug, rawJobUrl) =>
   loadPostDetailPageData({
@@ -23,7 +46,22 @@ async function loadPostData(params, searchParams) {
 }
 
 export async function generateMetadata({ params, searchParams }) {
-  const { slug, fetchError, post, canonicalKey } = await loadPostData(params, searchParams);
+  const resolvedParams = await params;
+  const slug = String(getFirstValue(resolvedParams?.slug) || "");
+
+  // Section page metadata
+  const sectionConfig = getSectionConfig(slug);
+  if (sectionConfig) {
+    return buildPageMetadata({
+      title: sectionConfig.title,
+      description: sectionConfig.description,
+      path: `/post/${slug}`,
+      keywords: ["jobs section", sectionConfig.title, slug],
+    });
+  }
+
+  // Post detail metadata
+  const { fetchError, post, canonicalKey } = await loadPostData(params, searchParams);
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
   const title = post?.header?.title || "Job Details";
   const description =
@@ -49,8 +87,30 @@ export async function generateMetadata({ params, searchParams }) {
   });
 }
 
-export default async function PostDetailPage({ params, searchParams }) {
-  const { slug, jobUrl, fetchError, jobDetail, post, canonicalKey, hasJobUrlParam } =
+export default async function PostSlugPage({ params, searchParams }) {
+  const resolvedParams = await params;
+  const slug = String(getFirstValue(resolvedParams?.slug) || "");
+
+  // Render section listing page if slug is a known section
+  const sectionConfig = getSectionConfig(slug);
+  if (sectionConfig) {
+    const query = parseSectionJobsQuery(await searchParams);
+    const pageData = await loadSectionJobsPage({
+      ...query,
+      sectionKeys: sectionConfig.sectionKeys,
+      title: sectionConfig.title,
+      description: sectionConfig.description,
+    });
+
+    return (
+      <PostPageShell>
+        <SectionJobsPage basePath={`/post/${slug}`} {...pageData} />
+      </PostPageShell>
+    );
+  }
+
+  // Otherwise render post detail
+  const { jobUrl, fetchError, jobDetail, post, canonicalKey, hasJobUrlParam } =
     await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
