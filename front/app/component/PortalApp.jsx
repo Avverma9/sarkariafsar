@@ -9,7 +9,6 @@ import UpdatesSection from "./home/UpdatesSection";
 import SchemesSection from "./home/SchemesSection";
 import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
-import AdBanner from "./layout/AdBanner";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
 import baseUrl from "../lib/baseUrl";
 import {
@@ -489,11 +488,6 @@ export default function PortalApp({ initialData = {} }) {
         searchLoading={isSearchPanelActive && (searchLoading || isDebouncingSearch)}
         searchError={isSearchPanelActive ? searchError : ""}
       />
-
-      {/* Ad below hero — full width, high visibility */}
-      <div className="relative z-30 mx-auto w-full max-w-[1500px] px-4 pt-2 sm:px-6 lg:px-8">
-        <AdBanner />
-      </div>
 
       <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-6 pb-20 sm:px-6 lg:px-8">
         <Breadcrumbs className="mb-8" />
