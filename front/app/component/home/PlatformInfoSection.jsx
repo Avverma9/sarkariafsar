@@ -1,6 +1,5 @@
 import { BellRing, DatabaseZap, ShieldCheck, Sparkles } from "lucide-react";
 import Link from "next/link";
-import AdBanner from "../layout/AdBanner";
 
 const sections = [
   {
@@ -83,7 +82,7 @@ export default function PlatformInfoSection() {
       </div>
 
       <div className="grid grid-cols-1 gap-6">
-        {sections.map((section, index) => {
+        {sections.map((section) => {
           const Icon = section.icon;
 
           return (
@@ -125,10 +124,6 @@ export default function PlatformInfoSection() {
               ) : null}
               </article>
 
-              {/* Ad between info sections */}
-              {index < sections.length - 1 ? (
-                <AdBanner />
-              ) : null}
             </div>
           );
         })}

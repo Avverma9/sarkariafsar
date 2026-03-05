@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import Breadcrumbs from "./Breadcrumbs";
-import AdBanner from "./AdBanner";
 import { statesList as fallbackStatesList } from "../home/data";
 import { getGovSchemeStateNameOnly } from "../../lib/govSchemesApi";
 
@@ -141,8 +140,6 @@ export default function PostPageShell({ children }) {
       <main className="flex-grow pt-24 sm:pt-28">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <Breadcrumbs className="mb-6 sm:mb-8" />
-          {/* Ad below breadcrumbs — full width, good visibility on all screens */}
-          <AdBanner className="mb-6 sm:mb-8" />
         </div>
         {children}
       </main>
