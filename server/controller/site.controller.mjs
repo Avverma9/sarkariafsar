@@ -315,6 +315,10 @@ export const scrapeJobDetailController = async (req, res, next) => {
     const jsonData = result?.jsonData || null;
     const saved = result?.saved || null;
 
+    if (saved?.created || saved?.updated || saved?.patched || saved?.changed) {
+      await clearFrontendCache("job-details");
+    }
+
     return res.status(200).json({ 
       success: true,
       formattedHtml,
@@ -541,6 +545,8 @@ export const siteAddController = async (req, res, next) => {
       siteUrl: getValue(req, "siteUrl", ""),
       status: getValue(req, "status", "inactive"),
     });
+
+    await clearFrontendCache("sites");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Site created" : "Site updated",

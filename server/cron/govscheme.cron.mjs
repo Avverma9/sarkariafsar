@@ -5,6 +5,7 @@ import siteModel from "../models/site.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import { formatJobHtmlAdvanced } from "../utils/htmlFormatter.mjs";
 import { formatJobJsonAdvanced } from "../utils/jsonFormatter.mjs";
+import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
 
 const DEFAULT_CRON_SCHEDULE = "*/30 * * * *";
 const DEFAULT_CRON_TIMEZONE = "Asia/Kolkata";
@@ -173,6 +174,10 @@ export const runGovSchemeScrapeJob = async () => {
       changedCount,
       failedCount,
     };
+
+    if (createdCount > 0 || updatedCount > 0 || changedCount > 0) {
+      await clearFrontendCache("job-details");
+    }
 
     console.log(
       `[cron] GovScheme scrape completed in ${durationMs}ms | sections=${summary.scannedSections} jobs=${summary.scannedJobs} created=${createdCount} updated=${updatedCount} changed=${changedCount} failed=${failedCount}`
