@@ -148,6 +148,8 @@ export const patchGovSchemeController = async (req, res, next) => {
       return res.status(404).json({ message: "Scheme not found", scheme: null });
     }
 
+    await clearFrontendCache("gov-schemes");
+
     return res.status(200).json({
       message: "Scheme updated",
       scheme,

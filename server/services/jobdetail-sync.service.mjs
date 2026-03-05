@@ -3,6 +3,7 @@ import govJobListModel from "../models/govjoblist.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import { formatJobHtmlAdvanced } from "../utils/htmlFormatter.mjs";
 import { formatJobJsonAdvanced } from "../utils/jsonFormatter.mjs";
+import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
 
 const DEFAULT_SIMILARITY_THRESHOLD = 0.8;
 
@@ -188,6 +189,10 @@ export const syncStoredJobDetails = async ({
         `[job-detail-sync] Failed for ${item.jobUrl}: ${error?.message || error}`
       );
     }
+  }
+
+  if (createdCount > 0 || updatedCount > 0 || patchedCount > 0 || changedCount > 0) {
+    await clearFrontendCache("job-details");
   }
 
   return {
