@@ -86,10 +86,12 @@ export const buildBrowserCachedFetchOptions = (
   ...overrides,
 });
 
-export default {
+const fetchCache = {
   APP_FETCH_REVALIDATE_SECONDS,
   CACHE_TAGS,
   buildScopedCacheTag,
   buildCachedFetchOptions,
   buildBrowserCachedFetchOptions,
 };
+
+export default fetchCache;
