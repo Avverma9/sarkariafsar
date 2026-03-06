@@ -129,6 +129,15 @@ const buildStoredSectionMeta = ({ requestedSection = "", sectionUrls = [] } = {}
   };
 };
 
+const reverseJobListPostListForResponse = (jobList) => {
+  if (!jobList || typeof jobList !== "object") return jobList;
+
+  return {
+    ...jobList,
+    postList: Array.isArray(jobList.postList) ? [...jobList.postList].reverse() : [],
+  };
+};
+
 export const scrapeSiteSectionsController = async (req, res, next) => {
   try {
     const data = await scrapperService.getSiteSections({
@@ -465,7 +474,8 @@ export const fetchStoredJobListController = async (req, res, next) => {
     const section = String(getValue(req, "section", "")).trim();
 
     if (section) {
-      const jobList = await govJobListModel.getBySection(section);
+      const storedJobList = await govJobListModel.getBySection(section);
+      const jobList = reverseJobListPostListForResponse(storedJobList);
       if (!jobList) {
         return res.status(404).json({
           message: "Stored job list not found",
@@ -481,7 +491,7 @@ export const fetchStoredJobListController = async (req, res, next) => {
       });
     }
 
-    const jobLists = await govJobListModel.list();
+    const jobLists = (await govJobListModel.list()).map(reverseJobListPostListForResponse);
 
     return res.status(200).json({
       total: jobLists.length,
