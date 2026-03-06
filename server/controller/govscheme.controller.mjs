@@ -50,7 +50,7 @@ export const postGovSchemeController = async (req, res, next) => {
   try {
     const payload = toObject(req?.body || {});
     const scheme = await govSchemeModel.createScheme(payload);
-    await clearFrontendCache("gov-schemes");
+    void clearFrontendCache("gov-schemes");
 
     return res.status(201).json({
       message: "Scheme created",
@@ -148,7 +148,7 @@ export const patchGovSchemeController = async (req, res, next) => {
       return res.status(404).json({ message: "Scheme not found", scheme: null });
     }
 
-    await clearFrontendCache("gov-schemes");
+    void clearFrontendCache("gov-schemes");
 
     return res.status(200).json({
       message: "Scheme updated",
@@ -206,7 +206,7 @@ export const seedGovSchemeController = async (req, res, next) => {
     }
 
     if (created > 0 || updated > 0) {
-      await clearFrontendCache("gov-schemes");
+      void clearFrontendCache("gov-schemes");
     }
 
     return res.status(200).json({

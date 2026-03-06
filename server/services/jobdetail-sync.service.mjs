@@ -192,7 +192,7 @@ export const syncStoredJobDetails = async ({
   }
 
   if (createdCount > 0 || updatedCount > 0 || patchedCount > 0 || changedCount > 0) {
-    await clearFrontendCache("job-details");
+    void clearFrontendCache("job-details");
   }
 
   return {

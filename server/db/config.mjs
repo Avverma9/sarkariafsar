@@ -10,9 +10,14 @@ export const connectDatabase = async (mongoUri = DATABASE_URL) => {
 
   mongoose.set("strictQuery", true);
 
+  const maxPoolSize = Number.parseInt(process.env.MONGO_MAX_POOL_SIZE || "30", 10);
+  const minPoolSize = Number.parseInt(process.env.MONGO_MIN_POOL_SIZE || "5", 10);
+
   const connection = await mongoose.connect(mongoUri, {
     autoIndex: true,
     serverSelectionTimeoutMS: 10000,
+    maxPoolSize: Number.isNaN(maxPoolSize) ? 30 : maxPoolSize,
+    minPoolSize: Number.isNaN(minPoolSize) ? 5 : minPoolSize,
   });
 
   console.log(`MongoDB connected: ${connection.connection.host}`);

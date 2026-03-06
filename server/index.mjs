@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import router from "./routes/index.mjs";
 import connectDatabase from "./db/config.mjs";
 import { startGovSchemeScrapeCron } from "./cron/govscheme.cron.mjs";
@@ -7,7 +8,9 @@ import { startJobListSyncCron } from "./cron/joblist.cron.mjs";
 
 const app = express();
 
+app.disable("x-powered-by");
 app.use(cors());
+app.use(compression());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 

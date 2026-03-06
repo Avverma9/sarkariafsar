@@ -234,7 +234,7 @@ export const scrapeSectionJobsController = async (req, res, next) => {
         sectionInput: requestedSection || "",
       },
     });
-    await clearFrontendCache("job-lists");
+    void clearFrontendCache("job-lists");
 
     const jobs = (data?.jobs || []).map((item) => ({
       title: item?.title || "",
@@ -316,7 +316,7 @@ export const scrapeJobDetailController = async (req, res, next) => {
     const saved = result?.saved || null;
 
     if (saved?.created || saved?.updated || saved?.patched || saved?.changed) {
-      await clearFrontendCache("job-details");
+      void clearFrontendCache("job-details");
     }
 
     return res.status(200).json({ 
@@ -367,6 +367,7 @@ export const findByTitleJobAndSchemeController = async (req, res, next) => {
     const keyword = String(
       getValue(req, "keyword", getValue(req, "title", getValue(req, "query", "")))
     ).trim();
+    const limit = Math.min(200, Math.max(1, toInteger(getValue(req, "limit"), 50)));
 
     if (!keyword) {
       throw new Error("keyword is required");
@@ -381,13 +382,22 @@ export const findByTitleJobAndSchemeController = async (req, res, next) => {
         .find({
           $or: [{ title: regex }, { pageTitle: regex }, { "jsonData.title": regex }],
         })
+        .select({
+          title: 1,
+          pageTitle: 1,
+          jobUrl: 1,
+          "jsonData.title": 1,
+        })
         .sort({ lastScrapedAt: -1, updatedAt: -1 })
+        .limit(limit)
         .lean(),
       govSchemeModel.model
         .find({
           schemeTitle: regex,
         })
+        .select({ schemeTitle: 1 })
         .sort({ updatedAt: -1, createdAt: -1 })
+        .limit(limit)
         .lean(),
     ]);
 
@@ -437,12 +447,14 @@ export const fetchJobByUrlController = async (req, res, next) => {
 
 export const getAllJobDetailsController = async (req, res, next) => {
   try {
-    const jobs = await govJobDetailModel.getAll();
-
-    return res.status(200).json({
-      total: jobs.length,
-      jobs: jobs.map((job) => job.jsonData),
+    const page = toInteger(getValue(req, "page"), 1);
+    const limit = toInteger(getValue(req, "limit"), 0);
+    const data = await govJobDetailModel.getAllJson({
+      page,
+      limit,
     });
+
+    return res.status(200).json(data);
   } catch (error) {
     return next(error);
   }
@@ -501,7 +513,7 @@ export const upsertJobSectionController = async (req, res, next) => {
       urls: toArray(getValue(req, "urls", [])),
       isManual: toBoolean(getValue(req, "isManual"), true),
     });
-    await clearFrontendCache("job-sections");
+    void clearFrontendCache("job-sections");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Section created" : "Section updated",
@@ -546,7 +558,7 @@ export const siteAddController = async (req, res, next) => {
       status: getValue(req, "status", "inactive"),
     });
 
-    await clearFrontendCache("sites");
+    void clearFrontendCache("sites");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Site created" : "Site updated",
