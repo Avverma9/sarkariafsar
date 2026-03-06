@@ -1,4 +1,11 @@
 import baseUrl from "./baseUrl";
+import {
+  APP_FETCH_REVALIDATE_SECONDS,
+  CACHE_TAGS,
+  buildBrowserCachedFetchOptions,
+  buildCachedFetchOptions,
+  buildScopedCacheTag,
+} from "./fetchCache";
 
 function normalizeApiBaseUrl(value) {
   const candidate = String(value || "").trim();
@@ -35,16 +42,23 @@ function buildQueryString(params = {}) {
 }
 
 async function requestJson(path, options = {}) {
-  const { ...restOptions } = options;
+  const {
+    tags = [],
+    revalidate = APP_FETCH_REVALIDATE_SECONDS,
+    ...restOptions
+  } = options;
+  const fetchOptions =
+    typeof window === "undefined"
+      ? buildCachedFetchOptions(
+          {
+            tags,
+            revalidate,
+          },
+          restOptions
+        )
+      : buildBrowserCachedFetchOptions({}, restOptions);
 
-  const response = await fetch(`${SITE_API_BASE_URL}${path}`, {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    ...restOptions,
-  });
+  const response = await fetch(`${SITE_API_BASE_URL}${path}`, fetchOptions);
 
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`;
@@ -65,11 +79,18 @@ async function requestJson(path, options = {}) {
 }
 
 export async function getStoredJobLists({ section } = {}) {
-  return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`);
+  return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`, {
+    tags: [
+      CACHE_TAGS.jobLists,
+      buildScopedCacheTag(CACHE_TAGS.jobLists, section),
+    ],
+  });
 }
 
 export async function getJobSections() {
-  return requestJson("/job-sections");
+  return requestJson("/job-sections", {
+    tags: [CACHE_TAGS.jobSections],
+  });
 }
 
 export async function getSectionJobsByUrls({
@@ -87,13 +108,25 @@ export async function getSectionJobsByUrls({
       limit,
       page,
     })}`,
+    {
+      tags: [CACHE_TAGS.sectionJobs],
+      revalidate: 180,
+    },
   );
 }
 
 export async function getJobByUrl(jobUrl = "") {
-  return requestJson(`/fetch/job-by-url${buildQueryString({ jobUrl })}`);
+  return requestJson(`/fetch/job-by-url${buildQueryString({ jobUrl })}`, {
+    tags: [
+      CACHE_TAGS.jobDetails,
+      buildScopedCacheTag(CACHE_TAGS.jobDetails, jobUrl),
+    ],
+  });
 }
 
 export async function searchJobsAndSchemes(keyword = "") {
-  return requestJson(`/find-by-title-job-and-scheme${buildQueryString({ keyword })}`);
+  return requestJson(`/find-by-title-job-and-scheme${buildQueryString({ keyword })}`, {
+    tags: [CACHE_TAGS.jobSearch, CACHE_TAGS.jobDetails, CACHE_TAGS.govSchemes],
+    revalidate: 180,
+  });
 }

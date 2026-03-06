@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { updateBlocks as fallbackUpdateBlocks } from "./data";
 import baseUrl from "../../lib/baseUrl";
+import { buildBrowserCachedFetchOptions } from "../../lib/fetchCache";
 import { buildCanonicalKey } from "../../lib/postFormatter";
 import { buildPostDetailsHref } from "../../lib/postLink";
 import UpdatesSectionSkeleton from "../skeletons/UpdatesSectionSkeleton";
@@ -151,10 +152,10 @@ function mapSectionsToBlocks(sections) {
 }
 
 async function fetchStoredJobLists() {
-  const response = await fetch(`${baseUrl}/fetch-stored-joblist`, {
-    method: "GET",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${baseUrl}/fetch-stored-joblist`,
+    buildBrowserCachedFetchOptions()
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to load jobs (${response.status})`);
@@ -406,10 +407,10 @@ export default function UpdatesSection({
       }
 
       try {
-        const sectionResponse = await fetch(`${baseUrl}/job-sections`, {
-          method: "GET",
-          cache: "no-store",
-        });
+        const sectionResponse = await fetch(
+          `${baseUrl}/job-sections`,
+          buildBrowserCachedFetchOptions()
+        );
 
         if (!sectionResponse.ok) {
           throw new Error(`Failed to load sections (${sectionResponse.status})`);

@@ -11,6 +11,7 @@ import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
 import baseUrl from "../lib/baseUrl";
+import { buildBrowserCachedFetchOptions } from "../lib/fetchCache";
 import {
   getAllGovSchemes,
   getGovSchemeByState,
@@ -319,11 +320,7 @@ export default function PortalApp({ initialData = {} }) {
           `${baseUrl}/find-by-title-job-and-scheme?keyword=${encodeURIComponent(
             debouncedSearchQuery,
           )}`,
-          {
-            method: "GET",
-            cache: "no-store",
-            signal: controller.signal,
-          },
+          buildBrowserCachedFetchOptions({}, { signal: controller.signal }),
         );
 
         if (!response.ok) {

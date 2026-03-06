@@ -1,9 +1,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { BRAND_NAME, DEFAULT_DESCRIPTION, SITE_ICON_PATH, getSiteUrl } from "./lib/seo";
+import { APP_FETCH_REVALIDATE_SECONDS } from "./lib/fetchCache";
 
-export const dynamic = "force-dynamic";
-export const fetchCache = "force-no-store";
+export const revalidate = APP_FETCH_REVALIDATE_SECONDS;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

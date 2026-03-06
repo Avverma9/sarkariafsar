@@ -5,7 +5,7 @@ import siteModel from "../models/site.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import { formatJobHtmlAdvanced } from "../utils/htmlFormatter.mjs";
 import { formatJobJsonAdvanced } from "../utils/jsonFormatter.mjs";
-import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
+import { invalidateAppCache } from "../utils/appCache.mjs";
 
 const DEFAULT_CRON_SCHEDULE = "*/30 * * * *";
 const DEFAULT_CRON_TIMEZONE = "Asia/Kolkata";
@@ -176,7 +176,7 @@ export const runGovSchemeScrapeJob = async () => {
     };
 
     if (createdCount > 0 || updatedCount > 0 || changedCount > 0) {
-      await clearFrontendCache("job-details");
+      await invalidateAppCache("job-details");
     }
 
     console.log(
