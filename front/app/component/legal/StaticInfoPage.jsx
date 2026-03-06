@@ -4,6 +4,10 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function createParagraphMarkup(value) {
+  return { __html: String(value || "") };
+}
+
 export default function StaticInfoPage({
   eyebrow = "Information",
   title = "",
@@ -54,9 +58,8 @@ export default function StaticInfoPage({
                   <p
                     key={`paragraph-${paragraphIndex + 1}`}
                     className="mt-3 text-sm leading-relaxed text-slate-700 sm:text-base"
-                  >
-                    {paragraph}
-                  </p>
+                    dangerouslySetInnerHTML={createParagraphMarkup(paragraph)}
+                  />
                 ))}
 
                 {bullets.length > 0 ? (

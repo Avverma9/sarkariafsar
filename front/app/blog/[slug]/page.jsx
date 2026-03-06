@@ -1,8 +1,15 @@
+import StructuredData from "../../component/seo/StructuredData";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostPageShell from "../../component/layout/PostPageShell";
 import { getAllBlogPosts, getBlogPostBySlug } from "../../lib/blogs";
-import { buildPageMetadata } from "../../lib/seo";
+import {
+  absoluteUrl,
+  buildArticleSchema,
+  buildBreadcrumbSchema,
+  buildPageMetadata,
+  buildWebPageSchema,
+} from "../../lib/seo";
 
 function formatDate(value) {
   const date = new Date(value);
@@ -38,6 +45,11 @@ export async function generateMetadata({ params }) {
     path: `/blog/${post.slug}`,
     keywords: ["blog", "sarkari updates", ...post.tags],
     type: "article",
+    authors: [post.author],
+    publishedTime: post.publishedAt,
+    modifiedTime: post.publishedAt,
+    category: post.category,
+    section: post.category,
   });
 }
 
@@ -51,9 +63,38 @@ export default async function BlogDetailPage({ params }) {
   }
 
   const relatedPosts = getAllBlogPosts().filter((item) => item.slug !== post.slug).slice(0, 3);
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+    { name: post.title, url: `/blog/${post.slug}` },
+  ];
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path: `/blog/${post.slug}` }),
+    buildWebPageSchema({
+      title: post.title,
+      description: post.excerpt,
+      path: `/blog/${post.slug}`,
+      breadcrumbItems,
+      mainEntityId: absoluteUrl(`/blog/${post.slug}#article`),
+      datePublished: post.publishedAt,
+      dateModified: post.publishedAt,
+    }),
+    buildArticleSchema({
+      title: post.title,
+      description: post.excerpt,
+      path: `/blog/${post.slug}`,
+      type: "BlogPosting",
+      authorName: post.author,
+      publishedTime: post.publishedAt,
+      modifiedTime: post.publishedAt,
+      section: post.category,
+      keywords: post.tags,
+    }),
+  ];
 
   return (
     <PostPageShell>
+      <StructuredData data={structuredData} />
       <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">
         <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <header className="border-b border-slate-200 bg-slate-50 px-6 py-8 sm:px-10">
@@ -64,7 +105,7 @@ export default async function BlogDetailPage({ params }) {
               {post.title}
             </h1>
             <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-medium text-slate-600">
-              <span>{formatDate(post.publishedAt)}</span>
+              <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
               <span>•</span>
               <span>{post.readingTime}</span>
               <span>•</span>

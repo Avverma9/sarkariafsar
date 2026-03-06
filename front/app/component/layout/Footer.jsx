@@ -1,14 +1,9 @@
-import {
-  Facebook,
-  Instagram,
-  Landmark,
-  Mail,
-  Twitter,
-  Youtube,
-} from "lucide-react";
+import { Landmark, Mail } from "lucide-react";
 import Link from "next/link";
 
 export default function Footer() {
+  const socialLinks = [];
+
   return (
     <footer className="border-t border-slate-800 bg-slate-950 pt-20 pb-10 text-slate-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -28,32 +23,22 @@ export default function Footer() {
               schemes — timely and accurate updates for applicants across India.
             </p>
 
-            <div className="flex gap-4">
-              <a
-                href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-blue-600 hover:bg-blue-600 hover:text-white"
-              >
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-sky-500 hover:bg-sky-500 hover:text-white"
-              >
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-red-600 hover:bg-red-600 hover:text-white"
-              >
-                <Youtube className="h-5 w-5" />
-              </a>
-              <a
-                href="#"
-                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 transition-all hover:border-pink-600 hover:bg-pink-600 hover:text-white"
-              >
-                <Instagram className="h-5 w-5" />
-              </a>
-            </div>
+            {socialLinks.length > 0 ? (
+              <div className="flex gap-4">
+                {socialLinks.map(({ href, label, Icon, className }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={label}
+                    className={className}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div>

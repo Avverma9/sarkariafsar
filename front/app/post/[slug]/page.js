@@ -1,14 +1,24 @@
+import StructuredData from "../../component/seo/StructuredData";
 import PostDetails from "../../component/post/PostDetails";
 import PostPageShell from "../../component/layout/PostPageShell";
 import { getFirstValue, loadPostDetailPageData } from "../../lib/postDetailPage";
 import { redirect } from "next/navigation";
-import { buildPageMetadata } from "../../lib/seo";
+import {
+  absoluteUrl,
+  buildArticleSchema,
+  buildBreadcrumbSchema,
+  buildCollectionPageSchema,
+  buildItemListSchema,
+  buildPageMetadata,
+  buildWebPageSchema,
+} from "../../lib/seo";
 import Link from "next/link";
 import SectionJobsPage from "../../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
 } from "../../lib/sectionJobsPage";
+import { buildPostDetailsHref } from "../../lib/postLink";
 
 // Known section slugs under /post/[section]
 const SECTION_CONFIGS = {
@@ -96,9 +106,39 @@ export default async function PostSlugPage({ params, searchParams }) {
       title: sectionConfig.title,
       description: sectionConfig.description,
     });
+    const path = `/post/${slug}`;
+    const breadcrumbItems = [
+      { name: "Home", url: "/" },
+      { name: "Jobs", url: "/post" },
+      { name: sectionConfig.title, url: path },
+    ];
+    const structuredData = [
+      buildBreadcrumbSchema(breadcrumbItems, { path }),
+      buildCollectionPageSchema({
+        title: pageData.title,
+        description: pageData.description,
+        path,
+        breadcrumbItems,
+        mainEntityId: absoluteUrl(`${path}#itemlist`),
+      }),
+      buildItemListSchema({
+        path,
+        name: `${pageData.title} updates`,
+        items: pageData.jobs.map((job) => ({
+          name: job?.title || "Job update",
+          url: job?.jobUrl
+            ? buildPostDetailsHref({
+                title: job?.title,
+                jobUrl: job?.jobUrl,
+              })
+            : path,
+        })),
+      }),
+    ];
 
     return (
       <PostPageShell>
+        <StructuredData data={structuredData} />
         <SectionJobsPage basePath={`/post/${slug}`} {...pageData} />
       </PostPageShell>
     );
@@ -120,9 +160,50 @@ export default async function PostSlugPage({ params, searchParams }) {
     redirect(`/post/${resolvedCanonicalKey}`);
   }
 
+  const path = `/post/${resolvedCanonicalKey}`;
+  const title = post?.header?.title || "Job Details";
+  const description =
+    post?.shortInfo?.[0] ||
+    post?.importantDates?.[0] ||
+    "Detailed government job update with important dates, eligibility and links.";
+  const structuredData =
+    jobUrl && !fetchError && jobDetail?.jsonData && post
+      ? [
+          buildBreadcrumbSchema(
+            [
+              { name: "Home", url: "/" },
+              { name: "Jobs", url: "/post" },
+              { name: title, url: path },
+            ],
+            { path },
+          ),
+          buildWebPageSchema({
+            title,
+            description,
+            path,
+            breadcrumbItems: [
+              { name: "Home", url: "/" },
+              { name: "Jobs", url: "/post" },
+              { name: title, url: path },
+            ],
+            mainEntityId: absoluteUrl(`${path}#article`),
+            dateModified: jobDetail?.fetchedAt || jobDetail?.updatedAt,
+          }),
+          buildArticleSchema({
+            title,
+            description,
+            path,
+            type: "Article",
+            section: post?.header?.badge || "Government Jobs",
+            keywords: ["job details", "sarkari post", "apply online", title],
+            modifiedTime: jobDetail?.fetchedAt || jobDetail?.updatedAt,
+          }),
+        ]
+      : [];
+
   return (
     <PostPageShell>
-   
+      <StructuredData data={structuredData} />
 
       {!jobUrl ? (
         <div className="px-4 py-12">

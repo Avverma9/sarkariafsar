@@ -1,7 +1,14 @@
+import StructuredData from "../component/seo/StructuredData";
 import Link from "next/link";
 import PostPageShell from "../component/layout/PostPageShell";
 import { getAllBlogPosts } from "../lib/blogs";
-import { buildPageMetadata } from "../lib/seo";
+import {
+  absoluteUrl,
+  buildBreadcrumbSchema,
+  buildCollectionPageSchema,
+  buildItemListSchema,
+  buildPageMetadata,
+} from "../lib/seo";
 
 export const metadata = buildPageMetadata({
   title: "Blog",
@@ -27,9 +34,33 @@ function formatDate(value) {
 
 export default function BlogListingPage() {
   const posts = getAllBlogPosts();
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Blog", url: "/blog" },
+  ];
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path: "/blog" }),
+    buildCollectionPageSchema({
+      title: "Blog & Guides",
+      description:
+        "Exam prep, application mistakes, result verification aur scheme guidance par short, useful aur practical blogs.",
+      path: "/blog",
+      breadcrumbItems,
+      mainEntityId: absoluteUrl("/blog#itemlist"),
+    }),
+    buildItemListSchema({
+      path: "/blog",
+      name: "Sarkari Afsar blog posts",
+      items: posts.map((post) => ({
+        name: post.title,
+        url: `/blog/${post.slug}`,
+      })),
+    }),
+  ];
 
   return (
     <PostPageShell>
+      <StructuredData data={structuredData} />
       <div className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
         <section className="mb-8 rounded-3xl border border-slate-200 bg-white px-6 py-8 shadow-sm sm:px-10">
           <p className="text-xs font-bold tracking-[0.2em] text-indigo-600 uppercase">
@@ -54,7 +85,12 @@ export default function BlogListingPage() {
                 <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold tracking-wide text-indigo-700 uppercase">
                   {post.category}
                 </span>
-                <span className="text-xs font-semibold text-slate-500">{formatDate(post.publishedAt)}</span>
+                <time
+                  dateTime={post.publishedAt}
+                  className="text-xs font-semibold text-slate-500"
+                >
+                  {formatDate(post.publishedAt)}
+                </time>
                 <span className="text-xs text-slate-400">•</span>
                 <span className="text-xs font-semibold text-slate-500">{post.readingTime}</span>
               </div>

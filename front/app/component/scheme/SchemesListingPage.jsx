@@ -45,7 +45,7 @@ function getPaginationItems(currentPage, totalPages) {
 
 function SchemeListItem({ item }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold tracking-wide text-indigo-700 uppercase">
           {item?.category || "Scheme"}
@@ -68,13 +68,13 @@ function SchemeListItem({ item }) {
           View Scheme
         </Link>
       </div>
-    </div>
+    </article>
   );
 }
 
 function SchemeGridCard({ item }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold tracking-wide text-indigo-700 uppercase">
           {item?.category || "Scheme"}
@@ -97,7 +97,7 @@ function SchemeGridCard({ item }) {
           View Scheme
         </Link>
       </div>
-    </div>
+    </article>
   );
 }
 

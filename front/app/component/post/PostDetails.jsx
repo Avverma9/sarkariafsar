@@ -93,9 +93,9 @@ export default function PostDetails({ post, jobUrl, canonicalKey }) {
       : "";
 
   return (
-    <div className="mx-auto w-full max-w-[1180px] px-4 py-6 sm:px-6 lg:px-8 bg-slate-50/50 min-h-screen">
+    <article className="mx-auto min-h-screen w-full max-w-[1180px] bg-slate-50/50 px-4 py-6 sm:px-6 lg:px-8">
       {/* 1. HERO SECTION */}
-      <div className="rounded-[28px] bg-gradient-to-br from-slate-900 via-indigo-950 to-emerald-950 p-6 text-white shadow-xl sm:p-8 relative overflow-hidden">
+      <header className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-slate-900 via-indigo-950 to-emerald-950 p-6 text-white shadow-xl sm:p-8">
         {/* Abstract Background Design */}
         <div className="absolute top-0 right-0 -mt-20 -mr-20 h-64 w-64 rounded-full bg-white/5 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl"></div>
@@ -147,7 +147,7 @@ export default function PostDetails({ post, jobUrl, canonicalKey }) {
             />
           </div>
         </div>
-      </div>
+      </header>
 
       {/* 2. STATS & QUICK INFO GRID */}
       <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -277,9 +277,9 @@ export default function PostDetails({ post, jobUrl, canonicalKey }) {
           
           {/* Selection Process (Extracted from tables) */}
           {selectionSteps.length > 0 && (
-            <div className="rounded-3xl bg-slate-900 p-5 text-white shadow-xl sm:p-6 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl"></div>
-              <h3 className="text-xl font-black mb-5">Selection Process</h3>
+            <section className="relative overflow-hidden rounded-3xl bg-slate-900 p-5 text-white shadow-xl sm:p-6">
+              <div className="absolute top-0 right-0 h-32 w-32 rounded-full bg-indigo-500/10 blur-3xl"></div>
+              <h2 className="mb-5 text-xl font-black">Selection Process</h2>
               <div className="space-y-3 relative z-10">
                 {selectionSteps.map((step, index) => (
                   <div key={`step-${index}`} className="flex min-w-0 items-start gap-3">
@@ -292,14 +292,14 @@ export default function PostDetails({ post, jobUrl, canonicalKey }) {
                   </div>
                 ))}
               </div>
-            </div>
+            </section>
           )}
 
           {/* Comprehensive Quick Links */}
-          <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 sticky top-6">
+          <aside className="sticky top-6 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-4 flex items-center gap-2">
               <LinkIcon className="h-5 w-5 text-indigo-500" />
-              <h3 className="text-xl font-black text-slate-900">Important Links</h3>
+              <h2 className="text-xl font-black text-slate-900">Important Links</h2>
             </div>
             
             <div className="mt-4 flex flex-col gap-2.5">
@@ -330,11 +330,11 @@ export default function PostDetails({ post, jobUrl, canonicalKey }) {
                 <p className="text-sm text-slate-500 italic text-center py-4">Links will be updated soon.</p>
               )}
             </div>
-          </div>
+          </aside>
 
         </div>
       </div>
 
-    </div>
+    </article>
   );
 }

@@ -1,6 +1,6 @@
 import { Landmark, MapPin, Menu, X } from "lucide-react";
 import Link from "next/link";
- 
+
 
 export default function Header({
   scrolled,
@@ -28,7 +28,7 @@ export default function Header({
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3" aria-label="Sarkari Afsar home">
             <div
               className={`rounded-2xl p-2 transition-colors duration-500 ${
                 scrolled ? "bg-indigo-600" : "bg-white/10 backdrop-blur-md"
@@ -37,7 +37,7 @@ export default function Header({
               <Landmark className="h-6 w-6 text-white sm:h-8 sm:w-8" />
             </div>
             <div>
-              <h1
+              <span
                 className={`text-xl leading-none font-black tracking-tight sm:text-2xl ${
                   scrolled ? "text-slate-900" : "text-white"
                 }`}
@@ -46,11 +46,14 @@ export default function Header({
                 <span className={scrolled ? "text-indigo-600" : "text-indigo-300"}>
                   Afsar
                 </span>
-              </h1>
+              </span>
             </div>
           </Link>
 
-          <nav className="hidden items-center gap-8 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-sm backdrop-blur-md md:flex">
+          <nav
+            aria-label="Primary"
+            className="hidden items-center gap-8 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-sm backdrop-blur-md md:flex"
+          >
             {menuItems.map((item) => (
               <Link
                 key={item.label}
@@ -66,13 +69,14 @@ export default function Header({
             ))}
           </nav>
 
-            <div className="hidden items-center gap-3 md:flex">
+          <div className="hidden items-center gap-3 md:flex">
             <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/20 px-4 py-2 backdrop-blur-md">
               <MapPin className={`h-4 w-4 ${scrolled ? "text-indigo-600" : "text-white"}`} />
               {statesLoading ? (
                 <div className="skeleton-shimmer h-4 w-24 rounded-md" />
               ) : (
                 <select
+                  aria-label="Select state"
                   value={selectedState}
                   onChange={(e) => setSelectedState(e.target.value)}
                   className={`cursor-pointer bg-transparent text-sm font-bold outline-none ${
@@ -98,6 +102,9 @@ export default function Header({
                 : "text-white hover:bg-white/10"
             }`}
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-primary-navigation"
+            aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
           >
             {isMobileMenuOpen ? (
               <X className="h-6 w-6" />
@@ -109,7 +116,10 @@ export default function Header({
       </div>
 
       {isMobileMenuOpen && (
-        <div className="animate-in slide-in-from-top-2 absolute top-full left-0 w-full border-t border-slate-100 bg-white shadow-2xl md:hidden">
+        <div
+          id="mobile-primary-navigation"
+          className="animate-in slide-in-from-top-2 absolute top-full left-0 w-full border-t border-slate-100 bg-white shadow-2xl md:hidden"
+        >
           <div className="space-y-4 px-6 py-6">
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
               <MapPin className="h-5 w-5 text-indigo-600" />
@@ -117,6 +127,7 @@ export default function Header({
                 <div className="skeleton-shimmer h-5 w-32 rounded-md" />
               ) : (
                 <select
+                  aria-label="Select state"
                   value={selectedState}
                   onChange={(e) => {
                     setSelectedState(e.target.value);

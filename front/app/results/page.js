@@ -1,10 +1,18 @@
+import StructuredData from "../component/seo/StructuredData";
 import PostPageShell from "../component/layout/PostPageShell";
 import SectionJobsPage from "../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
 } from "../lib/sectionJobsPage";
-import { buildPageMetadata } from "../lib/seo";
+import {
+  absoluteUrl,
+  buildBreadcrumbSchema,
+  buildCollectionPageSchema,
+  buildItemListSchema,
+  buildPageMetadata,
+} from "../lib/seo";
+import { buildPostDetailsHref } from "../lib/postLink";
 
 export const metadata = buildPageMetadata({
   title: "Latest Results",
@@ -22,9 +30,37 @@ export default async function ResultsPage({ searchParams }) {
     title: "Latest Results",
     description: "All result and answer-key related updates from configured source section URLs.",
   });
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Results", url: "/results" },
+  ];
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path: "/results" }),
+    buildCollectionPageSchema({
+      title: pageData.title,
+      description: pageData.description,
+      path: "/results",
+      breadcrumbItems,
+      mainEntityId: absoluteUrl("/results#itemlist"),
+    }),
+    buildItemListSchema({
+      path: "/results",
+      name: "Latest result updates",
+      items: pageData.jobs.map((job) => ({
+        name: job?.title || "Result update",
+        url: job?.jobUrl
+          ? buildPostDetailsHref({
+              title: job?.title,
+              jobUrl: job?.jobUrl,
+            })
+          : "/results",
+      })),
+    }),
+  ];
 
   return (
     <PostPageShell>
+      <StructuredData data={structuredData} />
       <SectionJobsPage basePath="/results" {...pageData} />
     </PostPageShell>
   );

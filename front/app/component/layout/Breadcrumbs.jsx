@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { buildBreadcrumbSchema } from "../../lib/seo";
 
 const SEGMENT_LABELS = {
   jobs: "Jobs",
@@ -59,36 +60,51 @@ function buildCrumbs(pathname = "/") {
 export default function Breadcrumbs({ className = "", showOnHome = true }) {
   const pathname = usePathname() || "/";
   const crumbs = buildCrumbs(pathname);
+  const breadcrumbSchema = buildBreadcrumbSchema(
+    crumbs.map((crumb) => ({
+      name: crumb.label,
+      url: crumb.href,
+    })),
+    { path: pathname },
+  );
 
   if (!showOnHome && crumbs.length === 1) {
     return null;
   }
 
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className={`rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm ${className}`.trim()}
-    >
-      <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
-        {crumbs.map((crumb, index) => {
-          const isLast = index === crumbs.length - 1;
+    <>
+      {breadcrumbSchema ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema).replace(/</g, "\\u003c") }}
+        />
+      ) : null}
+      <nav
+        aria-label="Breadcrumb"
+        className={`rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-sm ${className}`.trim()}
+      >
+        <ol className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-600 sm:text-sm">
+          {crumbs.map((crumb, index) => {
+            const isLast = index === crumbs.length - 1;
 
-          return (
-            <li key={crumb.href} className="inline-flex items-center gap-2">
-              {index > 0 ? <span className="text-slate-400">/</span> : null}
-              {isLast ? (
-                <span aria-current="page" className="text-slate-900">
-                  {crumb.label}
-                </span>
-              ) : (
-                <Link className="text-slate-600 hover:text-indigo-700" href={crumb.href}>
-                  {crumb.label}
-                </Link>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </nav>
+            return (
+              <li key={crumb.href} className="inline-flex items-center gap-2">
+                {index > 0 ? <span className="text-slate-400">/</span> : null}
+                {isLast ? (
+                  <span aria-current="page" className="text-slate-900">
+                    {crumb.label}
+                  </span>
+                ) : (
+                  <Link className="text-slate-600 hover:text-indigo-700" href={crumb.href}>
+                    {crumb.label}
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </nav>
+    </>
   );
 }

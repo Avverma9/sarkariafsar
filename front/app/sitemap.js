@@ -103,11 +103,6 @@ async function getPostEntries() {
           priority: 0.8,
           lastModified,
         }),
-        createEntry(`/post/${canonicalKey}/full-content`, {
-          changeFrequency: "hourly",
-          priority: 0.72,
-          lastModified,
-        }),
       ];
     });
 

@@ -479,9 +479,12 @@ export default function UpdatesSection({
   }
 
   return (
-    <div className="mb-14">
+    <section className="mb-14" aria-labelledby="latest-updates-heading">
       <div className="mb-7 px-2">
-        <h2 className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
+        <h2
+          id="latest-updates-heading"
+          className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 md:text-3xl"
+        >
           <BellRing className="h-8 w-8 rounded-lg bg-indigo-100 p-1.5 text-indigo-600" />
           Latest Updates
         </h2>
@@ -720,6 +723,6 @@ export default function UpdatesSection({
             document.body,
           )
         : null}
-    </div>
+    </section>
   );
 }

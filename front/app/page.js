@@ -1,9 +1,39 @@
+import StructuredData from "./component/seo/StructuredData";
 import PortalApp from "./component/PortalApp";
 import { loadHomePageData } from "./lib/homePageData";
-import { buildPageMetadata } from "./lib/seo";
+import { buildSchemeSlug } from "./lib/schemeSlug";
+import {
+  absoluteUrl,
+  buildBreadcrumbSchema,
+  buildItemListSchema,
+  buildPageMetadata,
+  buildWebPageSchema,
+} from "./lib/seo";
+
+function getSectionHref(block) {
+  const category = String(block?.categoryKey || "").toLowerCase();
+
+  if (category === "latest-jobs") {
+    return "/post/new-jobs";
+  }
+
+  if (category === "results") {
+    return "/results";
+  }
+
+  if (category === "admit-cards") {
+    return "/admit-cards";
+  }
+
+  if (category === "admissions") {
+    return "/post/admissions";
+  }
+
+  return "/post";
+}
 
 export const metadata = buildPageMetadata({
-  title: "SarkariAfsar - Home",
+  title: "Latest Sarkari Jobs, Results, Admit Cards and Yojana",
   description:
     "Sarkari jobs, results, admit cards aur pramukh yojnayein. Real-time search ke saath latest updates dekhein.",
   path: "/",
@@ -107,5 +137,41 @@ export const metadata = buildPageMetadata({
 
 export default async function Home() {
   const initialData = await loadHomePageData();
-  return <PortalApp initialData={initialData} />;
+  const breadcrumbItems = [{ name: "Home", url: "/" }];
+  const featuredItems = [
+    ...(Array.isArray(initialData?.sectionBlocks) ? initialData.sectionBlocks : []).map((block) => ({
+      name: block?.title || "Section",
+      url: getSectionHref(block),
+    })),
+    ...(Array.isArray(initialData?.schemes) ? initialData.schemes : [])
+      .slice(0, 6)
+      .map((scheme) => ({
+        name: scheme?.title || "Scheme",
+        url: `/schemes/${buildSchemeSlug(scheme)}`,
+      })),
+  ].slice(0, 10);
+
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path: "/" }),
+    buildWebPageSchema({
+      title: "Latest Sarkari Jobs, Results, Admit Cards and Yojana",
+      description:
+        "Sarkari jobs, results, admit cards aur pramukh yojnayein. Real-time search ke saath latest updates dekhein.",
+      path: "/",
+      breadcrumbItems,
+      mainEntityId: absoluteUrl("/#itemlist"),
+    }),
+    buildItemListSchema({
+      path: "/",
+      name: "Featured Sarkari Afsar sections and schemes",
+      items: featuredItems,
+    }),
+  ];
+
+  return (
+    <>
+      <StructuredData data={structuredData} />
+      <PortalApp initialData={initialData} />
+    </>
+  );
 }

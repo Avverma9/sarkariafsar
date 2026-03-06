@@ -1,10 +1,18 @@
+import StructuredData from "../component/seo/StructuredData";
 import PostPageShell from "../component/layout/PostPageShell";
 import SectionJobsPage from "../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
 } from "../lib/sectionJobsPage";
-import { buildPageMetadata } from "../lib/seo";
+import {
+  absoluteUrl,
+  buildBreadcrumbSchema,
+  buildCollectionPageSchema,
+  buildItemListSchema,
+  buildPageMetadata,
+} from "../lib/seo";
+import { buildPostDetailsHref } from "../lib/postLink";
 
 export const metadata = buildPageMetadata({
   title: "Admit Cards",
@@ -22,9 +30,37 @@ export default async function AdmitCardsPage({ searchParams }) {
     title: "Admit Cards",
     description: "All admit card updates from configured source section URLs.",
   });
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Admit Cards", url: "/admit-cards" },
+  ];
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path: "/admit-cards" }),
+    buildCollectionPageSchema({
+      title: pageData.title,
+      description: pageData.description,
+      path: "/admit-cards",
+      breadcrumbItems,
+      mainEntityId: absoluteUrl("/admit-cards#itemlist"),
+    }),
+    buildItemListSchema({
+      path: "/admit-cards",
+      name: "Latest admit card updates",
+      items: pageData.jobs.map((job) => ({
+        name: job?.title || "Admit card update",
+        url: job?.jobUrl
+          ? buildPostDetailsHref({
+              title: job?.title,
+              jobUrl: job?.jobUrl,
+            })
+          : "/admit-cards",
+      })),
+    }),
+  ];
 
   return (
     <PostPageShell>
+      <StructuredData data={structuredData} />
       <SectionJobsPage basePath="/admit-cards" {...pageData} />
     </PostPageShell>
   );
