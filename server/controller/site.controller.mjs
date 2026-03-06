@@ -482,10 +482,17 @@ export const getAllJobDetailsController = async (req, res, next) => {
 
 export const clearCacheStorageController = async (req, res, next) => {
   try {
+    if (!CACHE_CLEAR_TOKEN) {
+      return res.status(500).json({
+        success: false,
+        message: "Cache clear token is not configured",
+      });
+    }
+
     const providedToken =
       getBearerToken(req) || String(getValue(req, "token", "")).trim();
 
-    if (CACHE_CLEAR_TOKEN && providedToken !== CACHE_CLEAR_TOKEN) {
+    if (providedToken !== CACHE_CLEAR_TOKEN) {
       return res.status(401).json({
         success: false,
         message: "Unauthorized cache clear request",
