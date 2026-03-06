@@ -198,7 +198,7 @@ export const syncStoredJobLists = async ({
   }
 
   if (syncedSections > 0) {
-    await clearFrontendCache("job-lists");
+    void clearFrontendCache("job-lists");
   }
 
   return {

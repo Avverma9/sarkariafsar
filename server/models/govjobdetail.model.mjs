@@ -6,6 +6,7 @@ const DEFAULT_SIMILARITY_THRESHOLD = 0.8;
 const SIMILARITY_CANDIDATE_LIMIT = 120;
 const HTML_TOKEN_NGRAM_SIZE = 3;
 const HTML_TOKEN_MAX_HASHES = 320;
+const MAX_GET_ALL_JSON_LIMIT = 1000;
 
 const toCleanString = (value = "") => String(value || "").trim();
 
@@ -266,6 +267,14 @@ const govJobDetailSchema = new mongoose.Schema(
   }
 );
 
+govJobDetailSchema.index({ lastScrapedAt: -1, updatedAt: -1 });
+govJobDetailSchema.index({
+  sourceHost: 1,
+  section: 1,
+  lastScrapedAt: -1,
+  updatedAt: -1,
+});
+
 govJobDetailSchema.pre("validate", function normalizeGovJobDetailDoc(next) {
   try {
     this.title = toCleanString(this.title || this?.jsonData?.title || this.pageTitle || "");
@@ -364,6 +373,12 @@ const findBestSimilarityCandidate = async ({
   }
 
   const candidates = await GovJobDetail.find(query)
+    .select({
+      formattedHtmlTokenHashes: 1,
+      contentHash: 1,
+      jobUrlAliases: 1,
+      jobUrl: 1,
+    })
     .sort({ lastScrapedAt: -1, updatedAt: -1 })
     .limit(SIMILARITY_CANDIDATE_LIMIT);
 
@@ -534,6 +549,45 @@ export const listAllGovJobDetails = async () => {
   return docs.map(toDetailResponseShape);
 };
 
+export const listAllGovJobDetailsJson = async ({
+  page = 1,
+  limit = 0,
+} = {}) => {
+  const safePage = Number.isFinite(Number(page)) ? Math.max(1, Number(page)) : 1;
+  const safeLimit = Number.isFinite(Number(limit))
+    ? Math.max(0, Math.min(MAX_GET_ALL_JSON_LIMIT, Number(limit)))
+    : 0;
+
+  if (safeLimit > 0) {
+    const [docs, total] = await Promise.all([
+      GovJobDetail.find({}, { jsonData: 1 })
+        .sort({ lastScrapedAt: -1, updatedAt: -1 })
+        .skip((safePage - 1) * safeLimit)
+        .limit(safeLimit)
+        .lean(),
+      GovJobDetail.countDocuments({}),
+    ]);
+
+    return {
+      total,
+      page: safePage,
+      limit: safeLimit,
+      jobs: docs.map((doc) => doc?.jsonData ?? null),
+    };
+  }
+
+  const docs = await GovJobDetail.find({}, { jsonData: 1 })
+    .sort({ lastScrapedAt: -1, updatedAt: -1 })
+    .lean();
+
+  return {
+    total: docs.length,
+    page: 1,
+    limit: 0,
+    jobs: docs.map((doc) => doc?.jsonData ?? null),
+  };
+};
+
 export const findGovJobDetailsByTitle = async ({ title = "" } = {}) => {
   const normalizedTitle = toCleanString(title);
   if (!normalizedTitle) {
@@ -579,6 +633,7 @@ export const govJobDetailModel = {
   upsertFromScrape: upsertGovJobDetailFromScrape,
   list: listGovJobDetails,
   getAll: listAllGovJobDetails,
+  getAllJson: listAllGovJobDetailsJson,
   findByTitle: findGovJobDetailsByTitle,
   findByJobUrl: findGovJobDetailByJobUrl,
   createJobUrlHash,

@@ -184,6 +184,8 @@ const govJobListSchema = new mongoose.Schema(
   }
 );
 
+govJobListSchema.index({ createdAt: -1 });
+
 govJobListSchema.pre("validate", function normalizeGovJobListDoc(next) {
   try {
     this.section = normalizeSectionKey(this.section || this.sectionName);

@@ -3,7 +3,6 @@ import {
   ArrowRight,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   LayoutGrid,
   List,
   Search,
@@ -11,12 +10,10 @@ import {
 } from "lucide-react";
 import { buildPostDetailsHref } from "../../lib/postLink";
 
+const SOURCE_LABEL = "sarkariafsar.com";
+
 function getSourceHost(url) {
-  try {
-    return new URL(url).hostname.replace(/^www\./i, "");
-  } catch {
-    return "";
-  }
+  return String(url || "").trim() ? SOURCE_LABEL : "";
 }
 
 function buildListingHref(basePath, { view, q, limit, page }) {
