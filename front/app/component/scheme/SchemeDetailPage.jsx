@@ -11,7 +11,7 @@ import {
 
 export default function SchemeDetailPage({ scheme }) {
   return (
-    <div className="mx-auto w-full max-w-5xl px-4 pb-14 sm:px-6 lg:px-8">
+    <article className="mx-auto w-full max-w-5xl px-4 pb-14 sm:px-6 lg:px-8">
       <div className="mb-5">
         <Link
           href="/schemes"
@@ -22,7 +22,7 @@ export default function SchemeDetailPage({ scheme }) {
         </Link>
       </div>
 
-      <div className="rounded-3xl bg-gradient-to-br from-emerald-900 via-slate-900 to-indigo-950 p-6 text-white shadow-xl sm:p-8">
+      <header className="rounded-3xl bg-gradient-to-br from-emerald-900 via-slate-900 to-indigo-950 p-6 text-white shadow-xl sm:p-8">
         <p className="text-xs font-black tracking-wider text-emerald-200 uppercase">
           Government Scheme
         </p>
@@ -41,7 +41,7 @@ export default function SchemeDetailPage({ scheme }) {
             City: {scheme?.city}
           </span>
         </div>
-      </div>
+      </header>
 
       <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -111,7 +111,7 @@ export default function SchemeDetailPage({ scheme }) {
       </section>
 
       {scheme?.applyLink ? (
-        <div className="mt-5 flex">
+        <footer className="mt-5 flex">
           <a
             href={scheme.applyLink}
             target="_blank"
@@ -121,8 +121,8 @@ export default function SchemeDetailPage({ scheme }) {
             Official Website
             <ExternalLink className="h-4 w-4" />
           </a>
-        </div>
+        </footer>
       ) : null}
-    </div>
+    </article>
   );
 }

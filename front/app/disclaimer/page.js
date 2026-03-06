@@ -1,6 +1,7 @@
+import StructuredData from "../component/seo/StructuredData";
 import PostPageShell from "../component/layout/PostPageShell";
 import StaticInfoPage from "../component/legal/StaticInfoPage";
-import { buildPageMetadata } from "../lib/seo";
+import { buildBreadcrumbSchema, buildPageMetadata, buildWebPageSchema } from "../lib/seo";
 
 const EFFECTIVE_DATE = "February 28, 2026";
 
@@ -42,8 +43,25 @@ const sections = [
 ];
 
 export default function DisclaimerPage() {
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Disclaimer", url: "/disclaimer" },
+  ];
+
   return (
     <PostPageShell>
+      <StructuredData
+        data={[
+          buildBreadcrumbSchema(breadcrumbItems, { path: "/disclaimer" }),
+          buildWebPageSchema({
+            title: "Disclaimer",
+            description:
+              "Sarkari Afsar Disclaimer: official source verification, information usage aur liability clarification.",
+            path: "/disclaimer",
+            breadcrumbItems,
+          }),
+        ]}
+      />
       <StaticInfoPage
         eyebrow="Legal"
         title="Disclaimer"

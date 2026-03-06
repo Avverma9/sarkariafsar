@@ -32,10 +32,13 @@ export default function SchemesSection({
   }
 
   return (
-    <div id="schemes-section">
+    <section id="schemes-section" aria-labelledby="featured-schemes-heading">
       <div className="mb-8 flex items-center justify-between px-2">
         <div>
-          <h2 className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
+          <h2
+            id="featured-schemes-heading"
+            className="flex items-center gap-3 text-2xl font-black tracking-tight text-slate-900 md:text-3xl"
+          >
             <Landmark className="h-8 w-8 rounded-lg bg-emerald-100 p-1.5 text-emerald-600" />
             Featured Schemes
           </h2>
@@ -116,6 +119,6 @@ export default function SchemesSection({
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }

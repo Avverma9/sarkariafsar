@@ -1,6 +1,12 @@
+import StructuredData from "../component/seo/StructuredData";
 import PostPageShell from "../component/layout/PostPageShell";
 import StaticInfoPage from "../component/legal/StaticInfoPage";
-import { buildPageMetadata } from "../lib/seo";
+import {
+  buildBreadcrumbSchema,
+  buildContactPageSchema,
+  buildPageMetadata,
+  buildWebPageSchema,
+} from "../lib/seo";
 
 const EFFECTIVE_DATE = "February 28, 2026";
 const SUPPORT_EMAIL = "support@sarkariafsar.com";
@@ -45,8 +51,32 @@ const sections = [
 ];
 
 export default function ContactUsPage() {
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Contact Us", url: "/contact-us" },
+  ];
+
   return (
     <PostPageShell>
+      <StructuredData
+        data={[
+          buildBreadcrumbSchema(breadcrumbItems, { path: "/contact-us" }),
+          buildWebPageSchema({
+            title: "Contact Us",
+            description:
+              "Sarkari Afsar support se sampark karein: correction requests, partnership queries aur feedback.",
+            path: "/contact-us",
+            type: "ContactPage",
+            breadcrumbItems,
+          }),
+          buildContactPageSchema({
+            title: "Contact Us",
+            description:
+              "Sarkari Afsar support se sampark karein: correction requests, partnership queries aur feedback.",
+            path: "/contact-us",
+          }),
+        ]}
+      />
       <StaticInfoPage
         eyebrow="Support"
         title="Contact Us"

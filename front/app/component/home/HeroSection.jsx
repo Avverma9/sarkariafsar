@@ -20,6 +20,9 @@ export default function HeroSection({
 
   return (
     <section className="relative flex min-h-[85vh] w-full flex-col overflow-visible bg-slate-900 pt-20 md:flex-row md:pt-0">
+      <h1 className="sr-only">
+        Sarkari Afsar: latest sarkari jobs, results, admit cards and government schemes
+      </h1>
       <div className="group relative flex min-h-[40vh] w-full flex-col items-center justify-center overflow-hidden p-8 md:min-h-full md:w-1/2">
         <div className="absolute inset-0 z-10 bg-gradient-to-br from-emerald-900/90 to-slate-900/95 transition-all duration-700 group-hover:from-emerald-800/80" />
         <Image
@@ -140,19 +143,31 @@ export default function HeroSection({
       </div>
 
       <div className="absolute bottom-0 left-1/2 z-40 flex w-full max-w-4xl -translate-x-1/2 translate-y-1/2 flex-col items-center px-4 md:px-8">
-        <div className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] md:flex-row md:rounded-full md:p-3">
+        <div
+          role="search"
+          aria-label="Search jobs and schemes"
+          className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] md:flex-row md:rounded-full md:p-3"
+        >
           <div className="flex flex-grow items-center px-4 py-3 md:py-2">
             <Search className="mr-4 h-7 w-7 text-indigo-500" />
+            <label htmlFor="site-search" className="sr-only">
+              Search government jobs and schemes
+            </label>
             <input
+              id="site-search"
               type="text"
               placeholder="Ex: SSC CGL, PM Kisan, UP Police..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search government jobs and schemes"
               className="w-full bg-transparent text-lg font-bold text-slate-800 outline-none placeholder:text-slate-400 md:text-xl"
             />
           </div>
 
-          <button className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-8 py-4 text-lg font-black text-yellow-400 shadow-md transition-all hover:bg-slate-800 hover:shadow-xl md:w-auto md:rounded-full md:py-4">
+          <button
+            type="button"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border border-slate-700 bg-slate-900 px-8 py-4 text-lg font-black text-yellow-400 shadow-md transition-all hover:bg-slate-800 hover:shadow-xl md:w-auto md:rounded-full md:py-4"
+          >
             Khojein <ArrowRight className="h-6 w-6" />
           </button>
         </div>

@@ -1,10 +1,4 @@
-import { notFound } from "next/navigation";
-import PostPageShell from "../../component/layout/PostPageShell";
-import SectionJobsPage from "../../component/home/SectionJobsPage";
-import {
-  loadSectionJobsPage,
-  parseSectionJobsQuery,
-} from "../../lib/sectionJobsPage";
+import { notFound, redirect } from "next/navigation";
 import { buildPageMetadata } from "../../lib/seo";
 
 function normalizeSectionSlug(value) {
@@ -58,7 +52,7 @@ export function getSectionConfig(sectionSlug) {
 
 function getCanonicalPath(config) {
   if (!config) {
-    return "/jobs";
+    return "/post";
   }
 
   if (config.canonicalSlug === "results") {
@@ -69,7 +63,7 @@ function getCanonicalPath(config) {
     return "/admit-cards";
   }
 
-  return `/jobs/${config.canonicalSlug}`;
+  return `/post/${config.canonicalSlug}`;
 }
 
 export async function generateMetadata({ params }) {
@@ -100,18 +94,9 @@ export default async function JobsSectionPage({ params, searchParams }) {
   if (!config) {
     notFound();
   }
+  const resolvedSearchParams = await searchParams;
+  const paramsString = new URLSearchParams(resolvedSearchParams || {}).toString();
+  const target = getCanonicalPath(config);
 
-  const query = parseSectionJobsQuery(await searchParams);
-  const pageData = await loadSectionJobsPage({
-    ...query,
-    sectionKeys: config.sectionKeys,
-    title: config.title,
-    description: config.description,
-  });
-
-  return (
-    <PostPageShell>
-      <SectionJobsPage basePath={`/jobs/${config.canonicalSlug}`} {...pageData} />
-    </PostPageShell>
-  );
+  redirect(paramsString ? `${target}?${paramsString}` : target);
 }

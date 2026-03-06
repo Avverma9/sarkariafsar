@@ -1,6 +1,7 @@
+import StructuredData from "../component/seo/StructuredData";
 import PostPageShell from "../component/layout/PostPageShell";
 import StaticInfoPage from "../component/legal/StaticInfoPage";
-import { buildPageMetadata } from "../lib/seo";
+import { buildBreadcrumbSchema, buildPageMetadata, buildWebPageSchema } from "../lib/seo";
 
 const EFFECTIVE_DATE = "February 28, 2026";
 
@@ -36,8 +37,25 @@ const sections = [
 ];
 
 export default function CookiePolicyPage() {
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Cookie Policy", url: "/cookie-policy" },
+  ];
+
   return (
     <PostPageShell>
+      <StructuredData
+        data={[
+          buildBreadcrumbSchema(breadcrumbItems, { path: "/cookie-policy" }),
+          buildWebPageSchema({
+            title: "Cookie Policy",
+            description:
+              "Sarkari Afsar Cookie Policy: cookies kya hoti hain, kaise use hoti hain aur unhe manage kaise karein.",
+            path: "/cookie-policy",
+            breadcrumbItems,
+          }),
+        ]}
+      />
       <StaticInfoPage
         eyebrow="Legal"
         title="Cookie Policy"

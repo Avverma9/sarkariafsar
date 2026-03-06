@@ -55,7 +55,7 @@ function JobCard({ job, index }) {
   const sourceHost = getSourceHost(jobUrl);
 
   return (
-    <div
+    <article
       key={`${jobUrl || jobTitle}-${index}`}
       className="flex min-w-0 flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
     >
@@ -82,7 +82,7 @@ function JobCard({ job, index }) {
 
    
       </div>
-    </div>
+    </article>
   );
 }
 
@@ -93,7 +93,7 @@ function JobListItem({ job, index }) {
   const sourceHost = getSourceHost(jobUrl);
 
   return (
-    <div
+    <article
       key={`${jobUrl || jobTitle}-${index}`}
       className="flex min-w-0 flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between"
     >
@@ -116,7 +116,7 @@ function JobListItem({ job, index }) {
         </Link>
        
       </div>
-    </div>
+    </article>
   );
 }
 

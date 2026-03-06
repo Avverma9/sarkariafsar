@@ -1,8 +1,16 @@
+import StructuredData from "../../component/seo/StructuredData";
 import { notFound, redirect } from "next/navigation";
 import PostPageShell from "../../component/layout/PostPageShell";
 import SchemeDetailPage from "../../component/scheme/SchemeDetailPage";
 import { loadSchemeDetailPageData } from "../../lib/schemeDetailPage";
-import { buildPageMetadata } from "../../lib/seo";
+import {
+  absoluteUrl,
+  buildBreadcrumbSchema,
+  buildGovernmentServiceSchema,
+  buildHowToSchema,
+  buildPageMetadata,
+  buildWebPageSchema,
+} from "../../lib/seo";
 
 async function loadSchemeData(slug) {
   return loadSchemeDetailPageData(slug);
@@ -29,6 +37,7 @@ export async function generateMetadata({ params }) {
     path: `/schemes/${pageData.canonicalSlug || slug}`,
     keywords: ["scheme details", pageData.scheme.category, pageData.scheme.state],
     type: "article",
+    category: pageData.scheme.category,
   });
 }
 
@@ -45,8 +54,40 @@ export default async function SchemeDetailRoute({ params }) {
     redirect(`/schemes/${pageData.canonicalSlug}`);
   }
 
+  const path = `/schemes/${pageData.canonicalSlug || slug}`;
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Schemes", url: "/schemes" },
+    { name: pageData.scheme.title, url: path },
+  ];
+  const structuredData = [
+    buildBreadcrumbSchema(breadcrumbItems, { path }),
+    buildWebPageSchema({
+      title: pageData.scheme.title,
+      description: pageData.scheme.about,
+      path,
+      breadcrumbItems,
+      mainEntityId: absoluteUrl(`${path}#service`),
+    }),
+    buildGovernmentServiceSchema({
+      title: pageData.scheme.title,
+      description: pageData.scheme.about,
+      path,
+      category: pageData.scheme.category,
+      state: pageData.scheme.state,
+      applyLink: pageData.scheme.applyLink,
+    }),
+    buildHowToSchema({
+      title: `${pageData.scheme.title} application process`,
+      description: pageData.scheme.about,
+      path,
+      steps: pageData.scheme.process,
+    }),
+  ];
+
   return (
     <PostPageShell>
+      <StructuredData data={structuredData} />
       <SchemeDetailPage scheme={pageData.scheme} />
     </PostPageShell>
   );

@@ -1,6 +1,14 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { BRAND_NAME, DEFAULT_DESCRIPTION, SITE_ICON_PATH, getSiteUrl } from "./lib/seo";
+import StructuredData from "./component/seo/StructuredData";
+import {
+  BRAND_NAME,
+  DEFAULT_DESCRIPTION,
+  SITE_ICON_PATH,
+  buildOrganizationSchema,
+  buildWebsiteSchema,
+  getSiteUrl,
+} from "./lib/seo";
 import { APP_FETCH_REVALIDATE_SECONDS } from "./lib/fetchCache";
 
 export const revalidate = APP_FETCH_REVALIDATE_SECONDS;
@@ -23,6 +31,10 @@ export const metadata = {
   },
   description: DEFAULT_DESCRIPTION,
   applicationName: BRAND_NAME,
+  authors: [{ name: BRAND_NAME, url: getSiteUrl() }],
+  creator: BRAND_NAME,
+  publisher: BRAND_NAME,
+  category: "Government Jobs and Schemes",
   alternates: {
     canonical: "/",
   },
@@ -93,6 +105,9 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <StructuredData
+          data={[buildOrganizationSchema(), buildWebsiteSchema()]}
+        />
         {children}
       </body>
     </html>
