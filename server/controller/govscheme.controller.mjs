@@ -1,6 +1,6 @@
 import govSchemeModel from "../models/govscheme.model.mjs";
 import { readFile } from "node:fs/promises";
-import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
+import { invalidateAppCache } from "../utils/appCache.mjs";
 
 const getValue = (req, key, fallback = undefined) => {
   if (req?.body && req.body[key] !== undefined) return req.body[key];
@@ -50,7 +50,7 @@ export const postGovSchemeController = async (req, res, next) => {
   try {
     const payload = toObject(req?.body || {});
     const scheme = await govSchemeModel.createScheme(payload);
-    void clearFrontendCache("gov-schemes");
+    void invalidateAppCache("gov-schemes");
 
     return res.status(201).json({
       message: "Scheme created",
@@ -148,7 +148,7 @@ export const patchGovSchemeController = async (req, res, next) => {
       return res.status(404).json({ message: "Scheme not found", scheme: null });
     }
 
-    void clearFrontendCache("gov-schemes");
+    void invalidateAppCache("gov-schemes");
 
     return res.status(200).json({
       message: "Scheme updated",
@@ -206,7 +206,7 @@ export const seedGovSchemeController = async (req, res, next) => {
     }
 
     if (created > 0 || updated > 0) {
-      void clearFrontendCache("gov-schemes");
+      void invalidateAppCache("gov-schemes");
     }
 
     return res.status(200).json({

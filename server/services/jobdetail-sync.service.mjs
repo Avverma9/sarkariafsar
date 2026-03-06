@@ -3,7 +3,9 @@ import govJobListModel from "../models/govjoblist.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import { formatJobHtmlAdvanced } from "../utils/htmlFormatter.mjs";
 import { formatJobJsonAdvanced } from "../utils/jsonFormatter.mjs";
-import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
+import { createJobUpdateDiff } from "../utils/jobUpdateDiff.mjs";
+import { sendJobUpdateNotification } from "../utils/jobUpdateMailer.mjs";
+import { invalidateAppCache } from "../utils/appCache.mjs";
 
 const DEFAULT_SIMILARITY_THRESHOLD = 0.8;
 
@@ -126,11 +128,51 @@ export const scrapeAndStoreJobDetail = async ({
     },
   });
 
+  let changeSummary = null;
+  let notification = { sent: false, reason: "not_applicable" };
+
+  if (saved?.updated && saved?.changed && saved?.previousDetail && saved?.detail) {
+    changeSummary = createJobUpdateDiff({
+      previousDetail: saved.previousDetail,
+      currentDetail: saved.detail,
+    });
+
+    if (changeSummary.changeCount > 0) {
+      try {
+        notification = await sendJobUpdateNotification({
+          jobTitle: saved.detail.title || title,
+          jobUrl: saved.detail.jobUrl || jobUrl,
+          matchedBy: saved?.detail?.dedupeMeta?.matchedBy || "",
+          changedFields: changeSummary.changedFields,
+          changes: changeSummary.changes,
+          omittedChangeCount: changeSummary.omittedChangeCount,
+        });
+      } catch (error) {
+        notification = {
+          sent: false,
+          reason: "mailer_failed",
+          error: error?.message || String(error),
+        };
+        console.error(
+          `[job-update-mailer] Failed for ${saved.detail.jobUrl}: ${
+            error?.message || error
+          }`
+        );
+      }
+    } else {
+      notification = { sent: false, reason: "no_structured_diff" };
+    }
+  }
+
   return {
     detail,
     formattedHtml,
     jsonData,
-    saved,
+    saved: {
+      ...saved,
+      changeSummary,
+      notification,
+    },
   };
 };
 
@@ -342,7 +384,7 @@ export const syncStoredJobDetails = async ({
   }
 
   if (createdCount > 0 || updatedCount > 0 || patchedCount > 0 || changedCount > 0) {
-    void clearFrontendCache("job-details");
+    void invalidateAppCache("job-details");
   }
 
   return {

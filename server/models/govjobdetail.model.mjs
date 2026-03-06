@@ -461,6 +461,7 @@ export const upsertGovJobDetailFromScrape = async ({
   });
 
   if (existing) {
+    const previousDetail = toDetailResponseShape(existing.toObject());
     const mergedAliases = mergeJobUrlAliases(existing, normalizedJobUrl);
     const changed = existing.contentHash !== contentHash;
     payload.jobUrlAliases = mergedAliases;
@@ -479,6 +480,7 @@ export const upsertGovJobDetailFromScrape = async ({
       changed,
       patched: false,
       similarityScore: 1,
+      previousDetail,
       detail: toDetailResponseShape(existing),
     };
   }
@@ -492,6 +494,7 @@ export const upsertGovJobDetailFromScrape = async ({
 
   if (similarityMatch?.doc) {
     const matchedDoc = similarityMatch.doc;
+    const previousDetail = toDetailResponseShape(matchedDoc.toObject());
     const mergedAliases = mergeJobUrlAliases(matchedDoc, normalizedJobUrl);
     const changed = matchedDoc.contentHash !== contentHash;
     payload.jobUrlAliases = mergedAliases;
@@ -510,6 +513,7 @@ export const upsertGovJobDetailFromScrape = async ({
       changed,
       patched: true,
       similarityScore: similarityMatch.score,
+      previousDetail,
       detail: toDetailResponseShape(matchedDoc),
     };
   }
@@ -527,6 +531,7 @@ export const upsertGovJobDetailFromScrape = async ({
     changed: true,
     patched: false,
     similarityScore: 0,
+    previousDetail: null,
     detail: toDetailResponseShape(created),
   };
 };

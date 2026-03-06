@@ -1,5 +1,10 @@
 import baseUrl from "./baseUrl";
 import { buildCanonicalKey, formatPostDetail } from "./postFormatter";
+import {
+  CACHE_TAGS,
+  buildCachedFetchOptions,
+  buildScopedCacheTag,
+} from "./fetchCache";
 
 export function getFirstValue(value) {
   if (Array.isArray(value)) {
@@ -143,10 +148,12 @@ export function getJobUrlFromSearchParams(searchParams) {
 }
 
 async function fetchStoredJobLists() {
-  const response = await fetch(`${baseUrl}/fetch-stored-joblist`, {
-    method: "GET",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    `${baseUrl}/fetch-stored-joblist`,
+    buildCachedFetchOptions({
+      tags: [CACHE_TAGS.jobLists],
+    })
+  );
 
   if (!response.ok) {
     throw new Error(`Failed to fetch stored job lists (${response.status})`);
@@ -189,10 +196,10 @@ async function resolveJobUrlBySlug(slug) {
     const query = new URLSearchParams({ keyword });
     const response = await fetch(
       `${baseUrl}/find-by-title-job-and-scheme?${query.toString()}`,
-      {
-        method: "GET",
-        cache: "no-store",
-      },
+      buildCachedFetchOptions({
+        tags: [CACHE_TAGS.jobSearch, CACHE_TAGS.jobDetails],
+        revalidate: 180,
+      })
     );
 
     if (!response.ok) {
@@ -232,10 +239,15 @@ export async function fetchJobDetailByUrl(jobUrl) {
 
   for (const candidate of candidates) {
     const query = new URLSearchParams({ jobUrl: candidate });
-    const response = await fetch(`${baseUrl}/fetch/job-by-url?${query.toString()}`, {
-      method: "GET",
-      cache: "no-store",
-    });
+    const response = await fetch(
+      `${baseUrl}/fetch/job-by-url?${query.toString()}`,
+      buildCachedFetchOptions({
+        tags: [
+          CACHE_TAGS.jobDetails,
+          buildScopedCacheTag(CACHE_TAGS.jobDetails, candidate),
+        ],
+      })
+    );
 
     if (response.ok) {
       return response.json();

@@ -6,7 +6,7 @@ import siteModel from "../models/site.model.mjs";
 import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import govJobListModel from "../models/govjoblist.model.mjs";
 import govSchemeModel from "../models/govscheme.model.mjs";
-import { clearFrontendCache } from "../utils/clearFrontendCache.mjs";
+import { clearAppCacheStorage, invalidateAppCache } from "../utils/appCache.mjs";
 import { createHash } from "node:crypto";
 
 const getValue = (req, key, fallback = undefined) => {
@@ -69,6 +69,11 @@ const toObject = (value) => {
 };
 
 const escapeRegExp = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const CACHE_CLEAR_TOKEN =
+  process.env.API_CACHE_CLEAR_TOKEN ||
+  process.env.FRONT_API_CACHE_CLEAR_TOKEN ||
+  process.env.CACHE_SECRET ||
+  "";
 
 let defaultSectionsSeeded = false;
 let defaultSitesSeeded = false;
@@ -136,6 +141,12 @@ const reverseJobListPostListForResponse = (jobList) => {
     ...jobList,
     postList: Array.isArray(jobList.postList) ? [...jobList.postList].reverse() : [],
   };
+};
+
+const getBearerToken = (req) => {
+  const header = String(req?.headers?.authorization || "").trim();
+  if (!header.toLowerCase().startsWith("bearer ")) return "";
+  return header.slice(7).trim();
 };
 
 export const scrapeSiteSectionsController = async (req, res, next) => {
@@ -243,7 +254,7 @@ export const scrapeSectionJobsController = async (req, res, next) => {
         sectionInput: requestedSection || "",
       },
     });
-    void clearFrontendCache("job-lists");
+    void invalidateAppCache("job-lists");
 
     const jobs = (data?.jobs || []).map((item) => ({
       title: item?.title || "",
@@ -325,7 +336,7 @@ export const scrapeJobDetailController = async (req, res, next) => {
     const saved = result?.saved || null;
 
     if (saved?.created || saved?.updated || saved?.patched || saved?.changed) {
-      void clearFrontendCache("job-details");
+      void invalidateAppCache("job-details");
     }
 
     return res.status(200).json({ 
@@ -469,6 +480,40 @@ export const getAllJobDetailsController = async (req, res, next) => {
   }
 };
 
+export const clearCacheStorageController = async (req, res, next) => {
+  try {
+    const providedToken =
+      getBearerToken(req) || String(getValue(req, "token", "")).trim();
+
+    if (CACHE_CLEAR_TOKEN && providedToken !== CACHE_CLEAR_TOKEN) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized cache clear request",
+      });
+    }
+
+    const target = String(
+      getValue(req, "target", getValue(req, "scope", "all"))
+    ).trim();
+    const tag = String(getValue(req, "tag", "")).trim();
+    const clearFrontend = toBoolean(getValue(req, "frontend"), true);
+
+    const result = await clearAppCacheStorage({
+      target,
+      tag,
+      clearFrontend,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Cache storage cleared",
+      ...result,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const fetchStoredJobListController = async (req, res, next) => {
   try {
     const section = String(getValue(req, "section", "")).trim();
@@ -523,7 +568,7 @@ export const upsertJobSectionController = async (req, res, next) => {
       urls: toArray(getValue(req, "urls", [])),
       isManual: toBoolean(getValue(req, "isManual"), true),
     });
-    void clearFrontendCache("job-sections");
+    void invalidateAppCache("job-sections");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Section created" : "Section updated",
@@ -568,7 +613,7 @@ export const siteAddController = async (req, res, next) => {
       status: getValue(req, "status", "inactive"),
     });
 
-    void clearFrontendCache("sites");
+    void invalidateAppCache("sites");
 
     return res.status(result.created ? 201 : 200).json({
       message: result.created ? "Site created" : "Site updated",
@@ -601,6 +646,7 @@ export default {
   findByTitleJobAndSchemeController,
   fetchJobByUrlController,
   getAllJobDetailsController,
+  clearCacheStorageController,
   listJobSectionsController,
   upsertJobSectionController,
   getJobSectionUrlsController,

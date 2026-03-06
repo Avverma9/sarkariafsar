@@ -1,4 +1,11 @@
 import baseUrl from "./baseUrl";
+import {
+  APP_FETCH_REVALIDATE_SECONDS,
+  CACHE_TAGS,
+  buildBrowserCachedFetchOptions,
+  buildCachedFetchOptions,
+  buildScopedCacheTag,
+} from "./fetchCache";
 
 function normalizeAbsoluteUrl(value) {
   const candidate = String(value || "").trim();
@@ -65,18 +72,25 @@ function buildQueryString(params = {}) {
 }
 
 async function requestJson(path, params, options = {}) {
-  const { ...restOptions } = options;
+  const {
+    tags = [],
+    revalidate = APP_FETCH_REVALIDATE_SECONDS,
+    ...restOptions
+  } = options;
+  const fetchOptions =
+    typeof window === "undefined"
+      ? buildCachedFetchOptions(
+          {
+            tags,
+            revalidate,
+          },
+          restOptions
+        )
+      : buildBrowserCachedFetchOptions({}, restOptions);
 
   const response = await fetch(
     `${GOV_SCHEMES_API_BASE_URL}${path}${buildQueryString(params)}`,
-    {
-      method: "GET",
-      cache: "no-store",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      ...restOptions,
-    },
+    fetchOptions,
   );
 
   if (!response.ok) {
@@ -98,13 +112,22 @@ async function requestJson(path, params, options = {}) {
 }
 
 export async function getAllGovSchemes() {
-  return requestJson("/getAllSchemes");
+  return requestJson("/getAllSchemes", undefined, {
+    tags: [CACHE_TAGS.govSchemes],
+  });
 }
 
 export async function getGovSchemeStateNameOnly() {
-  return requestJson("/getSchemeStateNameOnly");
+  return requestJson("/getSchemeStateNameOnly", undefined, {
+    tags: [CACHE_TAGS.govSchemes],
+  });
 }
 
 export async function getGovSchemeByState(state) {
-  return requestJson("/getSchemeByState", { state });
+  return requestJson("/getSchemeByState", { state }, {
+    tags: [
+      CACHE_TAGS.govSchemes,
+      buildScopedCacheTag(CACHE_TAGS.govSchemes, state),
+    ],
+  });
 }
