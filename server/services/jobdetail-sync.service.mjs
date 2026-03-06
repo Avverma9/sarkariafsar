@@ -30,6 +30,12 @@ const toObject = (value) => {
   return value;
 };
 
+const toDateTimestamp = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 0;
+  return date.getTime();
+};
+
 const clampSimilarity = (value, fallback = DEFAULT_SIMILARITY_THRESHOLD) => {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -38,11 +44,32 @@ const clampSimilarity = (value, fallback = DEFAULT_SIMILARITY_THRESHOLD) => {
   return parsed;
 };
 
+const compareCandidates = (left, right) => {
+  if (left.priority !== right.priority) {
+    return left.priority - right.priority;
+  }
+
+  if (left.lastScrapedAtMs !== right.lastScrapedAtMs) {
+    return left.lastScrapedAtMs - right.lastScrapedAtMs;
+  }
+
+  if (left.postFetchedAtMs !== right.postFetchedAtMs) {
+    return right.postFetchedAtMs - left.postFetchedAtMs;
+  }
+
+  return String(left.jobUrl || "").localeCompare(String(right.jobUrl || ""));
+};
+
 const toPostCandidatesFromJobList = ({
   jobList = null,
   jobsPerSection = 0,
 } = {}) => {
-  const posts = Array.isArray(jobList?.postList) ? jobList.postList : [];
+  const posts = Array.isArray(jobList?.postList)
+    ? [...jobList.postList].sort(
+        (left, right) =>
+          toDateTimestamp(right?.fetchedAt) - toDateTimestamp(left?.fetchedAt)
+      )
+    : [];
   const safeJobsPerSection = toInteger(jobsPerSection, 0);
   const selectedPosts =
     safeJobsPerSection > 0 ? posts.slice(0, safeJobsPerSection) : posts;
@@ -53,7 +80,9 @@ const toPostCandidatesFromJobList = ({
       sectionName: String(jobList?.sectionName || "").trim(),
       title: String(post?.title || "").trim(),
       jobUrl: String(post?.jobUrl || "").trim(),
+      jobUrlHash: String(post?.jobUrlHash || "").trim(),
       sourceSectionUrl: String(post?.sourceSectionUrl || "").trim(),
+      fetchedAt: post?.fetchedAt || null,
     }))
     .filter((item) => item.jobUrl);
 };
@@ -110,6 +139,7 @@ export const syncStoredJobDetails = async ({
   sectionLimit = 0,
   jobsPerSection = 0,
   maxJobsPerRun = 0,
+  minRecheckMinutes = 30,
   requestConfig = {},
   includeElementHtml = false,
   maxCombinationItems = 8,
@@ -119,6 +149,7 @@ export const syncStoredJobDetails = async ({
   const safeSectionLimit = toInteger(sectionLimit, 0);
   const safeJobsPerSection = toInteger(jobsPerSection, 0);
   const safeMaxJobsPerRun = toInteger(maxJobsPerRun, 0);
+  const safeMinRecheckMinutes = toInteger(minRecheckMinutes, 30);
   const safeSimilarityThreshold = clampSimilarity(
     similarityThreshold,
     DEFAULT_SIMILARITY_THRESHOLD
@@ -135,8 +166,12 @@ export const syncStoredJobDetails = async ({
   const selectedJobLists =
     safeSectionLimit > 0 ? jobLists.slice(0, safeSectionLimit) : jobLists;
 
-  const candidates = [];
-  const seenJobUrlHashes = new Set();
+  const sectionKeys = new Set(
+    selectedJobLists
+      .map((jobList) => String(jobList?.section || "").trim())
+      .filter(Boolean)
+  );
+  const listCandidateMap = new Map();
 
   for (const jobList of selectedJobLists) {
     const posts = toPostCandidatesFromJobList({
@@ -145,18 +180,133 @@ export const syncStoredJobDetails = async ({
     });
 
     for (const post of posts) {
-      let hash = "";
+      let hash = String(post?.jobUrlHash || "").trim();
       try {
-        hash = govJobDetailModel.createJobUrlHash(post.jobUrl);
+        hash = hash || govJobDetailModel.createJobUrlHash(post.jobUrl);
       } catch {
         continue;
       }
-      if (!hash || seenJobUrlHashes.has(hash)) continue;
-      seenJobUrlHashes.add(hash);
-      candidates.push(post);
+
+      if (!hash) continue;
+
+      const postFetchedAtMs = toDateTimestamp(post?.fetchedAt);
+      const existing = listCandidateMap.get(hash);
+      if (!existing || postFetchedAtMs > existing.postFetchedAtMs) {
+        listCandidateMap.set(hash, {
+          ...post,
+          jobUrlHash: hash,
+          postFetchedAtMs,
+        });
+      }
     }
   }
 
+  const listCandidateHashes = [...listCandidateMap.keys()];
+  const existingDetailDocs =
+    listCandidateHashes.length > 0
+      ? await govJobDetailModel.model
+          .find({ jobUrlHash: { $in: listCandidateHashes } })
+          .select({
+            title: 1,
+            jobUrl: 1,
+            jobUrlHash: 1,
+            section: 1,
+            sourceSectionUrl: 1,
+            lastScrapedAt: 1,
+          })
+          .lean()
+      : [];
+
+  const existingDetailMap = new Map(
+    existingDetailDocs.map((doc) => [String(doc?.jobUrlHash || "").trim(), doc])
+  );
+
+  const candidates = [];
+  let missingDetailCount = 0;
+  let listRefreshDueCount = 0;
+
+  for (const candidate of listCandidateMap.values()) {
+    const existing = existingDetailMap.get(candidate.jobUrlHash);
+    const lastScrapedAtMs = toDateTimestamp(existing?.lastScrapedAt);
+
+    if (!existing) {
+      missingDetailCount += 1;
+      candidates.push({
+        ...candidate,
+        priority: 0,
+        reason: "missing_detail",
+        lastScrapedAtMs: 0,
+      });
+      continue;
+    }
+
+    if (candidate.postFetchedAtMs > lastScrapedAtMs) {
+      listRefreshDueCount += 1;
+      candidates.push({
+        ...candidate,
+        title: candidate.title || String(existing?.title || "").trim(),
+        section: candidate.section || String(existing?.section || "").trim(),
+        sourceSectionUrl:
+          candidate.sourceSectionUrl ||
+          String(existing?.sourceSectionUrl || "").trim(),
+        priority: 1,
+        reason: "list_refreshed_since_detail",
+        lastScrapedAtMs,
+      });
+    }
+  }
+
+  let periodicRecheckDueCount = 0;
+  if (safeMinRecheckMinutes > 0) {
+    const staleThresholdDate = new Date(
+      Date.now() - safeMinRecheckMinutes * 60 * 1000
+    );
+    const staleQuery = {
+      lastScrapedAt: { $lte: staleThresholdDate },
+    };
+
+    if (requestedSection) {
+      staleQuery.section = requestedSection;
+    } else if (sectionKeys.size > 0) {
+      staleQuery.section = { $in: [...sectionKeys] };
+    }
+
+    const staleCandidateDocs = await govJobDetailModel.model
+      .find(staleQuery)
+      .select({
+        title: 1,
+        jobUrl: 1,
+        jobUrlHash: 1,
+        section: 1,
+        sourceSectionUrl: 1,
+        lastScrapedAt: 1,
+      })
+      .sort({ lastScrapedAt: 1, updatedAt: 1 })
+      .limit(safeMaxJobsPerRun > 0 ? Math.max(safeMaxJobsPerRun * 4, 100) : 250)
+      .lean();
+
+    for (const doc of staleCandidateDocs) {
+      const jobUrlHash = String(doc?.jobUrlHash || "").trim();
+      if (!jobUrlHash || listCandidateMap.has(jobUrlHash)) continue;
+
+      periodicRecheckDueCount += 1;
+      candidates.push({
+        title: String(doc?.title || "").trim(),
+        jobUrl: String(doc?.jobUrl || "").trim(),
+        jobUrlHash,
+        section: String(doc?.section || "").trim(),
+        sectionName: "",
+        sourceSectionUrl: String(doc?.sourceSectionUrl || "").trim(),
+        fetchedAt: null,
+        postFetchedAtMs: 0,
+        priority: 2,
+        reason: "scheduled_recheck",
+        lastScrapedAtMs: toDateTimestamp(doc?.lastScrapedAt),
+      });
+    }
+  }
+
+  candidates.sort(compareCandidates);
   const selectedCandidates =
     safeMaxJobsPerRun > 0 ? candidates.slice(0, safeMaxJobsPerRun) : candidates;
 
@@ -198,7 +348,11 @@ export const syncStoredJobDetails = async ({
   return {
     requestedSection: requestedSection || null,
     scannedSections: selectedJobLists.length,
+    eligibleCandidates: candidates.length,
     scannedJobs: selectedCandidates.length,
+    missingDetailCount,
+    listRefreshDueCount,
+    periodicRecheckDueCount,
     createdCount,
     updatedCount,
     patchedCount,

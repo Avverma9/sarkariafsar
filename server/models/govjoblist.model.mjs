@@ -68,6 +68,23 @@ const toSectionUrlArray = (values = []) => {
   return urls;
 };
 
+const toDateTimestamp = (value) => {
+  const date = value ? new Date(value) : null;
+  if (!date || Number.isNaN(date.getTime())) return 0;
+  return date.getTime();
+};
+
+const sortPostListByFetchedAtDesc = (postList = []) =>
+  [...(postList || [])].sort((left, right) => {
+    const fetchedAtDiff =
+      toDateTimestamp(right?.fetchedAt) - toDateTimestamp(left?.fetchedAt);
+    if (fetchedAtDiff !== 0) return fetchedAtDiff;
+
+    const leftKey = String(left?.jobUrlHash || left?.jobUrl || "").trim();
+    const rightKey = String(right?.jobUrlHash || right?.jobUrl || "").trim();
+    return leftKey.localeCompare(rightKey);
+  });
+
 const normalizePostList = (postList = [], fallbackSectionUrl = "") => {
   if (!Array.isArray(postList)) return [];
 
@@ -107,7 +124,7 @@ const normalizePostList = (postList = [], fallbackSectionUrl = "") => {
     });
   }
 
-  return normalized;
+  return sortPostListByFetchedAtDesc(normalized);
 };
 
 const postSchema = new mongoose.Schema(
@@ -252,7 +269,7 @@ const mergePostLists = (existing = [], incoming = []) => {
     });
   }
 
-  return Array.from(map.values());
+  return sortPostListByFetchedAtDesc(Array.from(map.values()));
 };
 
 export const upsertGovJobListSection = async ({
