@@ -9,6 +9,17 @@ const normalizeSectionKey = (value = "") =>
     .replace(/[^\w]/g, "")
     .replace(/^_+|_+$/g, "");
 
+const CANONICAL_SECTION_ALIASES = new Map([
+  ["latest_jobs", "new_jobs"],
+  ["latest_job", "new_jobs"],
+  ["result", "results"],
+]);
+
+const toCanonicalSectionKey = (value = "") => {
+  const normalized = normalizeSectionKey(value);
+  return CANONICAL_SECTION_ALIASES.get(normalized) || normalized;
+};
+
 const normalizeUrl = (value = "") => {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -249,7 +260,7 @@ export const upsertGovJobListSection = async ({
   postList = [],
   extra = {},
 } = {}) => {
-  const normalizedSection = normalizeSectionKey(section || sectionName);
+  const normalizedSection = toCanonicalSectionKey(section || sectionName);
   if (!normalizedSection) {
     throw new Error("section is required");
   }
@@ -286,7 +297,7 @@ export const upsertGovJobListSection = async ({
 };
 
 export const getGovJobListBySection = async (section = "") => {
-  const normalizedSection = normalizeSectionKey(section);
+  const normalizedSection = toCanonicalSectionKey(section);
   if (!normalizedSection) return null;
 
   const doc = await GovJobList.findOne({ section: normalizedSection }).lean();
@@ -294,7 +305,7 @@ export const getGovJobListBySection = async (section = "") => {
 };
 
 export const listGovJobListSections = async () => {
-  const docs = await GovJobList.find({}).sort({ section: 1 }).lean();
+  const docs = await GovJobList.find({}).sort({ createdAt: -1 }).lean();
   return docs.map(toResponseShape);
 };
 

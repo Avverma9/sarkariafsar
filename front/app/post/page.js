@@ -11,8 +11,6 @@ export const metadata = buildPageMetadata({
   keywords: ["jobs dashboard", "new jobs", "government jobs india"],
 });
 
-export const revalidate = 3600;
-
 export default async function PostIndexPage() {
   const pageData = await loadJobsTablesPage({ limit: 20 });
 

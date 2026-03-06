@@ -14,8 +14,6 @@ export const metadata = buildPageMetadata({
   keywords: ["admit card", "hall ticket", "exam date"],
 });
 
-export const revalidate = 3600;
-
 export default async function AdmitCardsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);
   const pageData = await loadSectionJobsPage({

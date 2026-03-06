@@ -2,16 +2,8 @@ import FullContent from "../../../component/post/FullContent";
 import PostPageShell from "../../../component/layout/PostPageShell";
 import { getFirstValue, loadPostDetailPageData } from "../../../lib/postDetailPage";
 import { redirect } from "next/navigation";
-import { cache } from "react";
 import { buildPageMetadata } from "../../../lib/seo";
 import Link from "next/link";
-
-const loadPostDataByKey = cache((slug, rawJobUrl) =>
-  loadPostDetailPageData({
-    params: { slug },
-    searchParams: rawJobUrl ? { jobUrl: rawJobUrl } : {},
-  }),
-);
 
 async function loadPostData(params, searchParams) {
   const resolvedParams = await params;
@@ -19,7 +11,10 @@ async function loadPostData(params, searchParams) {
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
   const rawJobUrl = String(getFirstValue(resolvedSearchParams?.jobUrl) || "");
 
-  return loadPostDataByKey(slug, rawJobUrl);
+  return loadPostDetailPageData({
+    params: { slug },
+    searchParams: rawJobUrl ? { jobUrl: rawJobUrl } : {},
+  });
 }
 
 export async function generateMetadata({ params, searchParams }) {
@@ -102,5 +97,3 @@ export default async function FullContentPage({ params, searchParams }) {
     </PostPageShell>
   );
 }
-
-export const revalidate = 3600;
