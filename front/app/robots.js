@@ -6,7 +6,6 @@ export default function robots() {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/api/revalidate"],
       },
     ],
     sitemap: absoluteUrl("/sitemap.xml"),

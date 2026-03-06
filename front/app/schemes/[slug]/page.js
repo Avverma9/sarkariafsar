@@ -1,36 +1,11 @@
 import { notFound, redirect } from "next/navigation";
-import { cache } from "react";
 import PostPageShell from "../../component/layout/PostPageShell";
 import SchemeDetailPage from "../../component/scheme/SchemeDetailPage";
 import { loadSchemeDetailPageData } from "../../lib/schemeDetailPage";
 import { buildPageMetadata } from "../../lib/seo";
-import { getAllGovSchemes } from "../../lib/govSchemesApi";
-import { buildSchemeSlug } from "../../lib/schemeSlug";
 
-const loadSchemeData = cache((slug) => loadSchemeDetailPageData(slug));
-
-export const revalidate = 3600;
-
-export async function generateStaticParams() {
-  try {
-    const payload = await getAllGovSchemes();
-    const schemes = Array.isArray(payload?.schemes)
-      ? payload.schemes
-      : Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(payload)
-      ? payload
-      : [];
-
-    const slugs = schemes
-      .map((s) => buildSchemeSlug(s))
-      .filter(Boolean)
-      .map((slug) => ({ slug }));
-
-    return slugs;
-  } catch (e) {
-    return [];
-  }
+async function loadSchemeData(slug) {
+  return loadSchemeDetailPageData(slug);
 }
 
 export async function generateMetadata({ params }) {

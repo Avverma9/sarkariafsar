@@ -105,8 +105,6 @@ export const metadata = buildPageMetadata({
   ,
 });
 
-export const revalidate = 3600;
-
 export default async function Home() {
   const initialData = await loadHomePageData();
   return <PortalApp initialData={initialData} />;

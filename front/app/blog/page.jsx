@@ -25,8 +25,6 @@ function formatDate(value) {
   });
 }
 
-export const revalidate = 3600;
-
 export default function BlogListingPage() {
   const posts = getAllBlogPosts();
 

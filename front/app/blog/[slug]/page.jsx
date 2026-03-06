@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostPageShell from "../../component/layout/PostPageShell";
-import { getAllBlogPosts, getBlogPostBySlug, getBlogSlugs } from "../../lib/blogs";
+import { getAllBlogPosts, getBlogPostBySlug } from "../../lib/blogs";
 import { buildPageMetadata } from "../../lib/seo";
 
 function formatDate(value) {
@@ -17,12 +17,6 @@ function formatDate(value) {
     year: "numeric",
   });
 }
-
-export function generateStaticParams() {
-  return getBlogSlugs().map((slug) => ({ slug }));
-}
-
-export const revalidate = 3600;
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;

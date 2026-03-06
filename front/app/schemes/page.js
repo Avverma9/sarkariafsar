@@ -14,8 +14,6 @@ export const metadata = buildPageMetadata({
   keywords: ["government schemes", "schemes listing", "state schemes"],
 });
 
-export const revalidate = 3600;
-
 export default async function SchemesPage({ searchParams }) {
   const query = parseSchemesListingQuery(await searchParams);
   const pageData = await loadSchemesListingPage(query);
