@@ -2,7 +2,7 @@ import cron from "node-cron";
 import jobListSyncService from "../services/joblist-sync.service.mjs";
 import jobDetailSyncService from "../services/jobdetail-sync.service.mjs";
 
-const DEFAULT_CRON_SCHEDULE = "*/10 * * * *";
+const DEFAULT_CRON_SCHEDULE = "*/30 * * * * *";
 const DEFAULT_CRON_TIMEZONE = "Asia/Kolkata";
 
 let cronTask = null;
@@ -49,7 +49,7 @@ export const runJobListSyncJob = async () => {
 
     const detailSyncEnabled = toBoolean(
       process.env.JOBDETAIL_SYNC_ENABLED_WITH_JOBLIST_CRON,
-      true
+      false
     );
     let jobDetailSummary = null;
     if (detailSyncEnabled) {
@@ -57,6 +57,10 @@ export const runJobListSyncJob = async () => {
         sectionLimit: toInteger(process.env.JOBDETAIL_SYNC_SECTION_LIMIT, 0),
         jobsPerSection: toInteger(process.env.JOBDETAIL_SYNC_JOBS_PER_SECTION, 0),
         maxJobsPerRun: toInteger(process.env.JOBDETAIL_SYNC_MAX_JOBS_PER_RUN, 0),
+        minRecheckMinutes: toInteger(
+          process.env.JOBDETAIL_SYNC_MIN_RECHECK_MINUTES,
+          30
+        ),
         includeElementHtml: toBoolean(process.env.JOBDETAIL_SYNC_INCLUDE_ELEMENT_HTML, false),
         maxCombinationItems: toInteger(
           process.env.JOBDETAIL_SYNC_MAX_COMBINATION_ITEMS,
