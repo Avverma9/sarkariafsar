@@ -103,6 +103,37 @@ const ensureDefaultSites = async () => {
 };
 
 const toNormalizedHost = (url = "") => siteModel.getNormalizedHostFromUrl(url);
+const SECTION_KEY_ALIASES = new Map([
+  ["latest_jobs", "new_jobs"],
+  ["latest_job", "new_jobs"],
+  ["result", "results"],
+]);
+const MONTH_LOOKUP = new Map([
+  ["jan", 0],
+  ["january", 0],
+  ["feb", 1],
+  ["february", 1],
+  ["mar", 2],
+  ["march", 2],
+  ["apr", 3],
+  ["april", 3],
+  ["may", 4],
+  ["jun", 5],
+  ["june", 5],
+  ["jul", 6],
+  ["july", 6],
+  ["aug", 7],
+  ["august", 7],
+  ["sep", 8],
+  ["sept", 8],
+  ["september", 8],
+  ["oct", 9],
+  ["october", 9],
+  ["nov", 10],
+  ["november", 10],
+  ["dec", 11],
+  ["december", 11],
+]);
 
 const buildStoredSectionMeta = ({ requestedSection = "", sectionUrls = [] } = {}) => {
   const cleanSection = String(requestedSection || "").trim();
@@ -145,6 +176,19 @@ const buildStoredSectionMeta = ({ requestedSection = "", sectionUrls = [] } = {}
     sectionName: "Section Group",
   };
 };
+
+const normalizeSectionKey = (value = "") => {
+  const normalized = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^\w]/g, "")
+    .replace(/^_+|_+$/g, "");
+
+  return SECTION_KEY_ALIASES.get(normalized) || normalized;
+};
+
+const isNewJobsSection = (value = "") => normalizeSectionKey(value) === "new_jobs";
 
 const buildKeywordRegex = (value = "") => {
   const normalized = String(value || "").trim();
@@ -231,6 +275,204 @@ const mergeJobSearchResults = ({ detailMatches = [], listMatches = [] } = {}) =>
   }
 
   return merged;
+};
+
+const extractDateValueText = (value = "") => {
+  const cleanValue = String(value || "")
+    .replace(/[–—]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleanValue) return "";
+
+  const separatorIndex = cleanValue.indexOf(":");
+  return separatorIndex >= 0
+    ? cleanValue.slice(separatorIndex + 1).trim()
+    : cleanValue;
+};
+
+const parseDateParts = ({ year, month, day = 1, endOfMonth = false } = {}) => {
+  const parsedYear = Number.parseInt(String(year || ""), 10);
+  const parsedMonth = Number.parseInt(String(month || ""), 10);
+  const parsedDay = Number.parseInt(String(day || ""), 10);
+
+  if (
+    Number.isNaN(parsedYear) ||
+    Number.isNaN(parsedMonth) ||
+    parsedMonth < 0 ||
+    parsedMonth > 11
+  ) {
+    return null;
+  }
+
+  const resolvedDay = endOfMonth
+    ? new Date(Date.UTC(parsedYear, parsedMonth + 1, 0)).getUTCDate()
+    : parsedDay;
+  const date = new Date(Date.UTC(parsedYear, parsedMonth, resolvedDay, 23, 59, 59, 999));
+
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseLastDateText = (value = "") => {
+  const rawValue = extractDateValueText(value);
+  if (!rawValue) return null;
+
+  const normalized = rawValue
+    .replace(/\b(tentative|expected|approx(?:\.|imate)?|approximately|likely)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalized) return null;
+
+  if (
+    /\b(district wise|notify later|notified soon|before exam|will be updated|updated soon|coming soon|soon|tba|n\/a|na)\b/i.test(
+      normalized
+    )
+  ) {
+    return null;
+  }
+
+  let match = normalized.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})\b/);
+  if (match) {
+    const [, day, month, year] = match;
+    const normalizedYear = year.length === 2 ? `20${year}` : year;
+    return parseDateParts({
+      year: normalizedYear,
+      month: Number.parseInt(month, 10) - 1,
+      day,
+    });
+  }
+
+  match = normalized.match(
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\.?,?\s+(\d{4})\b/i
+  );
+  if (match) {
+    const [, day, monthName, year] = match;
+    const month = MONTH_LOOKUP.get(monthName.toLowerCase());
+    if (month !== undefined) {
+      return parseDateParts({ year, month, day });
+    }
+  }
+
+  match = normalized.match(
+    /\b([A-Za-z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,)?\s+(\d{4})\b/i
+  );
+  if (match) {
+    const [, monthName, day, year] = match;
+    const month = MONTH_LOOKUP.get(monthName.toLowerCase());
+    if (month !== undefined) {
+      return parseDateParts({ year, month, day });
+    }
+  }
+
+  match = normalized.match(/\b([A-Za-z]{3,9})\.?\s+(\d{4})\b/i);
+  if (match) {
+    const [, monthName, year] = match;
+    const month = MONTH_LOOKUP.get(monthName.toLowerCase());
+    if (month !== undefined) {
+      return parseDateParts({ year, month, endOfMonth: true });
+    }
+  }
+
+  return null;
+};
+
+const getLastDateTimestampFromJobDetail = (detail = {}) => {
+  const importantDates = Array.isArray(detail?.jsonData?.importantDates)
+    ? detail.jsonData.importantDates
+    : [];
+
+  for (const item of importantDates) {
+    const line = String(item || "").trim();
+    if (!line) continue;
+
+    if (
+      !/(online apply last date|last date for apply|apply last date|application last date|registration last date|closing date|form complete last date|last date)/i.test(
+        line
+      )
+    ) {
+      continue;
+    }
+
+    const parsedDate = parseLastDateText(line);
+    if (parsedDate) {
+      return parsedDate.getTime();
+    }
+  }
+
+  return null;
+};
+
+const sortPostListByDeadlineDesc = ({ postList = [], detailDocs = [] } = {}) => {
+  const lastDateByHash = new Map();
+
+  for (const detail of detailDocs || []) {
+    const hash = String(detail?.jobUrlHash || "").trim();
+    if (!hash || lastDateByHash.has(hash)) continue;
+
+    const timestamp = getLastDateTimestampFromJobDetail(detail);
+    if (timestamp) {
+      lastDateByHash.set(hash, timestamp);
+    }
+  }
+
+  return [...(postList || [])].sort((left, right) => {
+    const leftDeadline = lastDateByHash.get(String(left?.jobUrlHash || "").trim()) || null;
+    const rightDeadline = lastDateByHash.get(String(right?.jobUrlHash || "").trim()) || null;
+
+    if (leftDeadline && rightDeadline && leftDeadline !== rightDeadline) {
+      return rightDeadline - leftDeadline;
+    }
+
+    if (leftDeadline && !rightDeadline) return -1;
+    if (!leftDeadline && rightDeadline) return 1;
+
+    const leftSortIndex = Number.parseInt(String(left?.sortIndex ?? ""), 10);
+    const rightSortIndex = Number.parseInt(String(right?.sortIndex ?? ""), 10);
+
+    if (!Number.isNaN(leftSortIndex) && !Number.isNaN(rightSortIndex) && leftSortIndex !== rightSortIndex) {
+      return leftSortIndex - rightSortIndex;
+    }
+
+    const leftFetchedAt = new Date(left?.fetchedAt || 0).getTime();
+    const rightFetchedAt = new Date(right?.fetchedAt || 0).getTime();
+    if (!Number.isNaN(leftFetchedAt) && !Number.isNaN(rightFetchedAt) && leftFetchedAt !== rightFetchedAt) {
+      return rightFetchedAt - leftFetchedAt;
+    }
+
+    return String(left?.jobUrl || "").localeCompare(String(right?.jobUrl || ""));
+  });
+};
+
+const applyStoredJobListOrdering = async ({ section = "", jobList = null } = {}) => {
+  if (!jobList || !Array.isArray(jobList?.postList) || !isNewJobsSection(section || jobList?.section)) {
+    return jobList;
+  }
+
+  const hashes = [...new Set(
+    (jobList.postList || [])
+      .map((post) => String(post?.jobUrlHash || "").trim())
+      .filter(Boolean)
+  )];
+
+  if (hashes.length === 0) {
+    return jobList;
+  }
+
+  const detailDocs = await govJobDetailModel.model
+    .find(
+      { jobUrlHash: { $in: hashes } },
+      { jobUrlHash: 1, jsonData: 1 }
+    )
+    .lean();
+
+  return {
+    ...jobList,
+    postList: sortPostListByDeadlineDesc({
+      postList: jobList.postList,
+      detailDocs,
+    }),
+  };
 };
 
 export const scrapeSiteSectionsController = async (req, res, next) => {
@@ -629,11 +871,17 @@ export const clearCacheStorageController = async (req, res, next) => {
       getValue(req, "target", getValue(req, "scope", "all"))
     ).trim();
     const tag = String(getValue(req, "tag", "")).trim();
+    const tags = toArray(getValue(req, "tags", []));
+    const path = String(getValue(req, "path", "")).trim();
+    const paths = toArray(getValue(req, "paths", []));
     const clearFrontend = toBoolean(getValue(req, "frontend"), true);
 
     const result = await clearAppCacheStorage({
       target,
       tag,
+      tags,
+      path,
+      paths,
       clearFrontend,
     });
 
@@ -661,10 +909,15 @@ export const fetchStoredJobListController = async (req, res, next) => {
         });
       }
 
+      const orderedJobList = await applyStoredJobListOrdering({
+        section,
+        jobList: storedJobList,
+      });
+
       return res.status(200).json({
         section,
-        total: Number(storedJobList?.totalPosts || 0),
-        jobList: storedJobList,
+        total: Number(orderedJobList?.totalPosts || 0),
+        jobList: orderedJobList,
       });
     }
 

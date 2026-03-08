@@ -21,20 +21,108 @@ const API_CACHE_TARGET_PREFIXES = {
   sites: ["site:sites|", "site:scrape-site-sections|"],
 };
 
+const DEFAULT_FRONTEND_PATHS = [
+  "/",
+  "/jobs",
+  "/post",
+  "/results",
+  "/admit-cards",
+  "/schemes",
+];
+
+const FRONTEND_REVALIDATE_TARGETS = {
+  all: {
+    tags: ["job-lists", "job-details", "job-sections", "sites", "gov-schemes"],
+    paths: DEFAULT_FRONTEND_PATHS,
+  },
+  api: {
+    tags: ["job-lists", "job-details", "job-sections", "sites", "gov-schemes"],
+    paths: DEFAULT_FRONTEND_PATHS,
+  },
+  site: {
+    tags: ["job-lists", "job-details", "job-sections", "sites"],
+    paths: ["/", "/jobs", "/post", "/results", "/admit-cards"],
+  },
+  "gov-schemes": {
+    tags: ["gov-schemes"],
+    paths: ["/", "/schemes"],
+  },
+  "job-lists": {
+    tags: ["job-lists"],
+    paths: ["/", "/jobs", "/post", "/results", "/admit-cards"],
+  },
+  "job-details": {
+    tags: ["job-details"],
+    paths: ["/", "/jobs", "/post", "/results", "/admit-cards"],
+  },
+  "job-sections": {
+    tags: ["job-sections"],
+    paths: ["/", "/jobs", "/results", "/admit-cards", "/schemes"],
+  },
+  sites: {
+    tags: ["sites"],
+    paths: ["/"],
+  },
+};
+
+const toArray = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const toUniqueStringArray = (values = []) => {
+  const output = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    const cleanValue = String(value || "").trim();
+    if (!cleanValue) continue;
+
+    const dedupeKey = cleanValue.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    output.push(cleanValue);
+  }
+
+  return output;
+};
+
 const normalizeTarget = (value = "all") => {
   const cleanValue = String(value || "all").trim().toLowerCase();
   return API_CACHE_TARGET_PREFIXES[cleanValue] ? cleanValue : "all";
 };
 
-const getFrontendTagForTarget = (target = "all", tag = "") => {
-  const cleanTag = String(tag || "").trim();
-  if (cleanTag) return cleanTag;
+const getFrontendRevalidateRequest = ({
+  target = "all",
+  tag = "",
+  tags = [],
+  path = "",
+  paths = [],
+} = {}) => {
+  const defaults = FRONTEND_REVALIDATE_TARGETS[target] || FRONTEND_REVALIDATE_TARGETS.all;
+  const explicitTags = toUniqueStringArray([
+    ...toArray(tag),
+    ...toArray(tags),
+  ]);
+  const explicitPaths = toUniqueStringArray([
+    ...toArray(path),
+    ...toArray(paths),
+  ]);
 
-  if (["job-lists", "job-details", "job-sections", "sites", "gov-schemes"].includes(target)) {
-    return target;
-  }
-
-  return "";
+  return {
+    tags: explicitTags.length > 0 ? explicitTags : [...defaults.tags],
+    paths: explicitPaths.length > 0 ? explicitPaths : [...defaults.paths],
+  };
 };
 
 const clearApiCacheForTarget = (target = "all") => {
@@ -49,18 +137,29 @@ const clearApiCacheForTarget = (target = "all") => {
 export const clearAppCacheStorage = async ({
   target = "all",
   tag = "",
+  tags = [],
+  path = "",
+  paths = [],
   clearFrontend = true,
 } = {}) => {
   const normalizedTarget = normalizeTarget(target);
   const apiDeleted = clearApiCacheForTarget(normalizedTarget);
-  const frontendTag = getFrontendTagForTarget(normalizedTarget, tag);
+  const frontendRequest = getFrontendRevalidateRequest({
+    target: normalizedTarget,
+    tag,
+    tags,
+    path,
+    paths,
+  });
   const frontendResult = clearFrontend
-    ? await clearFrontendCache(frontendTag)
+    ? await clearFrontendCache(frontendRequest)
     : null;
 
   return {
     target: normalizedTarget,
-    tag: frontendTag || null,
+    tag: frontendRequest.tags[0] || null,
+    tags: frontendRequest.tags,
+    paths: frontendRequest.paths,
     apiDeleted,
     frontendResult,
     stats: getApiCacheStats(),
@@ -71,6 +170,9 @@ export const invalidateAppCache = async (target = "all", options = {}) =>
   clearAppCacheStorage({
     target,
     tag: options?.tag || "",
+    tags: options?.tags || [],
+    path: options?.path || "",
+    paths: options?.paths || [],
     clearFrontend: options?.clearFrontend !== false,
   });
 
