@@ -74,6 +74,18 @@ const CACHE_CLEAR_TOKEN =
   process.env.FRONT_API_CACHE_CLEAR_TOKEN ||
   process.env.CACHE_SECRET ||
   "";
+const DEFAULT_JOBLIST_STRICT_JOB_ONLY = toBoolean(
+  process.env.JOBLIST_SYNC_STRICT_JOB_ONLY,
+  true
+);
+const DEFAULT_JOBLIST_SKIP_OLD_ONLINE_FORMS = toBoolean(
+  process.env.JOBLIST_SYNC_SKIP_OLD_ONLINE_FORMS,
+  true
+);
+const DEFAULT_JOBLIST_SKIP_ONLINE_FORM_YEARS = toIntegerArray(
+  process.env.JOBLIST_SYNC_SKIP_ONLINE_FORM_YEARS || "",
+  [2024, 2025]
+);
 
 let defaultSectionsSeeded = false;
 let defaultSitesSeeded = false;
@@ -134,19 +146,91 @@ const buildStoredSectionMeta = ({ requestedSection = "", sectionUrls = [] } = {}
   };
 };
 
-const reverseJobListPostListForResponse = (jobList) => {
-  if (!jobList || typeof jobList !== "object") return jobList;
+const buildKeywordRegex = (value = "") => {
+  const normalized = String(value || "").trim();
+  if (!normalized) return null;
 
-  return {
-    ...jobList,
-    postList: Array.isArray(jobList.postList) ? [...jobList.postList].reverse() : [],
-  };
+  const escaped = escapeRegExp(normalized);
+  const regexText = escaped.replace(/\s+/g, "\\s+");
+  return new RegExp(regexText, "i");
+};
+
+const getIndexedFetchedAt = (baseFetchedAt, index = 0) => {
+  const baseTime = new Date(baseFetchedAt || Date.now()).getTime();
+  const safeBaseTime = Number.isNaN(baseTime) ? Date.now() : baseTime;
+  const safeIndex = Number.isInteger(index) && index > 0 ? index : 0;
+  return new Date(safeBaseTime - safeIndex).toISOString();
 };
 
 const getBearerToken = (req) => {
   const header = String(req?.headers?.authorization || "").trim();
   if (!header.toLowerCase().startsWith("bearer ")) return "";
   return header.slice(7).trim();
+};
+
+const findMatchingJobListTitle = (post = {}, regex = null) => {
+  const candidates = [
+    String(post?.title || "").trim(),
+    ...((post?.titleAliases || []).map((value) => String(value || "").trim())),
+  ].filter(Boolean);
+
+  if (!regex) {
+    return candidates[0] || "";
+  }
+
+  return candidates.find((value) => regex.test(value)) || "";
+};
+
+const searchStoredJobLists = async ({ keyword = "", regex = null, limit = 50 } = {}) => {
+  const safeLimit = Math.min(200, Math.max(1, toInteger(limit, 50)));
+  const jobLists = await govJobListModel.list();
+  const matches = [];
+  const seenUrls = new Set();
+
+  for (const jobList of jobLists) {
+    for (const post of jobList?.postList || []) {
+      const matchedTitle = findMatchingJobListTitle(post, regex);
+      if (!matchedTitle) continue;
+
+      const jobUrl = String(post?.jobUrl || "").trim();
+      if (!jobUrl || seenUrls.has(jobUrl)) continue;
+      seenUrls.add(jobUrl);
+
+      matches.push({
+        title: matchedTitle,
+        jobUrl,
+        section: String(jobList?.section || "").trim(),
+        sourceSectionUrl: String(post?.sourceSectionUrl || "").trim(),
+        fetchedAt: post?.fetchedAt || null,
+      });
+
+      if (matches.length >= safeLimit) {
+        return matches;
+      }
+    }
+  }
+
+  return matches;
+};
+
+const mergeJobSearchResults = ({ detailMatches = [], listMatches = [] } = {}) => {
+  const merged = [];
+  const seenJobUrls = new Set();
+
+  for (const job of detailMatches || []) {
+    const jobUrl = String(job?.jobUrl || "").trim();
+    if (jobUrl) seenJobUrls.add(jobUrl);
+    merged.push(job);
+  }
+
+  for (const match of listMatches || []) {
+    const jobUrl = String(match?.jobUrl || "").trim();
+    if (!jobUrl || seenJobUrls.has(jobUrl)) continue;
+    seenJobUrls.add(jobUrl);
+    merged.push(match);
+  }
+
+  return merged;
 };
 
 export const scrapeSiteSectionsController = async (req, res, next) => {
@@ -220,12 +304,18 @@ export const scrapeSectionJobsController = async (req, res, next) => {
       siteName: getValue(req, "siteName", ""),
       jobLinkPattern: getValue(req, "jobLinkPattern", null),
       skipLinkPatterns: toArray(getValue(req, "skipLinkPatterns", [])),
-      strictJobOnly: toBoolean(getValue(req, "strictJobOnly"), true),
-      skipOldOnlineForms: toBoolean(getValue(req, "skipOldOnlineForms"), true),
-      skipOnlineFormYears: toIntegerArray(getValue(req, "skipOnlineFormYears", []), [
-        2024,
-        2025,
-      ]),
+      strictJobOnly: toBoolean(
+        getValue(req, "strictJobOnly"),
+        DEFAULT_JOBLIST_STRICT_JOB_ONLY
+      ),
+      skipOldOnlineForms: toBoolean(
+        getValue(req, "skipOldOnlineForms"),
+        DEFAULT_JOBLIST_SKIP_OLD_ONLINE_FORMS
+      ),
+      skipOnlineFormYears: toIntegerArray(
+        getValue(req, "skipOnlineFormYears", []),
+        DEFAULT_JOBLIST_SKIP_ONLINE_FORM_YEARS
+      ),
       limit: toInteger(getValue(req, "limit"), 0),
       requestConfig: toObject(getValue(req, "requestConfig", {})),
       maxCombinationItems: toInteger(getValue(req, "maxCombinationItems"), 12),
@@ -237,11 +327,13 @@ export const scrapeSectionJobsController = async (req, res, next) => {
     });
 
     const postList = (data?.jobs || [])
-      .map((item) => ({
+      .map((item, index) => ({
         title: item?.title || "",
+        titleAliases: Array.isArray(item?.titleAliases) ? item.titleAliases : [],
         jobUrl: item?.jobUrl || "",
         sourceSectionUrl: item?.sourceSectionUrl || resolvedSectionUrls[0] || "",
-        fetchedAt: data?.fetchedAt || new Date().toISOString(),
+        sortIndex: index,
+        fetchedAt: getIndexedFetchedAt(data?.fetchedAt, index),
       }))
       .filter((item) => item.jobUrl);
 
@@ -250,6 +342,7 @@ export const scrapeSectionJobsController = async (req, res, next) => {
       sectionName: storeMeta.sectionName,
       sectionUrls: resolvedSectionUrls,
       postList,
+      replacePostList: true,
       extra: {
         sectionInput: requestedSection || "",
       },
@@ -281,12 +374,18 @@ export const syncJobListController = async (req, res, next) => {
     const jobListSummary = await jobListSyncService.syncStoredJobLists({
       section: getValue(req, "section", ""),
       limit: toInteger(getValue(req, "limit"), 0),
-      strictJobOnly: toBoolean(getValue(req, "strictJobOnly"), true),
-      skipOldOnlineForms: toBoolean(getValue(req, "skipOldOnlineForms"), true),
-      skipOnlineFormYears: toIntegerArray(getValue(req, "skipOnlineFormYears", []), [
-        2024,
-        2025,
-      ]),
+      strictJobOnly: toBoolean(
+        getValue(req, "strictJobOnly"),
+        DEFAULT_JOBLIST_STRICT_JOB_ONLY
+      ),
+      skipOldOnlineForms: toBoolean(
+        getValue(req, "skipOldOnlineForms"),
+        DEFAULT_JOBLIST_SKIP_OLD_ONLINE_FORMS
+      ),
+      skipOnlineFormYears: toIntegerArray(
+        getValue(req, "skipOnlineFormYears", []),
+        DEFAULT_JOBLIST_SKIP_ONLINE_FORM_YEARS
+      ),
       requestConfig: toObject(getValue(req, "requestConfig", {})),
       maxCombinationItems: toInteger(getValue(req, "maxCombinationItems"), 12),
     });
@@ -367,8 +466,21 @@ export const fetchJobByTitleController = async (req, res, next) => {
       throw new Error("title is required");
     }
 
-    const jobs = await govJobDetailModel.findByTitle({
-      title,
+    const regex = buildKeywordRegex(title);
+    const [detailJobs, listMatches] = await Promise.all([
+      govJobDetailModel.findByTitle({
+        title,
+      }),
+      searchStoredJobLists({
+        keyword: title,
+        regex,
+        limit: 50,
+      }),
+    ]);
+
+    const jobs = mergeJobSearchResults({
+      detailMatches: detailJobs,
+      listMatches,
     });
 
     return res.status(200).json({
@@ -393,11 +505,9 @@ export const findByTitleJobAndSchemeController = async (req, res, next) => {
       throw new Error("keyword is required");
     }
 
-    const escaped = escapeRegExp(keyword);
-    const regexText = escaped.replace(/\s+/g, "\\s+");
-    const regex = new RegExp(regexText, "i");
+    const regex = buildKeywordRegex(keyword);
 
-    const [jobDocs, schemeDocs] = await Promise.all([
+    const [jobDocs, listMatches, schemeDocs] = await Promise.all([
       govJobDetailModel.model
         .find({
           $or: [{ title: regex }, { pageTitle: regex }, { "jsonData.title": regex }],
@@ -411,6 +521,11 @@ export const findByTitleJobAndSchemeController = async (req, res, next) => {
         .sort({ lastScrapedAt: -1, updatedAt: -1 })
         .limit(limit)
         .lean(),
+      searchStoredJobLists({
+        keyword,
+        regex,
+        limit,
+      }),
       govSchemeModel.model
         .find({
           schemeTitle: regex,
@@ -426,13 +541,24 @@ export const findByTitleJobAndSchemeController = async (req, res, next) => {
       type: "job",
       jobUrl: String(doc?.jobUrl || "").trim(),
     }));
+    const listJobs = listMatches.map((match) => ({
+      title: String(match?.title || "").trim(),
+      type: "job",
+      jobUrl: String(match?.jobUrl || "").trim(),
+    }));
 
     const schemes = schemeDocs.map((doc) => ({
       title: String(doc?.schemeTitle || "").trim(),
       type: "scheme",
     }));
 
-    const results = [...jobs, ...schemes];
+    const results = [
+      ...mergeJobSearchResults({
+        detailMatches: jobs,
+        listMatches: listJobs,
+      }),
+      ...schemes,
+    ];
 
     return res.status(200).json({
       keyword,
@@ -527,8 +653,7 @@ export const fetchStoredJobListController = async (req, res, next) => {
 
     if (section) {
       const storedJobList = await govJobListModel.getBySection(section);
-      const jobList = reverseJobListPostListForResponse(storedJobList);
-      if (!jobList) {
+      if (!storedJobList) {
         return res.status(404).json({
           message: "Stored job list not found",
           section,
@@ -538,12 +663,12 @@ export const fetchStoredJobListController = async (req, res, next) => {
 
       return res.status(200).json({
         section,
-        total: Number(jobList?.totalPosts || 0),
-        jobList,
+        total: Number(storedJobList?.totalPosts || 0),
+        jobList: storedJobList,
       });
     }
 
-    const jobLists = (await govJobListModel.list()).map(reverseJobListPostListForResponse);
+    const jobLists = await govJobListModel.list();
 
     return res.status(200).json({
       total: jobLists.length,

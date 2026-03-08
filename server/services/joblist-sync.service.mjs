@@ -56,6 +56,13 @@ const toObject = (value) => {
   return {};
 };
 
+const getIndexedFetchedAt = (baseFetchedAt, index = 0) => {
+  const baseTime = new Date(baseFetchedAt || Date.now()).getTime();
+  const safeBaseTime = Number.isNaN(baseTime) ? Date.now() : baseTime;
+  const safeIndex = Number.isInteger(index) && index > 0 ? index : 0;
+  return new Date(safeBaseTime - safeIndex).toISOString();
+};
+
 const toUniqueUrls = (urls = []) => {
   const output = [];
   const seen = new Set();
@@ -163,11 +170,13 @@ export const syncStoredJobLists = async ({
     });
 
     const postList = (data?.jobs || [])
-      .map((item) => ({
+      .map((item, index) => ({
         title: item?.title || "",
+        titleAliases: Array.isArray(item?.titleAliases) ? item.titleAliases : [],
         jobUrl: item?.jobUrl || "",
         sourceSectionUrl: item?.sourceSectionUrl || target.urls[0] || "",
-        fetchedAt: data?.fetchedAt || new Date().toISOString(),
+        sortIndex: index,
+        fetchedAt: getIndexedFetchedAt(data?.fetchedAt, index),
       }))
       .filter((item) => item.jobUrl);
 
@@ -176,6 +185,7 @@ export const syncStoredJobLists = async ({
       sectionName: target.name,
       sectionUrls: target.urls,
       postList,
+      replacePostList: true,
       extra: {
         sectionInput: target.name,
       },

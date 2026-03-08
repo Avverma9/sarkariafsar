@@ -6,13 +6,19 @@ const toPositiveInteger = (value, fallback) => {
   return parsed;
 };
 
+const toNonNegativeInteger = (value, fallback) => {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  if (Number.isNaN(parsed) || parsed < 0) return fallback;
+  return parsed;
+};
+
 const DEFAULT_API_CACHE_TTL_SECONDS = toPositiveInteger(
   process.env.API_RESPONSE_CACHE_TTL_SECONDS,
   300
 );
-const DEFAULT_API_CACHE_BROWSER_MAX_AGE_SECONDS = toPositiveInteger(
+const DEFAULT_API_CACHE_BROWSER_MAX_AGE_SECONDS = toNonNegativeInteger(
   process.env.API_RESPONSE_BROWSER_MAX_AGE_SECONDS,
-  60
+  0
 );
 
 const apiResponseCache = new NodeCache({
@@ -26,7 +32,7 @@ const toCacheTtlSeconds = (value = DEFAULT_API_CACHE_TTL_SECONDS) =>
   toPositiveInteger(value, DEFAULT_API_CACHE_TTL_SECONDS);
 
 const toBrowserMaxAgeSeconds = (value = DEFAULT_API_CACHE_BROWSER_MAX_AGE_SECONDS) =>
-  toPositiveInteger(value, DEFAULT_API_CACHE_BROWSER_MAX_AGE_SECONDS);
+  toNonNegativeInteger(value, DEFAULT_API_CACHE_BROWSER_MAX_AGE_SECONDS);
 
 export const buildApiCacheKey = ({ namespace = "api", req = null } = {}) => {
   const method = String(req?.method || "GET").toUpperCase();

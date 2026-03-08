@@ -20,6 +20,17 @@ const toCanonicalSectionKey = (value = "") => {
   return CANONICAL_SECTION_ALIASES.get(normalized) || normalized;
 };
 
+const getSectionLookupKeys = (value = "") => {
+  const canonicalSection = toCanonicalSectionKey(value);
+  if (!canonicalSection) return [];
+
+  const legacyAliases = [...CANONICAL_SECTION_ALIASES.entries()]
+    .filter(([, canonical]) => canonical === canonicalSection)
+    .map(([alias]) => alias);
+
+  return toUniqueStringArray([canonicalSection, ...legacyAliases]);
+};
+
 const normalizeUrl = (value = "") => {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -56,6 +67,11 @@ const toUniqueStringArray = (values = []) => {
   return output;
 };
 
+const toTitleAliasArray = (values = []) =>
+  toUniqueStringArray(values)
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
 const toSectionUrlArray = (values = []) => {
   const urls = [];
   for (const value of toUniqueStringArray(values)) {
@@ -74,11 +90,21 @@ const toDateTimestamp = (value) => {
   return date.getTime();
 };
 
+const toSortIndex = (value, fallback = Number.MAX_SAFE_INTEGER) => {
+  const parsed = Number.parseInt(String(value ?? ""), 10);
+  if (Number.isNaN(parsed) || parsed < 0) return fallback;
+  return parsed;
+};
+
 const sortPostListByFetchedAtDesc = (postList = []) =>
   [...(postList || [])].sort((left, right) => {
     const fetchedAtDiff =
       toDateTimestamp(right?.fetchedAt) - toDateTimestamp(left?.fetchedAt);
     if (fetchedAtDiff !== 0) return fetchedAtDiff;
+
+    const sortIndexDiff =
+      toSortIndex(left?.sortIndex) - toSortIndex(right?.sortIndex);
+    if (sortIndexDiff !== 0) return sortIndexDiff;
 
     const leftKey = String(left?.jobUrlHash || left?.jobUrl || "").trim();
     const rightKey = String(right?.jobUrlHash || right?.jobUrl || "").trim();
@@ -117,9 +143,11 @@ const normalizePostList = (postList = [], fallbackSectionUrl = "") => {
 
     normalized.push({
       title,
+      titleAliases: toTitleAliasArray(item.titleAliases || []),
       jobUrl,
       sourceSectionUrl,
       jobUrlHash,
+      sortIndex: toSortIndex(item.sortIndex, normalized.length),
       fetchedAt: item.fetchedAt ? new Date(item.fetchedAt) : new Date(),
     });
   }
@@ -133,6 +161,10 @@ const postSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+    titleAliases: {
+      type: [String],
+      default: [],
     },
     jobUrl: {
       type: String,
@@ -152,6 +184,11 @@ const postSchema = new mongoose.Schema(
     fetchedAt: {
       type: Date,
       default: Date.now,
+    },
+    sortIndex: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {
@@ -234,9 +271,11 @@ const toResponseShape = (doc) => ({
   totalPosts: Number(doc.totalPosts || 0),
   postList: (doc.postList || []).map((post) => ({
     title: post.title || "",
+    titleAliases: [...(post.titleAliases || [])],
     jobUrl: post.jobUrl || "",
     sourceSectionUrl: post.sourceSectionUrl || "",
     jobUrlHash: post.jobUrlHash || "",
+    sortIndex: Number.isFinite(Number(post.sortIndex)) ? Number(post.sortIndex) : 0,
     fetchedAt: post.fetchedAt || null,
   })),
   lastSyncedAt: doc.lastSyncedAt || null,
@@ -251,9 +290,11 @@ const mergePostLists = (existing = [], incoming = []) => {
     if (!post?.jobUrlHash) continue;
     map.set(post.jobUrlHash, {
       title: post.title || "",
+      titleAliases: toTitleAliasArray(post.titleAliases || []),
       jobUrl: post.jobUrl || "",
       sourceSectionUrl: post.sourceSectionUrl || "",
       jobUrlHash: post.jobUrlHash,
+      sortIndex: toSortIndex(post.sortIndex, 0),
       fetchedAt: post.fetchedAt || new Date(),
     });
   }
@@ -262,9 +303,14 @@ const mergePostLists = (existing = [], incoming = []) => {
     if (!post?.jobUrlHash) continue;
     map.set(post.jobUrlHash, {
       title: post.title || "",
+      titleAliases: toTitleAliasArray([
+        ...(map.get(post.jobUrlHash)?.titleAliases || []),
+        ...(post.titleAliases || []),
+      ]),
       jobUrl: post.jobUrl || "",
       sourceSectionUrl: post.sourceSectionUrl || "",
       jobUrlHash: post.jobUrlHash,
+      sortIndex: toSortIndex(post.sortIndex, 0),
       fetchedAt: post.fetchedAt || new Date(),
     });
   }
@@ -272,11 +318,33 @@ const mergePostLists = (existing = [], incoming = []) => {
   return sortPostListByFetchedAtDesc(Array.from(map.values()));
 };
 
+const pickPrimarySectionDoc = (docs = [], canonicalSection = "") => {
+  const normalizedCanonical = toCanonicalSectionKey(canonicalSection);
+  return (
+    docs.find(
+      (doc) =>
+        normalizeSectionKey(doc?.section || "") === normalizedCanonical
+    ) ||
+    docs[0] ||
+    null
+  );
+};
+
+const isRetryableWriteError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    error?.name === "VersionError" ||
+    message.includes("no matching document found") ||
+    message.includes("version")
+  );
+};
+
 export const upsertGovJobListSection = async ({
   section = "",
   sectionName = "",
   sectionUrls = [],
   postList = [],
+  replacePostList = true,
   extra = {},
 } = {}) => {
   const normalizedSection = toCanonicalSectionKey(section || sectionName);
@@ -287,45 +355,118 @@ export const upsertGovJobListSection = async ({
   const normalizedSectionName = String(sectionName || normalizedSection).trim();
   const normalizedSectionUrls = toSectionUrlArray(sectionUrls || []);
   const normalizedPostList = normalizePostList(postList || [], normalizedSectionUrls[0] || "");
+  const safeExtra =
+    extra && typeof extra === "object" && !Array.isArray(extra) ? extra : {};
 
-  const existing = await GovJobList.findOne({ section: normalizedSection });
-  if (existing) {
-    existing.sectionName = normalizedSectionName || existing.sectionName;
-    existing.sectionUrls = toSectionUrlArray([...(existing.sectionUrls || []), ...normalizedSectionUrls]);
-    existing.postList = mergePostLists(existing.postList || [], normalizedPostList);
-    existing.totalPosts = existing.postList.length;
-    existing.lastSyncedAt = new Date();
+  let lastError = null;
 
-    if (extra && typeof extra === "object" && !Array.isArray(extra)) {
-      Object.assign(existing, extra);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const lookupSections = getSectionLookupKeys(normalizedSection);
+      const existingDocs = await GovJobList.find({
+        section: { $in: lookupSections },
+      }).sort({ updatedAt: -1, createdAt: -1 });
+      const existing = pickPrimarySectionDoc(existingDocs, normalizedSection);
+
+      if (existing) {
+        existing.section = normalizedSection;
+        existing.sectionName = normalizedSectionName || existing.sectionName;
+        existing.sectionUrls = toSectionUrlArray([
+          ...(existing.sectionUrls || []),
+          ...normalizedSectionUrls,
+        ]);
+        existing.postList = replacePostList
+          ? normalizedPostList
+          : mergePostLists(existing.postList || [], normalizedPostList);
+        existing.totalPosts = existing.postList.length;
+        existing.lastSyncedAt = new Date();
+
+        Object.assign(existing, safeExtra);
+        await existing.save();
+
+        const duplicateIds = existingDocs
+          .filter((doc) => String(doc?._id || "") !== String(existing?._id || ""))
+          .map((doc) => doc._id);
+
+        if (duplicateIds.length > 0) {
+          await GovJobList.deleteMany({ _id: { $in: duplicateIds } });
+        }
+
+        return { created: false, sectionData: toResponseShape(existing) };
+      }
+
+      const created = await GovJobList.create({
+        ...safeExtra,
+        section: normalizedSection,
+        sectionName: normalizedSectionName || normalizedSection,
+        sectionUrls: normalizedSectionUrls,
+        postList: normalizedPostList,
+      });
+
+      return { created: true, sectionData: toResponseShape(created) };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableWriteError(error) || attempt === 2) {
+        throw error;
+      }
     }
-
-    await existing.save();
-    return { created: false, sectionData: toResponseShape(existing) };
   }
 
-  const created = await GovJobList.create({
-    ...(extra && typeof extra === "object" && !Array.isArray(extra) ? extra : {}),
-    section: normalizedSection,
-    sectionName: normalizedSectionName || normalizedSection,
-    sectionUrls: normalizedSectionUrls,
-    postList: normalizedPostList,
-  });
-
-  return { created: true, sectionData: toResponseShape(created) };
+  throw lastError || new Error("Failed to upsert job list section");
 };
 
 export const getGovJobListBySection = async (section = "") => {
   const normalizedSection = toCanonicalSectionKey(section);
   if (!normalizedSection) return null;
 
-  const doc = await GovJobList.findOne({ section: normalizedSection }).lean();
-  return doc ? toResponseShape(doc) : null;
+  const docs = await GovJobList.find({
+    section: { $in: getSectionLookupKeys(normalizedSection) },
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+  const doc = pickPrimarySectionDoc(docs, normalizedSection);
+  if (!doc) return null;
+
+  if (normalizeSectionKey(doc.section || "") !== normalizedSection) {
+    return toResponseShape({
+      ...doc,
+      section: normalizedSection,
+    });
+  }
+
+  return toResponseShape(doc);
 };
 
 export const listGovJobListSections = async () => {
-  const docs = await GovJobList.find({}).sort({ createdAt: -1 }).lean();
-  return docs.map(toResponseShape);
+  const docs = await GovJobList.find({})
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+  const canonicalMap = new Map();
+
+  for (const doc of docs) {
+    const canonicalSection = toCanonicalSectionKey(doc?.section || "");
+    if (!canonicalSection) continue;
+
+    const existing = canonicalMap.get(canonicalSection);
+    const isCanonicalDoc =
+      normalizeSectionKey(doc?.section || "") === canonicalSection;
+    const existingIsCanonical =
+      normalizeSectionKey(existing?.section || "") === canonicalSection;
+
+    if (!existing || (isCanonicalDoc && !existingIsCanonical)) {
+      canonicalMap.set(
+        canonicalSection,
+        isCanonicalDoc
+          ? doc
+          : {
+              ...doc,
+              section: canonicalSection,
+            }
+      );
+    }
+  }
+
+  return [...canonicalMap.values()].map(toResponseShape);
 };
 
 export const govJobListModel = {

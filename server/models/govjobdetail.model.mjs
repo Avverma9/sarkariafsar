@@ -357,6 +357,17 @@ const mergeJobUrlAliases = (doc = {}, normalizedJobUrl = "") =>
     normalizedJobUrl || "",
   ]);
 
+const isRetryableWriteError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  return (
+    error?.name === "VersionError" ||
+    error?.code === 11000 ||
+    message.includes("duplicate key") ||
+    message.includes("no matching document found") ||
+    message.includes("version")
+  );
+};
+
 const findBestSimilarityCandidate = async ({
   section = "",
   sourceHost = "",
@@ -450,90 +461,102 @@ export const upsertGovJobDetailFromScrape = async ({
     metaDescription: toCleanString(metaDescription || ""),
     lastScrapedAt: new Date(),
   };
+  let lastError = null;
 
-  const existing = await GovJobDetail.findOne({
-    $or: [
-      { jobUrlHash },
-      { jobUrl: normalizedJobUrl },
-      { jobUrlAliasHashes: jobUrlHash },
-      { jobUrlAliases: normalizedJobUrl },
-    ],
-  });
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const existing = await GovJobDetail.findOne({
+        $or: [
+          { jobUrlHash },
+          { jobUrl: normalizedJobUrl },
+          { jobUrlAliasHashes: jobUrlHash },
+          { jobUrlAliases: normalizedJobUrl },
+        ],
+      });
 
-  if (existing) {
-    const previousDetail = toDetailResponseShape(existing.toObject());
-    const mergedAliases = mergeJobUrlAliases(existing, normalizedJobUrl);
-    const changed = existing.contentHash !== contentHash;
-    payload.jobUrlAliases = mergedAliases;
-    payload.jobUrlAliasHashes = mergedAliases.map((url) => createJobUrlHash(url));
-    payload.dedupeMeta = {
-      version: HTML_SIMILARITY_DEDUPE_VERSION,
-      matchedBy: "job_url_hash",
-      similarityScore: 1,
-    };
-    Object.assign(existing, payload);
-    await existing.save();
+      if (existing) {
+        const previousDetail = toDetailResponseShape(existing.toObject());
+        const mergedAliases = mergeJobUrlAliases(existing, normalizedJobUrl);
+        const changed = existing.contentHash !== contentHash;
+        payload.jobUrlAliases = mergedAliases;
+        payload.jobUrlAliasHashes = mergedAliases.map((url) => createJobUrlHash(url));
+        payload.dedupeMeta = {
+          version: HTML_SIMILARITY_DEDUPE_VERSION,
+          matchedBy: "job_url_hash",
+          similarityScore: 1,
+        };
+        Object.assign(existing, payload);
+        await existing.save();
 
-    return {
-      created: false,
-      updated: true,
-      changed,
-      patched: false,
-      similarityScore: 1,
-      previousDetail,
-      detail: toDetailResponseShape(existing),
-    };
+        return {
+          created: false,
+          updated: true,
+          changed,
+          patched: false,
+          similarityScore: 1,
+          previousDetail,
+          detail: toDetailResponseShape(existing),
+        };
+      }
+
+      const similarityMatch = await findBestSimilarityCandidate({
+        section: payload.section,
+        sourceHost: payload.sourceHost,
+        formattedHtmlTokenHashes: payload.formattedHtmlTokenHashes,
+        threshold: safeSimilarityThreshold,
+      });
+
+      if (similarityMatch?.doc) {
+        const matchedDoc = similarityMatch.doc;
+        const previousDetail = toDetailResponseShape(matchedDoc.toObject());
+        const mergedAliases = mergeJobUrlAliases(matchedDoc, normalizedJobUrl);
+        const changed = matchedDoc.contentHash !== contentHash;
+        payload.jobUrlAliases = mergedAliases;
+        payload.jobUrlAliasHashes = mergedAliases.map((url) => createJobUrlHash(url));
+        payload.dedupeMeta = {
+          version: HTML_SIMILARITY_DEDUPE_VERSION,
+          matchedBy: "formatted_html_similarity",
+          similarityScore: similarityMatch.score,
+        };
+        Object.assign(matchedDoc, payload);
+        await matchedDoc.save();
+
+        return {
+          created: false,
+          updated: true,
+          changed,
+          patched: true,
+          similarityScore: similarityMatch.score,
+          previousDetail,
+          detail: toDetailResponseShape(matchedDoc),
+        };
+      }
+
+      payload.dedupeMeta = {
+        version: HTML_SIMILARITY_DEDUPE_VERSION,
+        matchedBy: "created",
+        similarityScore: 0,
+      };
+
+      const created = await GovJobDetail.create(payload);
+      return {
+        created: true,
+        updated: false,
+        changed: true,
+        patched: false,
+        similarityScore: 0,
+        previousDetail: null,
+        detail: toDetailResponseShape(created),
+      };
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableWriteError(error) || attempt === 2) {
+        throw error;
+      }
+    }
   }
 
-  const similarityMatch = await findBestSimilarityCandidate({
-    section: payload.section,
-    sourceHost: payload.sourceHost,
-    formattedHtmlTokenHashes: payload.formattedHtmlTokenHashes,
-    threshold: safeSimilarityThreshold,
-  });
-
-  if (similarityMatch?.doc) {
-    const matchedDoc = similarityMatch.doc;
-    const previousDetail = toDetailResponseShape(matchedDoc.toObject());
-    const mergedAliases = mergeJobUrlAliases(matchedDoc, normalizedJobUrl);
-    const changed = matchedDoc.contentHash !== contentHash;
-    payload.jobUrlAliases = mergedAliases;
-    payload.jobUrlAliasHashes = mergedAliases.map((url) => createJobUrlHash(url));
-    payload.dedupeMeta = {
-      version: HTML_SIMILARITY_DEDUPE_VERSION,
-      matchedBy: "formatted_html_similarity",
-      similarityScore: similarityMatch.score,
-    };
-    Object.assign(matchedDoc, payload);
-    await matchedDoc.save();
-
-    return {
-      created: false,
-      updated: true,
-      changed,
-      patched: true,
-      similarityScore: similarityMatch.score,
-      previousDetail,
-      detail: toDetailResponseShape(matchedDoc),
-    };
-  }
-
-  payload.dedupeMeta = {
-    version: HTML_SIMILARITY_DEDUPE_VERSION,
-    matchedBy: "created",
-    similarityScore: 0,
-  };
-
-  const created = await GovJobDetail.create(payload);
-  return {
-    created: true,
-    updated: false,
-    changed: true,
-    patched: false,
-    similarityScore: 0,
-    previousDetail: null,
-    detail: toDetailResponseShape(created),
-  };
+  throw lastError || new Error("Failed to upsert gov job detail");
 };
 
 export const listGovJobDetails = async ({ limit = 50 } = {}) => {
