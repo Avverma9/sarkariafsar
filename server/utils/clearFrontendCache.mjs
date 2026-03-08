@@ -15,12 +15,65 @@ const CACHE_TIMEOUT_MS = Number.parseInt(
 
 const sleep = (ms = 250) => new Promise((resolve) => setTimeout(resolve, ms));
 
-export const revalidateFrontend = async (tag = null) => {
+const toArray = (value) => {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item || "").trim()).filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+};
+
+const toUniqueStringArray = (values = []) => {
+  const output = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    const cleanValue = String(value || "").trim();
+    if (!cleanValue) continue;
+
+    const dedupeKey = cleanValue.toLowerCase();
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    output.push(cleanValue);
+  }
+
+  return output;
+};
+
+const normalizeRevalidatePayload = (input = {}) => {
+  if (typeof input === "string" || Array.isArray(input)) {
+    return {
+      tags: toUniqueStringArray(toArray(input)),
+      paths: [],
+    };
+  }
+
+  const source = input && typeof input === "object" ? input : {};
+  const tags = toUniqueStringArray([
+    ...toArray(source.tag),
+    ...toArray(source.tags),
+  ]);
+  const paths = toUniqueStringArray([
+    ...toArray(source.path),
+    ...toArray(source.paths),
+  ]);
+
+  return { tags, paths };
+};
+
+export const revalidateFrontend = async (input = {}) => {
   if (!CACHE_SECRET) {
     throw new Error("API_CACHE_CLEAR_TOKEN is missing");
   }
 
-  const cleanTag = String(tag || "").trim();
+  const payload = normalizeRevalidatePayload(input);
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -34,7 +87,10 @@ export const revalidateFrontend = async (tag = null) => {
         Authorization: `Bearer ${CACHE_SECRET}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(cleanTag ? { tag: cleanTag } : {}),
+      body: JSON.stringify({
+        ...(payload.tags.length > 0 ? { tags: payload.tags } : {}),
+        ...(payload.paths.length > 0 ? { paths: payload.paths } : {}),
+      }),
       signal: controller.signal,
     });
 
@@ -49,16 +105,17 @@ export const revalidateFrontend = async (tag = null) => {
   }
 };
 
-export const clearFrontendCache = async (tag = "") => {
-  const cleanTag = String(tag || "").trim();
+export const clearFrontendCache = async (input = {}) => {
+  const payload = normalizeRevalidatePayload(input);
+  const payloadLabel = JSON.stringify(payload);
 
   for (let attempt = 1; attempt <= 2; attempt += 1) {
     try {
-      return await revalidateFrontend(cleanTag || null);
+      return await revalidateFrontend(payload);
     } catch (err) {
       const reason = err?.message || String(err);
       console.error(
-        `[cache-revalidate] attempt=${attempt} tag=${cleanTag || "ALL"} failed: ${reason}`
+        `[cache-revalidate] attempt=${attempt} payload=${payloadLabel} failed: ${reason}`
       );
       if (attempt < 2) {
         await sleep(300);

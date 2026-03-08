@@ -6,6 +6,7 @@ import connectDatabase from "./db/config.mjs";
 import { startGovSchemeScrapeCron } from "./cron/govscheme.cron.mjs";
 import { startJobListSyncCron } from "./cron/joblist.cron.mjs";
 import { startJobDetailSyncCron } from "./cron/jobdetail.cron.mjs";
+import { startAppCacheClearCron } from "./cron/cache-clear.cron.mjs";
 
 const app = express();
 
@@ -50,6 +51,7 @@ const startServer = async () => {
   startGovSchemeScrapeCron();
   startJobListSyncCron();
   startJobDetailSyncCron();
+  startAppCacheClearCron();
 };
 
 startServer().catch((error) => {
