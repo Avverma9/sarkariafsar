@@ -11,8 +11,16 @@ const DEFAULT_HEADERS = {
 };
 
 const BLOCKED_PROTOCOL_PREFIXES = ["javascript:", "mailto:", "tel:", "data:", "#"];
+const DEFAULT_SECTION_PAGINATION_MAX_PAGES = 100;
+const DEFAULT_SECTION_PAGINATION_MAX_EMPTY_PAGES = 2;
 
 const toCleanText = (value = "") => String(value).replace(/\s+/g, " ").trim();
+
+const toPositiveInteger = (value, fallback = 0) => {
+  const parsed = Number.parseInt(String(value || ""), 10);
+  if (Number.isNaN(parsed) || parsed <= 0) return fallback;
+  return parsed;
+};
 
 const escapeCssIdentifier = (value = "") =>
   String(value)
@@ -427,14 +435,15 @@ const DEFAULT_UTILITY_SECTION_PATTERNS = [
 ];
 
 const DEFAULT_JOB_SKIP_PATTERNS = [
-  /\bhome\b/i,
-  /\bsarkari\s*result\b/i,
+  /^home$/i,
+  /^sarkari\s*result$/i,
   /\blet['’]?\s*s?\s*update\b/i,
-  /\blatest\s*job\b/i,
-  /\badmit\s*card\b/i,
-  /\bresult(s)?\b/i,
-  /\badmission(s)?\b/i,
-  /\banswer\s*key(s)?\b/i,
+  /^latest\s*job(s)?$/i,
+  /^admit\s*card(s)?$/i,
+  /^result(s)?$/i,
+  /^exam\s*result(s)?$/i,
+  /^admission(s)?$/i,
+  /^answer\s*key(s)?$/i,
   /\bcontact(\s+us)?\b/i,
   /\bprivacy(\s+policy)?\b/i,
   /\bdisclaimer\b/i,
@@ -457,6 +466,22 @@ const DEFAULT_GENERIC_JOB_PATHS = new Set([
   "disclaimer",
   "about-us",
 ]);
+
+const JOB_TITLE_STATUS_SCORES = [
+  [/\blast\s*date\s*(extend|extended)?\b/i, 120],
+  [/\bdate\s*(extend|extended)\b/i, 110],
+  [/\bcorrection\b/i, 105],
+  [/\brevised\b/i, 100],
+  [/\binterview\b/i, 95],
+  [/\bexam\s*date\b/i, 90],
+  [/\badmit\s*card\b/i, 85],
+  [/\bresult\b/i, 80],
+  [/\banswer\s*key\b/i, 75],
+  [/\bmerit\s*list\b/i, 70],
+  [/\bscore\s*card\b/i, 65],
+  [/\bsyllabus\b/i, 60],
+  [/\bstart\b/i, 20],
+];
 
 const getSectionAnchorCandidates = ($, options = {}) => {
   const { navigationOnly = true } = options;
@@ -517,6 +542,71 @@ const normalizeYears = (years = []) => {
   }
 
   return output;
+};
+
+const toUniqueTextArray = (values = []) => {
+  const output = [];
+  const seen = new Set();
+
+  for (const value of values) {
+    const clean = toCleanText(value);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    output.push(clean);
+  }
+
+  return output;
+};
+
+const getJobTitleScore = (title = "") => {
+  const cleanTitle = toCleanText(title);
+  if (!cleanTitle) return 0;
+
+  let score = cleanTitle.length;
+  for (const [pattern, weight] of JOB_TITLE_STATUS_SCORES) {
+    if (pattern.test(cleanTitle)) {
+      score += weight;
+    }
+  }
+
+  return score;
+};
+
+const pickPreferredJobTitle = (left = "", right = "") => {
+  const leftTitle = toCleanText(left);
+  const rightTitle = toCleanText(right);
+  if (!leftTitle) return rightTitle;
+  if (!rightTitle) return leftTitle;
+
+  const leftScore = getJobTitleScore(leftTitle);
+  const rightScore = getJobTitleScore(rightTitle);
+  if (rightScore > leftScore) return rightTitle;
+  if (leftScore > rightScore) return leftTitle;
+  return rightTitle.length > leftTitle.length ? rightTitle : leftTitle;
+};
+
+const toPaginatedSectionUrl = (baseUrl = "", pageNumber = 1) => {
+  if (pageNumber <= 1) return String(baseUrl || "").trim();
+
+  try {
+    const parsed = new URL(baseUrl);
+    const segments = parsed.pathname
+      .split("/")
+      .filter(Boolean)
+      .filter((segment, index, allSegments) => {
+        if (segment.toLowerCase() !== "page") return true;
+        const nextSegment = allSegments[index + 1];
+        return !/^\d+$/.test(String(nextSegment || ""));
+      });
+
+    parsed.pathname = `/${[...segments, "page", String(pageNumber)].join("/")}/`;
+    parsed.hash = "";
+    return parsed.toString();
+  } catch {
+    return String(baseUrl || "").trim();
+  }
 };
 
 const shouldSkipOldOnlineForm = ({ title = "", lastSegment = "", years = [] } = {}) => {
@@ -630,6 +720,9 @@ export const getSectionJobList = async ({
   strictJobOnly = true,
   skipOldOnlineForms = true,
   skipOnlineFormYears = DEFAULT_OLD_ONLINE_FORM_YEARS,
+  enablePagination = true,
+  paginationMaxPages = DEFAULT_SECTION_PAGINATION_MAX_PAGES,
+  paginationMaxEmptyPages = DEFAULT_SECTION_PAGINATION_MAX_EMPTY_PAGES,
   limit = 0,
   requestConfig = {},
   maxCombinationItems = 12,
@@ -660,78 +753,146 @@ export const getSectionJobList = async ({
   const jobs = [];
   const seen = new Set();
   const seenHashes = new Set();
+  const jobIndexByUrl = new Map();
   let duplicatesRemoved = 0;
+  const safePaginationMaxPages = toPositiveInteger(
+    paginationMaxPages,
+    DEFAULT_SECTION_PAGINATION_MAX_PAGES
+  );
+  const safePaginationMaxEmptyPages = toPositiveInteger(
+    paginationMaxEmptyPages,
+    DEFAULT_SECTION_PAGINATION_MAX_EMPTY_PAGES
+  );
 
   for (const currentSectionUrl of normalizedSectionUrls) {
     if (limit > 0 && jobs.length >= limit) break;
 
-    const html = await fetchHtml(currentSectionUrl, requestConfig);
-    const $ = cheerio.load(html);
-    const baseSectionPath = new URL(currentSectionUrl).pathname.replace(/\/+$/, "") || "/";
-    const anchors = getJobAnchorCandidates($);
+    let emptyOrDuplicatePages = 0;
+    const maxPagesForSection = enablePagination ? safePaginationMaxPages : 1;
 
-    for (const element of anchors) {
+    for (let pageNumber = 1; pageNumber <= maxPagesForSection; pageNumber += 1) {
       if (limit > 0 && jobs.length >= limit) break;
 
-      const $element = $(element);
-      const href = $element.attr("href");
-      const jobUrl = toAbsoluteUrl(href, currentSectionUrl);
-      if (!jobUrl) continue;
+      const paginatedSectionUrl = toPaginatedSectionUrl(currentSectionUrl, pageNumber);
+      const jobsBeforePage = jobs.length;
+      const html = await fetchHtml(paginatedSectionUrl, requestConfig);
+      const $ = cheerio.load(html);
+      const baseSectionPath = new URL(paginatedSectionUrl).pathname.replace(/\/+$/, "") || "/";
+      const anchors = getJobAnchorCandidates($);
 
-      const parsedJobUrl = new URL(jobUrl);
-      const path = parsedJobUrl.pathname.replace(/\/+$/, "") || "/";
-      const lastSegment = path.split("/").filter(Boolean).pop() || "";
-      const genericPath = lastSegment.toLowerCase();
-      const isSameAsSectionPath = path === baseSectionPath;
-
-      const title = toCleanText($element.text());
-      const textToMatch = `${title} ${jobUrl}`.trim();
-      const excludeTarget = `${title} ${lastSegment.replace(/[-_]+/g, " ")}`.trim();
-
-      if (!title) continue;
-      if (includePattern && !includePattern.test(textToMatch)) continue;
-      if (excludePatterns.some((pattern) => pattern.test(excludeTarget))) continue;
-      if (skipOldOnlineForms && shouldSkipOldOnlineForm({ title, lastSegment, years: yearsToSkip }))
-        continue;
-
-      if (strictJobOnly) {
-        const words = title.split(/\s+/).filter(Boolean);
-        const hasNumber = /\d/.test(title) || /\d/.test(lastSegment);
-        const isLikelyShortGeneric = words.length < 3 && !hasNumber;
-        if (isSameAsSectionPath) continue;
-        if (DEFAULT_GENERIC_JOB_PATHS.has(genericPath)) continue;
-        if (isLikelyShortGeneric) continue;
-      }
-
-      const dedupeKey = toDedupeKey(jobUrl);
-      const hashes = buildJobHashes({ jobUrl, title, lastSegment });
-      const isHashDuplicate = hashes.some((hash) => seenHashes.has(hash));
-      const isUrlDuplicate = seen.has(dedupeKey);
-      if (isHashDuplicate || isUrlDuplicate) {
-        duplicatesRemoved += 1;
+      if (anchors.length === 0) {
+        emptyOrDuplicatePages += 1;
+        if (pageNumber > 1 && emptyOrDuplicatePages >= safePaginationMaxEmptyPages) {
+          break;
+        }
         continue;
       }
 
-      seen.add(dedupeKey);
-      hashes.forEach((hash) => seenHashes.add(hash));
+      for (const element of anchors) {
+        if (limit > 0 && jobs.length >= limit) break;
 
-      const selectorMeta = collectSelectorsForElement(element, { maxCombinationItems });
+        const $element = $(element);
+        const href = $element.attr("href");
+        const jobUrl = toAbsoluteUrl(href, paginatedSectionUrl);
+        if (!jobUrl) continue;
 
-      jobs.push({
-        section: section || null,
-        siteName: siteName || null,
-        title: title || null,
-        href: href || null,
-        sourceSectionUrl: currentSectionUrl,
-        jobUrl,
-        text: title || null,
-        attributes: { ...(element.attribs || {}) },
-        selectorPathAbsolute: selectorMeta.selectorPathAbsolute,
-        selectorPathReadable: selectorMeta.selectorPathReadable,
-        xpath: selectorMeta.xpath,
-        selectors: selectorMeta.selectors,
-        dedupeHash: hashValue(`${normalizeTextForHash(title)}|${normalizeJobUrlForHash(jobUrl)}`),
-      });
+        const parsedJobUrl = new URL(jobUrl);
+        const path = parsedJobUrl.pathname.replace(/\/+$/, "") || "/";
+        const lastSegment = path.split("/").filter(Boolean).pop() || "";
+        const genericPath = lastSegment.toLowerCase();
+        const isSameAsSectionPath = path === baseSectionPath;
+
+        const title = toCleanText($element.text());
+        const textToMatch = `${title} ${jobUrl}`.trim();
+        const excludeTarget = `${title} ${lastSegment.replace(/[-_]+/g, " ")}`.trim();
+
+        if (!title) continue;
+        if (includePattern && !includePattern.test(textToMatch)) continue;
+        if (excludePatterns.some((pattern) => pattern.test(excludeTarget))) continue;
+        if (
+          skipOldOnlineForms &&
+          shouldSkipOldOnlineForm({ title, lastSegment, years: yearsToSkip })
+        ) {
+          continue;
+        }
+
+        if (strictJobOnly) {
+          const words = title.split(/\s+/).filter(Boolean);
+          const hasNumber = /\d/.test(title) || /\d/.test(lastSegment);
+          const isLikelyShortGeneric = words.length < 3 && !hasNumber;
+          if (isSameAsSectionPath) continue;
+          if (DEFAULT_GENERIC_JOB_PATHS.has(genericPath)) continue;
+          if (isLikelyShortGeneric) continue;
+        }
+
+        const dedupeKey = toDedupeKey(jobUrl);
+        const existingJobIndex = jobIndexByUrl.get(dedupeKey);
+        if (existingJobIndex !== undefined) {
+          duplicatesRemoved += 1;
+          const existingJob = jobs[existingJobIndex];
+          const mergedTitleAliases = toUniqueTextArray([
+            existingJob?.title || "",
+            ...(existingJob?.titleAliases || []),
+            title,
+          ]);
+          const preferredTitle = pickPreferredJobTitle(
+            existingJob?.title || "",
+            title
+          );
+
+          existingJob.title = preferredTitle || existingJob.title || title;
+          existingJob.text = existingJob.title;
+          existingJob.titleAliases = mergedTitleAliases.filter(
+            (alias) => alias.toLowerCase() !== String(existingJob.title || "").toLowerCase()
+          );
+          continue;
+        }
+
+        const hashes = buildJobHashes({ jobUrl, title, lastSegment });
+        const isHashDuplicate = hashes.some((hash) => seenHashes.has(hash));
+        if (isHashDuplicate) {
+          duplicatesRemoved += 1;
+          continue;
+        }
+
+        seen.add(dedupeKey);
+        hashes.forEach((hash) => seenHashes.add(hash));
+
+        const selectorMeta = collectSelectorsForElement(element, { maxCombinationItems });
+
+        jobs.push({
+          section: section || null,
+          siteName: siteName || null,
+          title: title || null,
+          titleAliases: [],
+          href: href || null,
+          sourceSectionUrl: paginatedSectionUrl,
+          jobUrl,
+          text: title || null,
+          attributes: { ...(element.attribs || {}) },
+          selectorPathAbsolute: selectorMeta.selectorPathAbsolute,
+          selectorPathReadable: selectorMeta.selectorPathReadable,
+          xpath: selectorMeta.xpath,
+          selectors: selectorMeta.selectors,
+          dedupeHash: hashValue(`${normalizeTextForHash(title)}|${normalizeJobUrlForHash(jobUrl)}`),
+        });
+        jobIndexByUrl.set(dedupeKey, jobs.length - 1);
+      }
+
+      const newJobsOnPage = jobs.length - jobsBeforePage;
+      if (pageNumber === 1) {
+        emptyOrDuplicatePages = 0;
+        continue;
+      }
+
+      if (newJobsOnPage === 0) {
+        emptyOrDuplicatePages += 1;
+        if (emptyOrDuplicatePages >= safePaginationMaxEmptyPages) {
+          break;
+        }
+      } else {
+        emptyOrDuplicatePages = 0;
+      }
     }
   }
 
