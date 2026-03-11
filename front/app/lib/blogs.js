@@ -514,14 +514,15 @@ const BLOG_POSTS = [
   }
   ,
   {
-    "slug": "cut-off-kaise-samjhein",
-    "title": "Cut-off Kaise Samjhein: Category, Normalization, Trends",
-    "excerpt": "Cut-off ka meaning, category-wise variation, normalization aur safe score estimate ka practical guide.",
+    "slug": "cutoff-basics-explained",
+    "aliases": ["cut-off-kaise-samjhein"],
+    "title": "Cutoff Basics Explained: Category, Normalization, Trends",
+    "excerpt": "Understand cutoff basics, category-wise variation, normalization, and how to estimate a safer expected score.",
     "publishedAt": "2026-02-28",
     "readingTime": "7 min read",
     "author": "Sarkari Afsar Editorial",
     "category": "Guides",
-    "tags": ["cut off", "normalization", "expected score", "exam updates"],
+    "tags": ["cutoff basics", "cut off", "normalization", "expected score", "exam updates"],
     "intro": "Cut-off ko log aksar ek single number samajh lete hain, jabki reality me cut-off category, shift difficulty, vacancies, aur selection stage ke hisaab se change hota hai. Kai exams me normalization apply hoti hai, isliye raw marks aur final normalized score alag ho sakta hai. Is post me aapko cut-off ka logic simple language me milega: trend kaise dekhein, safe score kaise estimate karein, aur kaunse factors cut-off ko upar-neeche le jaate hain. Iska fayda ye hai ki aap result ke baad panic nahi karoge aur next stage (DV/skill/typing/interview) ke liye time par plan kar paoge.",
     "sections": [
       {
@@ -1979,14 +1980,59 @@ function normalizeSlug(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function slugifyValue(value) {
+  return normalizeSlug(decodeURIComponent(String(value || "")))
+    .replace(/&/g, " and ")
+    .replace(/['’]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function getPostLookupKeys(post) {
+  const aliasList = Array.isArray(post.aliases) ? post.aliases : [];
+  const values = [post.slug, post.title, ...aliasList];
+  const keys = new Set();
+
+  values.forEach((value) => {
+    const normalizedValue = normalizeSlug(value);
+    const slugifiedValue = slugifyValue(value);
+
+    if (normalizedValue) {
+      keys.add(normalizedValue);
+    }
+
+    if (slugifiedValue) {
+      keys.add(slugifiedValue);
+      keys.add(slugifiedValue.replace(/-/g, ""));
+    }
+  });
+
+  return keys;
+}
+
 export function getAllBlogPosts() {
   return BLOG_POSTS;
 }
 
 export function getBlogPostBySlug(slug) {
   const normalizedSlug = normalizeSlug(slug);
+  const slugifiedValue = slugifyValue(slug);
+  const compactSlug = slugifiedValue.replace(/-/g, "");
 
-  return BLOG_POSTS.find((post) => post.slug === normalizedSlug) || null;
+  return (
+    BLOG_POSTS.find(
+      (post) => {
+        const lookupKeys = getPostLookupKeys(post);
+
+        return (
+          lookupKeys.has(normalizedSlug) ||
+          lookupKeys.has(slugifiedValue) ||
+          lookupKeys.has(compactSlug)
+        );
+      }
+    ) || null
+  );
 }
 
 export function getBlogSlugs() {
