@@ -1,3 +1,4 @@
+import "./utils/loadEnv.mjs";
 import express from "express";
 import cors from "cors";
 import compression from "compression";

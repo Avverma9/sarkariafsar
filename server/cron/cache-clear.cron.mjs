@@ -31,6 +31,8 @@ export const runAppCacheClearJob = async () => {
     const summary = await clearAppCacheStorage({
       target: "all",
       clearFrontend: true,
+      notify: true,
+      notificationSource: "cache_clear_cron",
     });
     const durationMs = Date.now() - startedAt;
     const frontendCleared = Boolean(summary?.frontendResult);
