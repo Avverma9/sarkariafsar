@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "check:blogs": "node scripts/validate-blog-data.mjs"
+    "check:blogs": "node scripts/validate-blog-data.mjs",
+    "check:ads": "node scripts/validate-ads-txt.mjs",
+    "check:content": "npm run check:blogs && npm run check:ads"
   },
   "dependencies": {
     "dompurify": "^3.3.1",
