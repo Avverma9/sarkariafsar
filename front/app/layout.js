@@ -9,9 +9,8 @@ import {
   buildWebsiteSchema,
   getSiteUrl,
 } from "./lib/seo";
-import { APP_FETCH_REVALIDATE_SECONDS } from "./lib/fetchCache";
 
-export const revalidate = APP_FETCH_REVALIDATE_SECONDS;
+export const revalidate = 300;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

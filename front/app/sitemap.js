@@ -5,6 +5,8 @@ import { getStoredJobLists } from "./lib/siteApi";
 import { absoluteUrl } from "./lib/seo";
 import { getBlogSlugs } from "./lib/blogs";
 
+const SITEMAP_FETCH_TIMEOUT_MS = 15000;
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -53,9 +55,26 @@ function extractSchemes(payload) {
   return asArray(payload);
 }
 
+async function withTimeout(task, timeoutMs = SITEMAP_FETCH_TIMEOUT_MS) {
+  let timeoutId;
+
+  try {
+    return await Promise.race([
+      task,
+      new Promise((_, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`Timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 async function getSchemeEntries() {
   try {
-    const payload = await getAllGovSchemes();
+    const payload = await withTimeout(getAllGovSchemes());
     const schemes = extractSchemes(payload);
 
     return schemes
@@ -81,7 +100,7 @@ async function getSchemeEntries() {
 
 async function getPostEntries() {
   try {
-    const payload = await getStoredJobLists();
+    const payload = await withTimeout(getStoredJobLists());
     const jobLists = asArray(payload?.jobLists);
     const allPosts = jobLists.flatMap((list) => asArray(list?.postList));
     const admitCardPosts = jobLists.flatMap((list) => asArray(list?.admitCardPostList));
