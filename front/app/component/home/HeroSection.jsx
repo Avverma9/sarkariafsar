@@ -1,6 +1,7 @@
 import { ArrowRight, Briefcase, Landmark, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { buildPostDetailsHref } from "../../lib/postLink";
 import { buildSchemeSlug } from "../../lib/schemeSlug";
 
@@ -15,8 +16,31 @@ export default function HeroSection({
   showSearchResults = false,
   searchLoading = false,
   searchError = "",
+  onSearchVisibilityChange,
 }) {
   const visibleResults = Array.isArray(searchResults) ? searchResults.slice(0, 8) : [];
+  const searchShellRef = useRef(null);
+
+  useEffect(() => {
+    if (!searchShellRef.current || typeof onSearchVisibilityChange !== "function") {
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        onSearchVisibilityChange(entry.isIntersecting);
+      },
+      {
+        threshold: 0.2,
+      },
+    );
+
+    observer.observe(searchShellRef.current);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [onSearchVisibilityChange]);
 
   return (
     <section className="relative flex min-h-[85vh] w-full flex-col overflow-visible bg-slate-900 pt-20 md:flex-row md:pt-0">
@@ -142,7 +166,10 @@ export default function HeroSection({
         </svg>
       </div>
 
-      <div className="absolute bottom-0 left-1/2 z-40 flex w-full max-w-4xl -translate-x-1/2 translate-y-1/2 flex-col items-center px-4 md:px-8">
+      <div
+        ref={searchShellRef}
+        className="absolute bottom-0 left-1/2 z-40 flex w-full max-w-4xl -translate-x-1/2 translate-y-1/2 flex-col items-center px-4 md:px-8"
+      >
         <div
           role="search"
           aria-label="Search jobs and schemes"

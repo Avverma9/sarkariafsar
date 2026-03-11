@@ -114,12 +114,14 @@ async function requestJson(path, params, options = {}) {
 export async function getAllGovSchemes() {
   return requestJson("/getAllSchemes", undefined, {
     tags: [CACHE_TAGS.govSchemes],
+    cache: 'no-store',
   });
 }
 
 export async function getGovSchemeStateNameOnly() {
   return requestJson("/getSchemeStateNameOnly", undefined, {
     tags: [CACHE_TAGS.govSchemes],
+    cache: 'no-store',
   });
 }
 
@@ -129,5 +131,6 @@ export async function getGovSchemeByState(state) {
       CACHE_TAGS.govSchemes,
       buildScopedCacheTag(CACHE_TAGS.govSchemes, state),
     ],
+    cache: 'no-store',
   });
 }

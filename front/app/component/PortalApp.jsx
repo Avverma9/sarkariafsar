@@ -270,6 +270,7 @@ export default function PortalApp({ initialData = {} }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isHeroSearchVisible, setIsHeroSearchVisible] = useState(true);
   const [statesList, setStatesList] = useState(() =>
     serverStatesList.length > 1 ? serverStatesList : getDefaultStates(),
   );
@@ -475,6 +476,13 @@ export default function PortalApp({ initialData = {} }) {
         statesLoading={statesLoading}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
+        showSearch={!isHeroSearchVisible}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        searchResults={searchResults}
+        searchLoading={isSearchPanelActive && (searchLoading || isDebouncingSearch)}
+        searchError={isSearchPanelActive ? searchError : ""}
+        showSearchResults={isSearchPanelActive}
       />
 
       <HeroSection
@@ -484,6 +492,7 @@ export default function PortalApp({ initialData = {} }) {
         showSearchResults={isSearchPanelActive}
         searchLoading={isSearchPanelActive && (searchLoading || isDebouncingSearch)}
         searchError={isSearchPanelActive ? searchError : ""}
+        onSearchVisibilityChange={setIsHeroSearchVisible}
       />
 
       <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-6 pb-20 sm:px-6 lg:px-8">

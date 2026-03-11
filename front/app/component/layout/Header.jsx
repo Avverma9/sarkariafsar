@@ -1,5 +1,11 @@
-import { Landmark, MapPin, Menu, X } from "lucide-react";
+import { ArrowRight, Briefcase, Landmark, MapPin, Menu, Search, X } from "lucide-react";
 import Link from "next/link";
+import { buildPostDetailsHref } from "../../lib/postLink";
+import { buildSchemeSlug } from "../../lib/schemeSlug";
+
+function normalizeSearchType(value) {
+  return String(value || "").trim().toLowerCase();
+}
 
 
 export default function Header({
@@ -10,6 +16,13 @@ export default function Header({
   statesLoading = false,
   isMobileMenuOpen,
   setIsMobileMenuOpen,
+  showSearch = false,
+  searchQuery = "",
+  setSearchQuery = () => {},
+  searchResults = [],
+  searchLoading = false,
+  searchError = "",
+  showSearchResults = false,
 }) {
   const menuItems = [
     { label: "Jobs", href: "/post" },
@@ -17,6 +30,7 @@ export default function Header({
     { label: "Admit Cards", href: "/admit-cards" },
     { label: "Schemes", href: "/schemes" },
   ];
+  const visibleResults = Array.isArray(searchResults) ? searchResults.slice(0, 6) : [];
 
   return (
     <header
@@ -52,7 +66,7 @@ export default function Header({
 
           <nav
             aria-label="Primary"
-            className="hidden items-center gap-8 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-sm backdrop-blur-md md:flex"
+            className="hidden items-center gap-8 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-sm backdrop-blur-md xl:flex"
           >
             {menuItems.map((item) => (
               <Link
@@ -70,6 +84,104 @@ export default function Header({
           </nav>
 
           <div className="hidden items-center gap-3 md:flex">
+            <div
+              className={`relative overflow-visible transition-all duration-300 ${
+                showSearch
+                  ? "max-w-[26rem] translate-y-0 opacity-100"
+                  : "pointer-events-none max-w-0 translate-y-[-6px] opacity-0"
+              }`}
+            >
+              <div className="flex items-center rounded-full border border-slate-200 bg-white px-4 py-2 shadow-sm">
+                <Search className="h-4 w-4 text-indigo-500" />
+                <label htmlFor="header-site-search" className="sr-only">
+                  Search government jobs and schemes
+                </label>
+                <input
+                  id="header-site-search"
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search jobs and schemes..."
+                  aria-label="Search government jobs and schemes"
+                  className="ml-3 w-[18rem] bg-transparent text-sm font-semibold text-slate-800 outline-none placeholder:text-slate-400"
+                />
+                <ArrowRight className="h-4 w-4 text-slate-300" />
+              </div>
+
+              {showSearch && showSearchResults ? (
+                <div className="absolute top-full right-0 mt-2 w-[26rem] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
+                  <div className="border-b border-slate-100 px-4 py-2">
+                    <p className="text-[11px] font-black tracking-wide text-slate-500 uppercase">
+                      Search Results
+                    </p>
+                  </div>
+
+                  <div className="max-h-72 overflow-y-auto p-2">
+                    {searchLoading ? (
+                      <div className="flex items-center gap-2 rounded-xl px-3 py-4 text-sm font-semibold text-slate-500">
+                        <Search className="h-4 w-4 animate-pulse text-indigo-500" />
+                        Searching jobs and schemes...
+                      </div>
+                    ) : searchError ? (
+                      <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700">
+                        {searchError}
+                      </div>
+                    ) : visibleResults.length > 0 ? (
+                      visibleResults.map((item, index) => {
+                        const type = normalizeSearchType(item?.type);
+                        const title = String(item?.title || "Untitled");
+                        const key = `${type}-${title}-${index}`;
+                        const isJob = type === "job";
+                        const isScheme = type === "scheme";
+                        const isAdmitCard = type === "admit-card";
+                        const jobHref = item?.jobUrl
+                          ? buildPostDetailsHref({ title, jobUrl: item.jobUrl })
+                          : "";
+                        const schemeHref = isScheme ? `/schemes/${buildSchemeSlug(item)}` : "";
+                        const href = isScheme ? schemeHref : jobHref;
+                        const Icon = isScheme ? Landmark : isAdmitCard ? Menu : Briefcase;
+                        const badgeClass =
+                          isScheme || isAdmitCard
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : "border-indigo-200 bg-indigo-50 text-indigo-700";
+                        const badgeLabel = isScheme ? "SCHEME" : isAdmitCard ? "ADMIT CARD" : "JOB";
+
+                        if (!href) {
+                          return null;
+                        }
+
+                        return (
+                          <Link
+                            key={key}
+                            href={href}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50"
+                          >
+                            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-extrabold text-slate-800">{title}</p>
+                              <span
+                                className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wide ${badgeClass}`}
+                              >
+                                {badgeLabel}
+                              </span>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-slate-300" />
+                          </Link>
+                        );
+                      })
+                    ) : (
+                      <div className="flex items-center gap-2 rounded-xl px-3 py-4 text-sm font-semibold text-slate-500">
+                        <Search className="h-4 w-4 text-slate-300" />
+                        No result found
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <div className="flex items-center gap-2 rounded-full border border-white/20 bg-white/20 px-4 py-2 backdrop-blur-md">
               <MapPin className={`h-4 w-4 ${scrolled ? "text-indigo-600" : "text-white"}`} />
               {statesLoading ? (
