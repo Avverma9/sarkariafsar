@@ -11,6 +11,8 @@ import {
   buildWebPageSchema,
 } from "../../lib/seo";
 
+export const dynamic = 'force-dynamic';
+
 function formatDate(value) {
   const date = new Date(value);
 
@@ -43,7 +45,7 @@ export async function generateMetadata({ params }) {
     title: post.title,
     description: post.excerpt,
     path: `/blog/${post.slug}`,
-    keywords: ["blog", "sarkari updates", ...post.tags],
+    keywords: ["blog", "sarkari updates", ...(post.seoTags || post.tags)],
     type: "article",
     authors: [post.author],
     publishedTime: post.publishedAt,
@@ -88,7 +90,7 @@ export default async function BlogDetailPage({ params }) {
       publishedTime: post.publishedAt,
       modifiedTime: post.publishedAt,
       section: post.category,
-      keywords: post.tags,
+      keywords: post.seoTags || post.tags,
     }),
   ];
 

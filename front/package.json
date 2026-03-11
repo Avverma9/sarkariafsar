@@ -6,7 +6,8 @@
     "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "check:blogs": "node scripts/validate-blog-data.mjs"
   },
   "dependencies": {
     "dompurify": "^3.3.1",

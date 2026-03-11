@@ -10,6 +10,8 @@ import {
   buildPageMetadata,
 } from "../lib/seo";
 
+export const dynamic = 'force-dynamic';
+
 export const metadata = buildPageMetadata({
   title: "Blog",
   description:

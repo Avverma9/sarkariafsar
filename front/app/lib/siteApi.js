@@ -128,5 +128,6 @@ export async function searchJobsAndSchemes(keyword = "") {
   return requestJson(`/find-by-title-job-and-scheme${buildQueryString({ keyword })}`, {
     tags: [CACHE_TAGS.jobSearch, CACHE_TAGS.jobDetails, CACHE_TAGS.govSchemes],
     revalidate: 180,
+    cache: 'no-store',
   });
 }
