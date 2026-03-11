@@ -4,6 +4,7 @@ import {
   clearApiCacheByPrefix,
   getApiCacheStats,
 } from "./apiCache.mjs";
+import { sendSystemEventNotification } from "./jobUpdateMailer.mjs";
 
 const API_CACHE_TARGET_PREFIXES = {
   all: [""],
@@ -141,6 +142,8 @@ export const clearAppCacheStorage = async ({
   path = "",
   paths = [],
   clearFrontend = true,
+  notify = false,
+  notificationSource = "",
 } = {}) => {
   const normalizedTarget = normalizeTarget(target);
   const apiDeleted = clearApiCacheForTarget(normalizedTarget);
@@ -155,7 +158,7 @@ export const clearAppCacheStorage = async ({
     ? await clearFrontendCache(frontendRequest)
     : null;
 
-  return {
+  const result = {
     target: normalizedTarget,
     tag: frontendRequest.tags[0] || null,
     tags: frontendRequest.tags,
@@ -164,6 +167,26 @@ export const clearAppCacheStorage = async ({
     frontendResult,
     stats: getApiCacheStats(),
   };
+
+  if (notify) {
+    try {
+      await sendSystemEventNotification({
+        title: "Cache Cleared",
+        eventType: "cache_clear",
+        summary: `target=${normalizedTarget} frontend=${frontendResult ? "ok" : "failed_or_skipped"} apiDeleted=${apiDeleted}`,
+        details: {
+          source: String(notificationSource || "").trim() || "manual",
+          ...result,
+        },
+      });
+    } catch (error) {
+      console.error(
+        `[cache-clear-mailer] Failed: ${error?.message || error}`
+      );
+    }
+  }
+
+  return result;
 };
 
 export const invalidateAppCache = async (target = "all", options = {}) =>

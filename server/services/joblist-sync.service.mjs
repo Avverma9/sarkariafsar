@@ -2,7 +2,10 @@ import scrapperService from "./scrapper.services.mjs";
 import jobSectionsModel from "../models/jobsections.model.mjs";
 import siteModel from "../models/site.model.mjs";
 import govJobListModel from "../models/govjoblist.model.mjs";
+import govJobDetailModel from "../models/govjobdetail.model.mjs";
 import { invalidateAppCache } from "../utils/appCache.mjs";
+import { extractApplyLastDateMeta } from "../utils/jobApplyDate.mjs";
+import { sendNewPostsNotification } from "../utils/jobUpdateMailer.mjs";
 
 const DEFAULT_OLD_ONLINE_FORM_YEARS = [2024, 2025];
 
@@ -80,6 +83,59 @@ const toUniqueUrls = (urls = []) => {
   return output;
 };
 
+const getApplyLastDateMap = async (postList = []) => {
+  const hashes = [...new Set(
+    (postList || [])
+      .map((post) => String(post?.jobUrlHash || "").trim())
+      .filter(Boolean)
+  )];
+
+  if (hashes.length === 0) {
+    return new Map();
+  }
+
+  const detailDocs = await govJobDetailModel.model
+    .find(
+      { jobUrlHash: { $in: hashes } },
+      { jobUrlHash: 1, jsonData: 1 }
+    )
+    .lean();
+
+  const applyLastDateMap = new Map();
+
+  for (const doc of detailDocs) {
+    const jobUrlHash = String(doc?.jobUrlHash || "").trim();
+    if (!jobUrlHash || applyLastDateMap.has(jobUrlHash)) continue;
+
+    const meta = extractApplyLastDateMeta(doc);
+    if (!meta.applyLastDate) continue;
+    applyLastDateMap.set(jobUrlHash, meta.applyLastDate);
+  }
+
+  return applyLastDateMap;
+};
+
+const getNewPosts = ({ previousJobList = null, nextPostList = [] } = {}) => {
+  const previousHashes = new Set(
+    (previousJobList?.postList || [])
+      .map((post) => String(post?.jobUrlHash || "").trim())
+      .filter(Boolean)
+  );
+
+  return (nextPostList || [])
+    .filter((post) => {
+      const hash = String(post?.jobUrlHash || "").trim();
+      return hash && !previousHashes.has(hash);
+    })
+    .map((post) => ({
+      title: String(post?.title || "").trim(),
+      jobUrl: String(post?.jobUrl || "").trim(),
+      applyLastDate: String(post?.applyLastDate || "").trim(),
+      sourceSectionUrl: String(post?.sourceSectionUrl || "").trim(),
+    }))
+    .filter((post) => post.title && post.jobUrl);
+};
+
 const ensureDefaults = async () => {
   if (defaultsSeeded) return;
   await jobSectionsModel.seedDefaults();
@@ -126,8 +182,8 @@ const resolveSectionTargets = async ({ section = "" } = {}) => {
 export const syncStoredJobLists = async ({
   section = "",
   limit = 0,
-  strictJobOnly = true,
-  skipOldOnlineForms = true,
+  strictJobOnly = false,
+  skipOldOnlineForms = false,
   skipOnlineFormYears = DEFAULT_OLD_ONLINE_FORM_YEARS,
   requestConfig = {},
   maxCombinationItems = 12,
@@ -155,11 +211,13 @@ export const syncStoredJobLists = async ({
       continue;
     }
 
+    const previousJobList = await govJobListModel.getBySection(target.key);
+
     const data = await scrapperService.getSectionJobList({
       section: target.key,
       sectionUrls: target.urls,
-      strictJobOnly: toBoolean(strictJobOnly, true),
-      skipOldOnlineForms: toBoolean(skipOldOnlineForms, true),
+      strictJobOnly: toBoolean(strictJobOnly, false),
+      skipOldOnlineForms: toBoolean(skipOldOnlineForms, false),
       skipOnlineFormYears: toIntegerArray(
         skipOnlineFormYears,
         DEFAULT_OLD_ONLINE_FORM_YEARS
@@ -174,17 +232,28 @@ export const syncStoredJobLists = async ({
         title: item?.title || "",
         titleAliases: Array.isArray(item?.titleAliases) ? item.titleAliases : [],
         jobUrl: item?.jobUrl || "",
+        jobUrlHash: item?.jobUrl ? govJobListModel.createJobUrlHash(item.jobUrl) : "",
         sourceSectionUrl: item?.sourceSectionUrl || target.urls[0] || "",
         sortIndex: index,
         fetchedAt: getIndexedFetchedAt(data?.fetchedAt, index),
       }))
       .filter((item) => item.jobUrl);
 
+    const applyLastDateMap = await getApplyLastDateMap(postList);
+    const enrichedPostList = postList.map((post) => ({
+      ...post,
+      applyLastDate: applyLastDateMap.get(post.jobUrlHash) || "",
+    }));
+    const newPosts = getNewPosts({
+      previousJobList,
+      nextPostList: enrichedPostList,
+    });
+
     const stored = await govJobListModel.upsertSection({
       section: target.key,
       sectionName: target.name,
       sectionUrls: target.urls,
-      postList,
+      postList: enrichedPostList,
       replacePostList: true,
       extra: {
         sectionInput: target.name,
@@ -193,18 +262,32 @@ export const syncStoredJobLists = async ({
 
     const totalPosts = Number(stored?.sectionData?.totalPosts || 0);
     syncedSections += 1;
-    totalJobsFetched += postList.length;
+    totalJobsFetched += enrichedPostList.length;
     totalPostsStored += totalPosts;
 
     results.push({
       section: stored?.sectionData?.section || target.key,
       sectionName: stored?.sectionData?.sectionName || target.name,
       urls: [...target.urls],
-      jobsFetched: postList.length,
+      jobsFetched: enrichedPostList.length,
       totalPosts,
       created: Boolean(stored?.created),
       skipped: false,
+      newPosts: newPosts.length,
     });
+
+    if (newPosts.length > 0) {
+      try {
+        await sendNewPostsNotification({
+          sectionName: target.name,
+          newPosts,
+        });
+      } catch (error) {
+        console.error(
+          `[joblist-sync-mailer] Failed for section ${target.key}: ${error?.message || error}`
+        );
+      }
+    }
   }
 
   if (syncedSections > 0) {

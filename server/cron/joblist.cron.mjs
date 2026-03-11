@@ -37,8 +37,8 @@ export const runJobListSyncJob = async () => {
   try {
     const jobListSummary = await jobListSyncService.syncStoredJobLists({
       limit: toInteger(process.env.JOBLIST_SYNC_LIMIT_PER_SECTION, 0),
-      strictJobOnly: toBoolean(process.env.JOBLIST_SYNC_STRICT_JOB_ONLY, true),
-      skipOldOnlineForms: toBoolean(process.env.JOBLIST_SYNC_SKIP_OLD_ONLINE_FORMS, true),
+      strictJobOnly: toBoolean(process.env.JOBLIST_SYNC_STRICT_JOB_ONLY, false),
+      skipOldOnlineForms: toBoolean(process.env.JOBLIST_SYNC_SKIP_OLD_ONLINE_FORMS, false),
       skipOnlineFormYears:
         process.env.JOBLIST_SYNC_SKIP_ONLINE_FORM_YEARS || "2024,2025",
       maxCombinationItems: toInteger(

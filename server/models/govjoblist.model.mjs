@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { createHash } from "node:crypto";
+import { cleanJobPostTitle } from "../utils/jobPostTitle.mjs";
+import { extractApplyLastDateMeta } from "../utils/jobApplyDate.mjs";
 
 const normalizeSectionKey = (value = "") =>
   String(value || "")
@@ -96,6 +98,9 @@ const toSortIndex = (value, fallback = Number.MAX_SAFE_INTEGER) => {
   return parsed;
 };
 
+const toApplyLastDate = (value = "") => String(value || "").trim();
+const isNewJobsSection = (value = "") => toCanonicalSectionKey(value) === "new_jobs";
+
 const sortPostListByFetchedAtDesc = (postList = []) =>
   [...(postList || [])].sort((left, right) => {
     const fetchedAtDiff =
@@ -120,7 +125,8 @@ const normalizePostList = (postList = [], fallbackSectionUrl = "") => {
   for (const item of postList) {
     if (!item || typeof item !== "object") continue;
 
-    const title = String(item.title || "").trim();
+    const rawTitle = String(item.title || "").trim();
+    const title = cleanJobPostTitle(rawTitle);
     const rawJobUrl = String(item.jobUrl || "").trim();
     const rawSourceSectionUrl = String(
       item.sourceSectionUrl || item.sectionUrl || fallbackSectionUrl || ""
@@ -143,7 +149,11 @@ const normalizePostList = (postList = [], fallbackSectionUrl = "") => {
 
     normalized.push({
       title,
-      titleAliases: toTitleAliasArray(item.titleAliases || []),
+      titleAliases: toTitleAliasArray([
+        ...(item.titleAliases || []),
+        rawTitle && rawTitle.toLowerCase() !== title.toLowerCase() ? rawTitle : "",
+      ]),
+      applyLastDate: toApplyLastDate(item.applyLastDate),
       jobUrl,
       sourceSectionUrl,
       jobUrlHash,
@@ -169,6 +179,11 @@ const postSchema = new mongoose.Schema(
     jobUrl: {
       type: String,
       required: true,
+      trim: true,
+    },
+    applyLastDate: {
+      type: String,
+      default: "",
       trim: true,
     },
     sourceSectionUrl: {
@@ -269,15 +284,23 @@ const toResponseShape = (doc) => ({
   sectionName: doc.sectionName || "",
   sectionUrls: [...(doc.sectionUrls || [])],
   totalPosts: Number(doc.totalPosts || 0),
-  postList: (doc.postList || []).map((post) => ({
-    title: post.title || "",
-    titleAliases: [...(post.titleAliases || [])],
-    jobUrl: post.jobUrl || "",
-    sourceSectionUrl: post.sourceSectionUrl || "",
-    jobUrlHash: post.jobUrlHash || "",
-    sortIndex: Number.isFinite(Number(post.sortIndex)) ? Number(post.sortIndex) : 0,
-    fetchedAt: post.fetchedAt || null,
-  })),
+  postList: (doc.postList || []).map((post) => {
+    const rawTitle = String(post.title || "").trim();
+    const title = cleanJobPostTitle(rawTitle);
+    return {
+      title,
+      titleAliases: toTitleAliasArray([
+        ...(post.titleAliases || []),
+        rawTitle && rawTitle.toLowerCase() !== title.toLowerCase() ? rawTitle : "",
+      ]),
+      applyLastDate: toApplyLastDate(post.applyLastDate),
+      jobUrl: post.jobUrl || "",
+      sourceSectionUrl: post.sourceSectionUrl || "",
+      jobUrlHash: post.jobUrlHash || "",
+      sortIndex: Number.isFinite(Number(post.sortIndex)) ? Number(post.sortIndex) : 0,
+      fetchedAt: post.fetchedAt || null,
+    };
+  }),
   lastSyncedAt: doc.lastSyncedAt || null,
   createdAt: doc.createdAt || null,
   updatedAt: doc.updatedAt || null,
@@ -291,6 +314,7 @@ const mergePostLists = (existing = [], incoming = []) => {
     map.set(post.jobUrlHash, {
       title: post.title || "",
       titleAliases: toTitleAliasArray(post.titleAliases || []),
+      applyLastDate: toApplyLastDate(post.applyLastDate),
       jobUrl: post.jobUrl || "",
       sourceSectionUrl: post.sourceSectionUrl || "",
       jobUrlHash: post.jobUrlHash,
@@ -307,6 +331,7 @@ const mergePostLists = (existing = [], incoming = []) => {
         ...(map.get(post.jobUrlHash)?.titleAliases || []),
         ...(post.titleAliases || []),
       ]),
+      applyLastDate: toApplyLastDate(post.applyLastDate),
       jobUrl: post.jobUrl || "",
       sourceSectionUrl: post.sourceSectionUrl || "",
       jobUrlHash: post.jobUrlHash,
@@ -328,6 +353,218 @@ const pickPrimarySectionDoc = (docs = [], canonicalSection = "") => {
     docs[0] ||
     null
   );
+};
+
+const selectCanonicalSectionDocs = (docs = []) => {
+  const canonicalMap = new Map();
+
+  for (const doc of docs || []) {
+    const canonicalSection = toCanonicalSectionKey(doc?.section || "");
+    if (!canonicalSection) continue;
+
+    const existing = canonicalMap.get(canonicalSection);
+    const isCanonicalDoc =
+      normalizeSectionKey(doc?.section || "") === canonicalSection;
+    const existingIsCanonical =
+      normalizeSectionKey(existing?.section || "") === canonicalSection;
+
+    if (!existing || (isCanonicalDoc && !existingIsCanonical)) {
+      canonicalMap.set(
+        canonicalSection,
+        isCanonicalDoc
+          ? doc
+          : {
+              ...doc,
+              section: canonicalSection,
+            }
+      );
+    }
+  }
+
+  return [...canonicalMap.values()];
+};
+
+const buildApplyLastDateMetaMap = (detailDocs = []) => {
+  const output = new Map();
+
+  for (const detail of detailDocs || []) {
+    const hash = String(detail?.jobUrlHash || "").trim();
+    if (!hash || output.has(hash)) continue;
+
+    const meta = extractApplyLastDateMeta(detail);
+    if (!meta.applyLastDate && !meta.applyLastDateTimestamp) continue;
+    output.set(hash, meta);
+  }
+
+  return output;
+};
+
+const hydratePostListApplyLastDate = ({
+  postList = [],
+  applyLastDateMetaMap = new Map(),
+} = {}) =>
+  (postList || []).map((post) => ({
+    ...post,
+    applyLastDate:
+      applyLastDateMetaMap.get(String(post?.jobUrlHash || "").trim())?.applyLastDate ||
+      toApplyLastDate(post?.applyLastDate),
+  }));
+
+const sortPostListByDeadlineDesc = ({
+  postList = [],
+  applyLastDateMetaMap = new Map(),
+} = {}) => {
+  const hydratedPostList = hydratePostListApplyLastDate({
+    postList,
+    applyLastDateMetaMap,
+  });
+
+  return [...hydratedPostList].sort((left, right) => {
+    const leftDeadline =
+      applyLastDateMetaMap.get(String(left?.jobUrlHash || "").trim())?.applyLastDateTimestamp ||
+      0;
+    const rightDeadline =
+      applyLastDateMetaMap.get(String(right?.jobUrlHash || "").trim())?.applyLastDateTimestamp ||
+      0;
+
+    if (leftDeadline > 0 && rightDeadline > 0 && leftDeadline !== rightDeadline) {
+      return rightDeadline - leftDeadline;
+    }
+
+    if (leftDeadline > 0 && rightDeadline <= 0) return -1;
+    if (leftDeadline <= 0 && rightDeadline > 0) return 1;
+
+    const leftSortIndex = toSortIndex(left?.sortIndex, Number.MAX_SAFE_INTEGER);
+    const rightSortIndex = toSortIndex(right?.sortIndex, Number.MAX_SAFE_INTEGER);
+    if (leftSortIndex !== rightSortIndex) {
+      return leftSortIndex - rightSortIndex;
+    }
+
+    const fetchedAtDiff = toDateTimestamp(right?.fetchedAt) - toDateTimestamp(left?.fetchedAt);
+    if (fetchedAtDiff !== 0) return fetchedAtDiff;
+
+    return String(left?.jobUrl || "").localeCompare(String(right?.jobUrl || ""));
+  });
+};
+
+const buildApplyLastDateUpdates = ({
+  postList = [],
+  applyLastDateMetaMap = new Map(),
+} = {}) => {
+  const updates = [];
+
+  for (const post of postList || []) {
+    const jobUrlHash = String(post?.jobUrlHash || "").trim();
+    if (!jobUrlHash) continue;
+
+    const applyLastDate =
+      applyLastDateMetaMap.get(jobUrlHash)?.applyLastDate || "";
+    if (!applyLastDate) continue;
+    if (toApplyLastDate(post?.applyLastDate) === applyLastDate) continue;
+
+    updates.push({
+      jobUrlHash,
+      jobUrl: String(post?.jobUrl || "").trim(),
+      applyLastDate,
+    });
+  }
+
+  return updates;
+};
+
+const hydrateSectionDocPostList = ({
+  section = "",
+  postList = [],
+  applyLastDateMetaMap = new Map(),
+} = {}) =>
+  isNewJobsSection(section)
+    ? sortPostListByDeadlineDesc({ postList, applyLastDateMetaMap })
+    : hydratePostListApplyLastDate({ postList, applyLastDateMetaMap });
+
+const hydrateGovJobListDocsWithApplyLastDates = async ({
+  docs = [],
+  persistApplyLastDates = false,
+} = {}) => {
+  if (!Array.isArray(docs) || docs.length === 0) {
+    return [];
+  }
+
+  const docIds = docs
+    .map((doc) => doc?._id)
+    .filter(Boolean);
+
+  const aggregatedDocs =
+    docIds.length > 0
+      ? await GovJobList.aggregate([
+          {
+            $match: {
+              _id: { $in: docIds },
+            },
+          },
+          {
+            $lookup: {
+              from: "gov_job_details",
+              let: {
+                jobHashes: "$postList.jobUrlHash",
+              },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $in: ["$jobUrlHash", "$$jobHashes"],
+                    },
+                  },
+                },
+                {
+                  $project: {
+                    _id: 0,
+                    jobUrlHash: 1,
+                    jsonData: 1,
+                    importantDates: 1,
+                  },
+                },
+              ],
+              as: "detailDocs",
+            },
+          },
+        ])
+      : [];
+
+  const aggregatedMap = new Map(
+    aggregatedDocs.map((doc) => [String(doc?._id || ""), doc])
+  );
+  const pendingUpdates = [];
+
+  const hydratedDocs = docs.map((doc) => {
+    const aggregatedDoc = aggregatedMap.get(String(doc?._id || ""));
+    const applyLastDateMetaMap = buildApplyLastDateMetaMap(
+      aggregatedDoc?.detailDocs || []
+    );
+
+    pendingUpdates.push(
+      ...buildApplyLastDateUpdates({
+        postList: doc?.postList || [],
+        applyLastDateMetaMap,
+      })
+    );
+
+    return {
+      ...doc,
+      postList: hydrateSectionDocPostList({
+        section: String(doc?.section || "").trim(),
+        postList: doc?.postList || [],
+        applyLastDateMetaMap,
+      }),
+    };
+  });
+
+  if (persistApplyLastDates && pendingUpdates.length > 0) {
+    await syncGovJobListApplyLastDates({
+      updates: pendingUpdates,
+    });
+  }
+
+  return hydratedDocs.map(toResponseShape);
 };
 
 const isRetryableWriteError = (error) => {
@@ -415,6 +652,164 @@ export const upsertGovJobListSection = async ({
   throw lastError || new Error("Failed to upsert job list section");
 };
 
+export const syncGovJobListApplyLastDates = async ({ updates = [] } = {}) => {
+  const updateMap = new Map();
+
+  for (const item of updates || []) {
+    if (!item || typeof item !== "object") continue;
+
+    const applyLastDate = toApplyLastDate(item.applyLastDate);
+    if (!applyLastDate) continue;
+
+    let jobUrlHash = String(item.jobUrlHash || "").trim();
+    if (!jobUrlHash) {
+      try {
+        jobUrlHash = createJobUrlHash(item.jobUrl || "");
+      } catch {
+        jobUrlHash = "";
+      }
+    }
+
+    if (!jobUrlHash) continue;
+    updateMap.set(jobUrlHash, applyLastDate);
+  }
+
+  const hashes = [...updateMap.keys()];
+  if (hashes.length === 0) {
+    return {
+      matchedSections: 0,
+      updatedSections: 0,
+      updatedPosts: 0,
+    };
+  }
+
+  const docIds = await GovJobList.find({
+    "postList.jobUrlHash": { $in: hashes },
+  }).distinct("_id");
+
+  let updatedSections = 0;
+  let updatedPosts = 0;
+
+  for (const docId of docIds) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const currentDoc = await GovJobList.findById(docId).lean();
+      if (!currentDoc) break;
+
+      let docUpdatedPosts = 0;
+      const updatedPostList = (currentDoc.postList || []).map((post) => {
+        const applyLastDate = updateMap.get(String(post?.jobUrlHash || "").trim());
+        if (!applyLastDate) {
+          return post;
+        }
+
+        if (toApplyLastDate(post?.applyLastDate) === applyLastDate) {
+          return post;
+        }
+
+        docUpdatedPosts += 1;
+        return {
+          ...post,
+          applyLastDate,
+        };
+      });
+
+      if (docUpdatedPosts === 0) {
+        break;
+      }
+
+      const normalizedPostList = normalizePostList(
+        updatedPostList,
+        currentDoc?.sectionUrls?.[0] || ""
+      );
+
+      const updateResult = await GovJobList.updateOne(
+        { _id: currentDoc._id, __v: currentDoc.__v },
+        {
+          $set: {
+            postList: normalizedPostList,
+            totalPosts: normalizedPostList.length,
+            lastSyncedAt: new Date(),
+          },
+          $inc: { __v: 1 },
+        }
+      );
+
+      if (updateResult.modifiedCount > 0) {
+        updatedSections += 1;
+        updatedPosts += docUpdatedPosts;
+        break;
+      }
+
+      if (attempt === 2) {
+        throw new Error(`Failed to sync applyLastDate for gov_job_lists doc ${docId}`);
+      }
+    }
+  }
+
+  return {
+    matchedSections: docIds.length,
+    updatedSections,
+    updatedPosts,
+  };
+};
+
+export const normalizeGovJobListDocuments = async ({ section = "" } = {}) => {
+  const query = {};
+  const normalizedSection = toCanonicalSectionKey(section);
+  if (normalizedSection) {
+    query.section = { $in: getSectionLookupKeys(normalizedSection) };
+  }
+
+  const docIds = await GovJobList.find(query).distinct("_id");
+  let normalizedSections = 0;
+
+  for (const docId of docIds) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const currentDoc = await GovJobList.findById(docId).lean();
+      if (!currentDoc) break;
+
+      const normalizedPostList = normalizePostList(
+        currentDoc.postList || [],
+        currentDoc?.sectionUrls?.[0] || ""
+      );
+
+      const updateResult = await GovJobList.updateOne(
+        { _id: currentDoc._id, __v: currentDoc.__v },
+        {
+          $set: {
+            postList: normalizedPostList,
+            totalPosts: normalizedPostList.length,
+            lastSyncedAt: new Date(),
+          },
+          $inc: { __v: 1 },
+        }
+      );
+
+      if (updateResult.modifiedCount > 0) {
+        normalizedSections += 1;
+        break;
+      }
+
+      if (updateResult.matchedCount === 0 && attempt < 2) {
+        continue;
+      }
+
+      if (updateResult.matchedCount > 0) {
+        break;
+      }
+
+      if (attempt === 2) {
+        throw new Error(`Failed to normalize gov_job_lists doc ${docId}`);
+      }
+    }
+  }
+
+  return {
+    matchedSections: docIds.length,
+    normalizedSections,
+  };
+};
+
 export const getGovJobListBySection = async (section = "") => {
   const normalizedSection = toCanonicalSectionKey(section);
   if (!normalizedSection) return null;
@@ -437,43 +832,65 @@ export const getGovJobListBySection = async (section = "") => {
   return toResponseShape(doc);
 };
 
+export const getGovJobListBySectionWithApplyLastDates = async ({
+  section = "",
+  persistApplyLastDates = false,
+} = {}) => {
+  const normalizedSection = toCanonicalSectionKey(section);
+  if (!normalizedSection) return null;
+
+  const docs = await GovJobList.find({
+    section: { $in: getSectionLookupKeys(normalizedSection) },
+  })
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
+  const doc = pickPrimarySectionDoc(docs, normalizedSection);
+  if (!doc) return null;
+
+  const hydratedDocs = await hydrateGovJobListDocsWithApplyLastDates({
+    docs: [
+      normalizeSectionKey(doc.section || "") === normalizedSection
+        ? doc
+        : {
+            ...doc,
+            section: normalizedSection,
+          },
+    ],
+    persistApplyLastDates,
+  });
+
+  return hydratedDocs[0] || null;
+};
+
 export const listGovJobListSections = async () => {
   const docs = await GovJobList.find({})
     .sort({ updatedAt: -1, createdAt: -1 })
     .lean();
-  const canonicalMap = new Map();
+  return selectCanonicalSectionDocs(docs).map(toResponseShape);
+};
 
-  for (const doc of docs) {
-    const canonicalSection = toCanonicalSectionKey(doc?.section || "");
-    if (!canonicalSection) continue;
+export const listGovJobListSectionsWithApplyLastDates = async ({
+  persistApplyLastDates = false,
+} = {}) => {
+  const docs = await GovJobList.find({})
+    .sort({ updatedAt: -1, createdAt: -1 })
+    .lean();
 
-    const existing = canonicalMap.get(canonicalSection);
-    const isCanonicalDoc =
-      normalizeSectionKey(doc?.section || "") === canonicalSection;
-    const existingIsCanonical =
-      normalizeSectionKey(existing?.section || "") === canonicalSection;
-
-    if (!existing || (isCanonicalDoc && !existingIsCanonical)) {
-      canonicalMap.set(
-        canonicalSection,
-        isCanonicalDoc
-          ? doc
-          : {
-              ...doc,
-              section: canonicalSection,
-            }
-      );
-    }
-  }
-
-  return [...canonicalMap.values()].map(toResponseShape);
+  return hydrateGovJobListDocsWithApplyLastDates({
+    docs: selectCanonicalSectionDocs(docs),
+    persistApplyLastDates,
+  });
 };
 
 export const govJobListModel = {
   model: GovJobList,
   upsertSection: upsertGovJobListSection,
+  normalizeDocuments: normalizeGovJobListDocuments,
+  syncApplyLastDates: syncGovJobListApplyLastDates,
   getBySection: getGovJobListBySection,
+  getBySectionWithApplyLastDates: getGovJobListBySectionWithApplyLastDates,
   list: listGovJobListSections,
+  listWithApplyLastDates: listGovJobListSectionsWithApplyLastDates,
   createJobUrlHash,
 };
 

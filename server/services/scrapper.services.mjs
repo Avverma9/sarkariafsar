@@ -1,6 +1,7 @@
 import axios from "axios";
 import * as cheerio from "cheerio";
 import { createHash } from "node:crypto";
+import { cleanJobPostTitle } from "../utils/jobPostTitle.mjs";
 
 const DEFAULT_HEADERS = {
   "User-Agent":
@@ -575,8 +576,8 @@ const getJobTitleScore = (title = "") => {
 };
 
 const pickPreferredJobTitle = (left = "", right = "") => {
-  const leftTitle = toCleanText(left);
-  const rightTitle = toCleanText(right);
+  const leftTitle = cleanJobPostTitle(toCleanText(left));
+  const rightTitle = cleanJobPostTitle(toCleanText(right));
   if (!leftTitle) return rightTitle;
   if (!rightTitle) return leftTitle;
 
@@ -717,8 +718,8 @@ export const getSectionJobList = async ({
   siteName = "",
   jobLinkPattern = null,
   skipLinkPatterns = [],
-  strictJobOnly = true,
-  skipOldOnlineForms = true,
+  strictJobOnly = false,
+  skipOldOnlineForms = false,
   skipOnlineFormYears = DEFAULT_OLD_ONLINE_FORM_YEARS,
   enablePagination = true,
   paginationMaxPages = DEFAULT_SECTION_PAGINATION_MAX_PAGES,
@@ -802,23 +803,24 @@ export const getSectionJobList = async ({
         const genericPath = lastSegment.toLowerCase();
         const isSameAsSectionPath = path === baseSectionPath;
 
-        const title = toCleanText($element.text());
-        const textToMatch = `${title} ${jobUrl}`.trim();
-        const excludeTarget = `${title} ${lastSegment.replace(/[-_]+/g, " ")}`.trim();
+        const rawTitle = toCleanText($element.text());
+        const title = cleanJobPostTitle(rawTitle);
+        const textToMatch = `${rawTitle} ${jobUrl}`.trim();
+        const excludeTarget = `${rawTitle} ${lastSegment.replace(/[-_]+/g, " ")}`.trim();
 
-        if (!title) continue;
+        if (!rawTitle) continue;
         if (includePattern && !includePattern.test(textToMatch)) continue;
         if (excludePatterns.some((pattern) => pattern.test(excludeTarget))) continue;
         if (
           skipOldOnlineForms &&
-          shouldSkipOldOnlineForm({ title, lastSegment, years: yearsToSkip })
+          shouldSkipOldOnlineForm({ title: rawTitle, lastSegment, years: yearsToSkip })
         ) {
           continue;
         }
 
         if (strictJobOnly) {
-          const words = title.split(/\s+/).filter(Boolean);
-          const hasNumber = /\d/.test(title) || /\d/.test(lastSegment);
+          const words = rawTitle.split(/\s+/).filter(Boolean);
+          const hasNumber = /\d/.test(rawTitle) || /\d/.test(lastSegment);
           const isLikelyShortGeneric = words.length < 3 && !hasNumber;
           if (isSameAsSectionPath) continue;
           if (DEFAULT_GENERIC_JOB_PATHS.has(genericPath)) continue;
@@ -833,6 +835,7 @@ export const getSectionJobList = async ({
           const mergedTitleAliases = toUniqueTextArray([
             existingJob?.title || "",
             ...(existingJob?.titleAliases || []),
+            rawTitle,
             title,
           ]);
           const preferredTitle = pickPreferredJobTitle(
@@ -864,7 +867,10 @@ export const getSectionJobList = async ({
           section: section || null,
           siteName: siteName || null,
           title: title || null,
-          titleAliases: [],
+          titleAliases:
+            rawTitle && rawTitle.toLowerCase() !== String(title || "").toLowerCase()
+              ? [rawTitle]
+              : [],
           href: href || null,
           sourceSectionUrl: paginatedSectionUrl,
           jobUrl,
@@ -874,7 +880,7 @@ export const getSectionJobList = async ({
           selectorPathReadable: selectorMeta.selectorPathReadable,
           xpath: selectorMeta.xpath,
           selectors: selectorMeta.selectors,
-          dedupeHash: hashValue(`${normalizeTextForHash(title)}|${normalizeJobUrlForHash(jobUrl)}`),
+          dedupeHash: hashValue(`${normalizeTextForHash(title || rawTitle)}|${normalizeJobUrlForHash(jobUrl)}`),
         });
         jobIndexByUrl.set(dedupeKey, jobs.length - 1);
       }

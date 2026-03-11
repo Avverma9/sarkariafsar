@@ -6,6 +6,7 @@ import { formatJobJsonAdvanced } from "../utils/jsonFormatter.mjs";
 import { createJobUpdateDiff } from "../utils/jobUpdateDiff.mjs";
 import { sendJobUpdateNotification } from "../utils/jobUpdateMailer.mjs";
 import { invalidateAppCache } from "../utils/appCache.mjs";
+import { extractApplyLastDateMeta } from "../utils/jobApplyDate.mjs";
 
 const DEFAULT_SIMILARITY_THRESHOLD = 0.8;
 
@@ -357,6 +358,7 @@ export const syncStoredJobDetails = async ({
   let patchedCount = 0;
   let changedCount = 0;
   let failedCount = 0;
+  const applyLastDateUpdates = [];
 
   for (const item of selectedCandidates) {
     try {
@@ -375,6 +377,17 @@ export const syncStoredJobDetails = async ({
       if (result?.saved?.updated) updatedCount += 1;
       if (result?.saved?.patched) patchedCount += 1;
       if (result?.saved?.changed) changedCount += 1;
+
+      const applyLastDateMeta = extractApplyLastDateMeta({
+        jsonData: result?.jsonData,
+      });
+      if (applyLastDateMeta.applyLastDate) {
+        applyLastDateUpdates.push({
+          jobUrl: result?.saved?.detail?.jobUrl || item.jobUrl,
+          jobUrlHash: result?.saved?.detail?.jobUrlHash || item.jobUrlHash,
+          applyLastDate: applyLastDateMeta.applyLastDate,
+        });
+      }
     } catch (error) {
       failedCount += 1;
       console.error(
@@ -383,8 +396,27 @@ export const syncStoredJobDetails = async ({
     }
   }
 
-  if (createdCount > 0 || updatedCount > 0 || patchedCount > 0 || changedCount > 0) {
+  let applyLastDateUpdateSummary = {
+    matchedSections: 0,
+    updatedSections: 0,
+    updatedPosts: 0,
+  };
+
+  if (applyLastDateUpdates.length > 0) {
+    applyLastDateUpdateSummary = await govJobListModel.syncApplyLastDates({
+      updates: applyLastDateUpdates,
+    });
+  }
+
+  if (
+    createdCount > 0 ||
+    updatedCount > 0 ||
+    patchedCount > 0 ||
+    changedCount > 0 ||
+    applyLastDateUpdateSummary.updatedPosts > 0
+  ) {
     void invalidateAppCache("job-details");
+    void invalidateAppCache("job-lists");
   }
 
   return {
@@ -399,6 +431,7 @@ export const syncStoredJobDetails = async ({
     updatedCount,
     patchedCount,
     changedCount,
+    applyLastDateUpdatedPosts: applyLastDateUpdateSummary.updatedPosts,
     failedCount,
   };
 };
