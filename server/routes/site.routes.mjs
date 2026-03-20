@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   clearCacheStorageController,
+  createJobPostController,
   fetchStoredJobListController,
   findByTitleJobAndSchemeController,
   fetchJobByTitleController,
@@ -48,6 +49,9 @@ router.post("/sync-joblist", syncJobListController);
 // Scrape one job page and return only formatted HTML.
 router.get("/scrape/job-detail", scrapeJobDetailController);
 router.post("/scrape/job-detail", scrapeJobDetailController);
+
+// Manually create or update a job post in the database.
+router.post("/jobs", createJobPostController);
 
 // Fetch stored job detail from DB by title.
 router.get(

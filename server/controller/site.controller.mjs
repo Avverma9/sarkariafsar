@@ -981,6 +981,44 @@ export const siteGetController = async (req, res, next) => {
   }
 };
 
+export const createJobPostController = async (req, res, next) => {
+  try {
+    const jobUrl = String(getValue(req, "jobUrl", "")).trim();
+    if (!jobUrl) {
+      throw new Error("Missing required parameter: jobUrl");
+    }
+
+    const result = await govJobDetailModel.upsertFromScrape({
+      jobUrl,
+      formattedHtml: String(getValue(req, "formattedHtml", "")),
+      jsonData: getValue(req, "jsonData", null) ?? null,
+      section: String(getValue(req, "section", "")),
+      sourceSectionUrl: String(getValue(req, "sourceSectionUrl", "")),
+      pageTitle: String(getValue(req, "pageTitle", "")),
+      canonicalUrl: String(getValue(req, "canonicalUrl", "")),
+      metaDescription: String(getValue(req, "metaDescription", "")),
+      similarityThreshold: Number(getValue(req, "similarityThreshold", 0.8)),
+      extra: { title: String(getValue(req, "title", "")) },
+    });
+
+    if (result?.created || result?.updated || result?.changed) {
+      void invalidateAppCache("job-details");
+    }
+
+    return res.status(result?.created ? 201 : 200).json({
+      success: true,
+      created: Boolean(result?.created),
+      updated: Boolean(result?.updated),
+      changed: Boolean(result?.changed),
+      patched: Boolean(result?.patched),
+      similarityScore: Number(result?.similarityScore || 0),
+      job: result?.detail || null,
+    });
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export default {
   scrapeSiteSectionsController,
   scrapeSectionJobsController,
@@ -997,4 +1035,5 @@ export default {
   getJobSectionUrlsController,
   siteAddController,
   siteGetController,
+  createJobPostController,
 };
