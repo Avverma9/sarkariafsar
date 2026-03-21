@@ -4,9 +4,10 @@ import { useState } from "react";
 import Header from "./Header";
 import Footer from "./Footer";
 import Breadcrumbs from "./Breadcrumbs";
+import NativeBanner from "../ads/NativeBanner";
 import { useGlobalSearch } from "../../lib/useGlobalSearch";
 
-export default function PostPageShell({ children }) {
+export default function PostPageShell({ children, showTopBanner = true }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const {
     searchQuery,
@@ -36,6 +37,7 @@ export default function PostPageShell({ children }) {
       <main className="flex-grow pt-24 sm:pt-28">
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
           <Breadcrumbs className="mb-6 sm:mb-8" />
+          {showTopBanner ? <NativeBanner className="mb-6 sm:mb-8" /> : null}
         </div>
         {children}
       </main>

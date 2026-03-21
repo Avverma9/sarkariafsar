@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Header from "./layout/Header";
 import Footer from "./layout/Footer";
 import Breadcrumbs from "./layout/Breadcrumbs";
+import NativeBanner from "./ads/NativeBanner";
 import HeroSection from "./home/HeroSection";
 import UpdatesSection from "./home/UpdatesSection";
 import ReminderSection from "./home/ReminderSection";
@@ -312,6 +313,7 @@ export default function PortalApp({ initialData = {} }) {
 
       <main className="relative z-30 mx-auto w-full max-w-[1500px] flex-grow px-4 pt-6 pb-20 sm:px-6 lg:px-8">
         <Breadcrumbs className="mb-8" />
+        <NativeBanner className="mb-8" />
         <UpdatesSection
           filteredUpdates={filteredUpdates}
           onSelectItem={setSelectedItem}
@@ -319,6 +321,10 @@ export default function PortalApp({ initialData = {} }) {
           serverJobsBySection={serverJobsBySection}
         />
 
+        <NativeBanner
+          className="mt-10"
+          frameClassName="h-[260px] sm:h-[300px] lg:h-[320px]"
+        />
         <ReminderSection
           initialDays={reminderDays}
           initialJobs={reminderJobs}
@@ -333,7 +339,11 @@ export default function PortalApp({ initialData = {} }) {
           error={schemesError}
         />
 
+        <NativeBanner className="my-8" />
+
         <PlatformInfoSection />
+
+        <NativeBanner className="mt-8" />
       </main>
 
       <Footer />

@@ -212,7 +212,7 @@ export default async function PostSlugPage({ params, searchParams }) {
       : [];
 
   return (
-    <PostPageShell>
+    <PostPageShell showTopBanner={false}>
       <StructuredData data={structuredData} />
 
       {!jobUrl ? (

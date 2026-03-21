@@ -2,6 +2,7 @@
 
 import React from "react";
 import { CheckCircle2 } from "lucide-react";
+import NativeBanner from "../component/ads/NativeBanner";
 
 // ─────────────────────────────────────────────
 // Utility helpers
@@ -500,6 +501,11 @@ const PostHelper = ({ post }) => {
 
       {/* Structured Sections */}
       <div className="w-full space-y-2">
+        
+        <NativeBanner
+          className="mt-10"
+          frameClassName="h-[260px] sm:h-[300px] lg:h-[320px]"
+        />
         <IntroSection intro={introduction} />
         <DatesSection dates={important_dates} />
         <VacancySection vacancy={vacancy_details} />
@@ -509,17 +515,33 @@ const PostHelper = ({ post }) => {
             <strong className="text-blue-900">Note: </strong> {stripMd(toStr(vacancy_note.content || vacancy_note))}
           </div>
         )}
-        
+
+        {age_limit ? (
+          <NativeBanner
+            className="mt-10"
+            frameClassName="h-[260px] sm:h-[300px] lg:h-[320px]"
+          />
+        ) : null}
+
         <AgeSection age={age_limit} />
         <FeeSection fee={application_fee} />
         <SelectionSection selection={selection_process} />
         <HowToSection howTo={howToSection} />
         <FAQSection faq={faq} />
         
+        <NativeBanner
+          className="mt-10"
+          frameClassName="h-[260px] sm:h-[300px] lg:h-[320px]"
+        />
         {/* Table Links with "Click Here" */}
         <ClickHereLinksSection links={official_links?.links || official_links} />
         
         <DisclaimerSection text={disclaimer} />
+
+        <NativeBanner
+          className="mt-10"
+          frameClassName="h-[260px] sm:h-[300px] lg:h-[320px]"
+        />
       </div>
     </div>
   );
