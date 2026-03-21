@@ -12,11 +12,12 @@ import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
 import {
-  getAllGovSchemes,
-  getGovSchemeByState,
+  getGovSchemesList,
   getGovSchemeStateNameOnly,
 } from "../lib/govSchemesApi";
 import { useGlobalSearch } from "../lib/useGlobalSearch";
+
+const HOME_SCHEMES_LIMIT = 6;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -245,6 +246,7 @@ export default function PortalApp({ initialData = {} }) {
   } = initialData;
 
   const hasServerData = serverSchemes.length > 0 || serverSectionBlocks.length > 0;
+  const hasInitialSchemes = serverSchemes.length > 0;
 
   const {
     searchQuery,
@@ -265,14 +267,9 @@ export default function PortalApp({ initialData = {} }) {
   );
   const [statesLoading, setStatesLoading] = useState(false);
   const [schemesData, setSchemesData] = useState(serverSchemes);
-  const [schemesLoading, setSchemesLoading] = useState(!hasServerData);
-  const [hasLoadedSchemes, setHasLoadedSchemes] = useState(hasServerData);
+  const [schemesLoading, setSchemesLoading] = useState(!hasInitialSchemes);
+  const [hasLoadedSchemes, setHasLoadedSchemes] = useState(hasInitialSchemes);
   const [schemesError, setSchemesError] = useState("");
-  const shouldSkipInitialSchemeFetch =
-    selectedState === "All India" &&
-    hasServerData &&
-    schemesData.length > 0 &&
-    !hasLoadedSchemes;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -332,8 +329,11 @@ export default function PortalApp({ initialData = {} }) {
   }, [serverStatesList]);
 
   useEffect(() => {
-    if (shouldSkipInitialSchemeFetch) {
+    if (selectedState === "All India" && hasInitialSchemes) {
+      setSchemesData(serverSchemes);
+      setSchemesLoading(false);
       setHasLoadedSchemes(true);
+      setSchemesError("");
       return;
     }
 
@@ -344,10 +344,10 @@ export default function PortalApp({ initialData = {} }) {
       setSchemesError("");
 
       try {
-        const payload =
-          selectedState === "All India"
-            ? await getAllGovSchemes()
-            : await getGovSchemeByState(selectedState);
+        const payload = await getGovSchemesList({
+          state: selectedState === "All India" ? "" : selectedState,
+          limit: HOME_SCHEMES_LIMIT,
+        });
         const schemes = extractSchemes(payload).map((scheme, index) =>
           normalizeScheme(scheme, index, selectedState),
         );
@@ -377,9 +377,9 @@ export default function PortalApp({ initialData = {} }) {
     return () => {
       active = false;
     };
-  }, [selectedState, shouldSkipInitialSchemeFetch]);
+  }, [hasInitialSchemes, selectedState, serverSchemes]);
 
-  const localFilteredSchemes = schemesData.slice(0, 6);
+  const localFilteredSchemes = schemesData.slice(0, HOME_SCHEMES_LIMIT);
   const localFilteredUpdates = updatesData.filter((item) => {
     const matchesState = selectedState === "All India" || item.state === selectedState;
     return matchesState;

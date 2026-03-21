@@ -9,13 +9,17 @@ function asArray(value) {
 
 function createSectionCard(section, limit) {
   const items = asArray(section?.jobs).slice(0, limit);
+  const totalPosts =
+    Number.isFinite(Number(section?.jobsTotal))
+      ? Number(section.jobsTotal)
+      : asArray(section?.jobs).length;
 
   return {
     id: section?.id || section?.slug || "section",
     name: section?.name || "Section",
     href: section?.href || "/post",
     categoryKey: section?.categoryKey || "latest-jobs",
-    totalPosts: asArray(section?.jobs).length,
+    totalPosts,
     shownCount: items.length,
     items,
   };

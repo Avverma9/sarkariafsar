@@ -6,7 +6,6 @@ import {
 
 const DEFAULT_LIMIT = 24;
 const ALLOWED_LIMITS = [12, 24, 36, 48, 60];
-const MAX_SECTION_JOB_LIMIT = 100;
 
 function getFirstValue(value) {
   if (Array.isArray(value)) {
@@ -25,26 +24,8 @@ function normalizeQueryText(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
 }
 
-function filterJobsByQuery(jobs, query) {
-  const normalizedQuery = normalizeQueryText(query).toLowerCase();
-
-  if (!normalizedQuery) {
-    return Array.isArray(jobs) ? jobs : [];
-  }
-
-  return (Array.isArray(jobs) ? jobs : []).filter((job) =>
-    String(job?.title || "")
-      .toLowerCase()
-      .includes(normalizedQuery),
-  );
-}
-
-function getRequestedJobLimit({ limit, page, query }) {
-  if (normalizeQueryText(query)) {
-    return MAX_SECTION_JOB_LIMIT;
-  }
-
-  return Math.min(MAX_SECTION_JOB_LIMIT, Math.max(limit, page * limit));
+function getSectionIdentifier({ slug = "", sectionKeys = [], categoryKey = "" } = {}) {
+  return String(slug || getFirstValue(sectionKeys) || categoryKey || "").trim();
 }
 
 export function parseSectionJobsQuery(searchParams = {}) {
@@ -74,9 +55,14 @@ export async function loadSectionJobsPage({
   query = "",
 } = {}) {
   try {
+    const normalizedQuery = normalizeQueryText(query);
+    const sectionIdentifier = getSectionIdentifier({ slug, sectionKeys, categoryKey });
     const payload = await getSectionsWithJobs({
-      sectionLimit: 20,
-      jobLimit: getRequestedJobLimit({ limit, page, query }),
+      section: sectionIdentifier,
+      sectionLimit: 1,
+      jobPage: page,
+      jobLimit: limit,
+      jobSearch: normalizedQuery,
     });
     const sections = mapSectionsWithJobs(payload?.sections);
     const section = findSectionByIdentifier(sections, {
@@ -102,12 +88,20 @@ export async function loadSectionJobsPage({
     }
 
     const resolvedTitle = title || section.name || "Jobs";
-    const filteredJobs = filterJobsByQuery(section.jobs, query);
-    const totalPosts = filteredJobs.length;
-    const totalPages = Math.max(1, Math.ceil(totalPosts / limit));
-    const safePage = Math.min(Math.max(page, 1), totalPages);
-    const start = (safePage - 1) * limit;
-    const jobs = filteredJobs.slice(start, start + limit);
+    const jobs = Array.isArray(section?.jobs) ? section.jobs : [];
+    const totalPosts =
+      Number.isFinite(Number(section?.jobsTotal)) ? Number(section.jobsTotal) : jobs.length;
+    const totalPages = Math.max(
+      1,
+      Number.isFinite(Number(section?.jobsTotalPages))
+        ? Number(section.jobsTotalPages)
+        : Math.ceil(Math.max(totalPosts, 1) / limit),
+    );
+    const safePage = Math.min(
+      Math.max(Number(section?.jobsPage) || page || 1, 1),
+      totalPages,
+    );
+    const safeLimit = Number(section?.jobsLimit) > 0 ? Number(section.jobsLimit) : limit;
 
     return {
       title: resolvedTitle,
@@ -117,9 +111,9 @@ export async function loadSectionJobsPage({
       totalPosts,
       totalPages,
       page: safePage,
-      limit,
+      limit: safeLimit,
       view,
-      query: normalizeQueryText(query),
+      query: normalizedQuery,
       error: "",
     };
   } catch (error) {

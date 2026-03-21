@@ -1,6 +1,6 @@
 import { getJobReminders, getSectionsWithJobs } from "./siteApi";
 import {
-  getAllGovSchemes,
+  getGovSchemesList,
   getGovSchemeStateNameOnly,
 } from "./govSchemesApi";
 import { mapSectionsWithJobs } from "./sections";
@@ -140,7 +140,7 @@ export async function loadHomePageData() {
     await Promise.allSettled([
       getSectionsWithJobs({ sectionLimit: 20, jobLimit: 10 }),
       getGovSchemeStateNameOnly(),
-      getAllGovSchemes(),
+      getGovSchemesList({ limit: 6 }),
       getJobReminders({ days: 7 }),
     ]);
 

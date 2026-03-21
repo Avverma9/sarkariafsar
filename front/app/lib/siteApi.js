@@ -76,17 +76,23 @@ export async function getStoredJobLists({ section } = {}) {
 export async function getSectionsWithJobs({
   status = "active",
   search = "",
+  section = "",
   activeJobsOnly = "all",
   sectionLimit = 20,
+  jobPage = 1,
   jobLimit = 10,
+  jobSearch = "",
 } = {}) {
   return requestJson(
     `/section/get-all-sections-with-jobs${buildQueryString({
       status,
       search,
+      section,
       activeJobsOnly,
       sectionLimit,
+      jobPage,
       jobLimit,
+      jobSearch,
     })}`,
   );
 }

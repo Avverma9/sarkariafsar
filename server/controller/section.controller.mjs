@@ -28,8 +28,46 @@ const toInteger = (value, fallback = 0) => {
   return parsed;
 };
 
+const toPositiveInteger = (value, fallback = 1, { min = 1, max = 100 } = {}) => {
+  const parsed = toInteger(value, fallback);
+  return Math.max(min, Math.min(max, parsed));
+};
+
 const escapeRegExp = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const buildJobFilter = ({
+  canonicalUrl = "",
+  activeJobsOnly = "",
+  jobSearch = "",
+} = {}) => {
+  const query = {};
+
+  if (canonicalUrl) {
+    query.sectionCanonicalUrl = String(canonicalUrl).trim();
+  }
+
+  if (activeJobsOnly === "true") {
+    query.applyLastDate = { $gte: new Date() };
+  }
+
+  if (activeJobsOnly === "false") {
+    query.applyLastDate = { $lt: new Date() };
+  }
+
+  const normalizedSearch = String(jobSearch || "").trim();
+
+  if (normalizedSearch) {
+    const searchPattern = new RegExp(escapeRegExp(normalizedSearch), "i");
+    query.$or = [
+      { jobtitle: searchPattern },
+      { title: searchPattern },
+      { slug: searchPattern },
+    ];
+  }
+
+  return query;
+};
 
 const toPayload = (value = {}) => {
   const payload = toObject(value);
@@ -228,8 +266,22 @@ export const getAllSectionAndJobList = async (req, res, next) => {
     const status = String(getValue(req, "status", "active")).trim().toLowerCase() || "active";
     const search = String(getValue(req, "search", "")).trim();
     const activeJobsOnly = String(getValue(req, "activeJobsOnly", "")).trim().toLowerCase();
-    const sectionLimit = Math.max(1, Math.min(100, toInteger(getValue(req, "sectionLimit"), 20)));
-    const jobLimit = Math.max(1, Math.min(100, toInteger(getValue(req, "jobLimit"), 10)));
+    const requestedSection = String(
+      getValue(req, "section", getValue(req, "canonicalUrl", ""))
+    ).trim();
+    const sectionLimit = toPositiveInteger(getValue(req, "sectionLimit"), 20, {
+      min: 1,
+      max: 100,
+    });
+    const jobLimit = toPositiveInteger(getValue(req, "jobLimit", getValue(req, "limit")), 10, {
+      min: 1,
+      max: 100,
+    });
+    const jobPage = toPositiveInteger(getValue(req, "jobPage", getValue(req, "page")), 1, {
+      min: 1,
+      max: 1000,
+    });
+    const jobSearch = String(getValue(req, "jobSearch", getValue(req, "q", ""))).trim();
     const sectionQuery = {};
 
     if (status) {
@@ -240,51 +292,44 @@ export const getAllSectionAndJobList = async (req, res, next) => {
       sectionQuery.name = new RegExp(escapeRegExp(search), "i");
     }
 
-    const sections = await JobSection.find(sectionQuery)
-      .sort({ name: 1 })
-      .limit(sectionLimit);
-
-    const canonicalUrls = sections
-      .map((section) => String(section?.canonicalUrl || "").trim())
-      .filter(Boolean);
-
-    const jobQuery = {};
-    if (canonicalUrls.length > 0) {
-      jobQuery.sectionCanonicalUrl = { $in: canonicalUrls };
-    }
-    if (activeJobsOnly === "true") {
-      jobQuery.applyLastDate = { $gte: new Date() };
-    }
-    if (activeJobsOnly === "false") {
-      jobQuery.applyLastDate = { $lt: new Date() };
+    if (requestedSection) {
+      sectionQuery.canonicalUrl = toCanonicalUrl(requestedSection);
     }
 
-    const jobs = canonicalUrls.length > 0
-      ? await JobDetails.find(jobQuery).sort({ postDate: -1, createdAt: -1 })
-      : [];
+    const sections = await JobSection.find(sectionQuery).sort({ name: 1 }).limit(sectionLimit);
+    const safeJobPage = jobPage;
+    const jobSkip = (safeJobPage - 1) * jobLimit;
 
-    const jobsBySection = new Map();
-    for (const job of jobs) {
-      const key = String(job?.sectionCanonicalUrl || "").trim();
-      if (!key) continue;
+    const sectionsWithJobs = await Promise.all(
+      sections.map(async (section) => {
+        const canonicalUrl = String(section?.canonicalUrl || "").trim();
+        const jobQuery = buildJobFilter({
+          canonicalUrl,
+          activeJobsOnly,
+          jobSearch,
+        });
+        const [jobs, jobsTotal] = await Promise.all([
+          JobDetails.find(jobQuery)
+            .sort({ postDate: -1, createdAt: -1 })
+            .skip(jobSkip)
+            .limit(jobLimit),
+          JobDetails.countDocuments(jobQuery),
+        ]);
+        const jobsTotalPages = Math.max(1, Math.ceil(jobsTotal / jobLimit));
 
-      const existing = jobsBySection.get(key) || [];
-      if (existing.length < jobLimit) {
-        existing.push(job);
-      }
-      jobsBySection.set(key, existing);
-    }
-
-    const sectionsWithJobs = sections.map((section) => {
-      const canonicalUrl = String(section?.canonicalUrl || "").trim();
-      const sectionJobs = jobsBySection.get(canonicalUrl) || [];
-
-      return {
-        sectionName: String(section?.name || ""),
-        sectionCanonicalUrl: canonicalUrl,
-        jobs: sectionJobs.map(toJobResponse),
-      };
-    });
+        return {
+          ...toResponse(section),
+          sectionName: String(section?.name || ""),
+          sectionCanonicalUrl: canonicalUrl,
+          jobs: jobs.map(toJobResponse),
+          jobsPage: safeJobPage,
+          jobsLimit: jobLimit,
+          jobsTotal,
+          jobsTotalPages,
+          jobsHasMore: safeJobPage < jobsTotalPages,
+        };
+      }),
+    );
 
     return res.status(200).json({
       success: true,
@@ -292,9 +337,12 @@ export const getAllSectionAndJobList = async (req, res, next) => {
       filters: {
         status,
         search,
+        section: requestedSection || "",
         activeJobsOnly: activeJobsOnly || "all",
         sectionLimit,
+        jobPage: safeJobPage,
         jobLimit,
+        jobSearch,
       },
       sections: sectionsWithJobs,
     });

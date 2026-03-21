@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { updateBlocks as fallbackUpdateBlocks } from "./data";
 import { getSectionsWithJobs } from "../../lib/siteApi";
 import {
+  findSectionByIdentifier,
   mapSectionsWithJobs,
   normalizeSection,
   toSectionCategory,
@@ -89,6 +90,14 @@ function paginateItems(items, page = 1) {
   return safeItems.slice(start, start + PAGE_SIZE);
 }
 
+function getSectionLookupConfig(block) {
+  return {
+    slug: block?.slug || block?.canonicalUrl || "",
+    sectionKeys: [block?.id, block?.key, block?.canonicalUrl, block?.title],
+    categoryKey: block?.categoryKey,
+  };
+}
+
 export default function UpdatesSection({
   filteredUpdates,
   onSelectItem,
@@ -124,7 +133,7 @@ export default function UpdatesSection({
   const [isInitialLoading, setIsInitialLoading] = useState(!hasServerData);
 
   const loadModalJobs = useCallback(
-    (block, page = 1) => {
+    async (block, page = 1) => {
       if (!block) {
         return;
       }
@@ -132,14 +141,34 @@ export default function UpdatesSection({
       setModalLoading(true);
       setModalError("");
 
+      const cachedItems = asArray(jobsBySection[block.id]);
+
       try {
-        const apiItems = asArray(jobsBySection[block.id]);
+        const payload = await getSectionsWithJobs({
+          section: block?.canonicalUrl || block?.slug || block?.key || block?.id || "",
+          sectionLimit: 1,
+          jobPage: page,
+          jobLimit: PAGE_SIZE,
+        });
+        const sections = mapSectionsWithJobs(payload?.sections);
+        const matchedSection = findSectionByIdentifier(
+          sections,
+          getSectionLookupConfig(block),
+        );
+        const apiItems = asArray(matchedSection?.jobs);
+        const totalPages = Math.max(1, Number(matchedSection?.jobsTotalPages) || 1);
 
         if (apiItems.length > 0) {
-          const paginatedItems = paginateItems(apiItems, page);
-          setModalJobs(paginatedItems);
+          if (page === 1) {
+            setJobsBySection((current) => ({
+              ...current,
+              [block.id]: apiItems,
+            }));
+          }
+
+          setModalJobs(apiItems);
           setModalPage(page);
-          setModalHasMore(page * PAGE_SIZE < apiItems.length);
+          setModalHasMore(page < totalPages);
           return;
         }
 
@@ -162,9 +191,16 @@ export default function UpdatesSection({
         if (process.env.NODE_ENV !== "production") {
           console.error(`Failed to prepare modal jobs for section: ${block.title}`, error);
         }
-        setModalJobs([]);
-        setModalHasMore(false);
-        setModalError("Jobs load nahi ho paaye. Please retry.");
+        if (cachedItems.length > 0) {
+          setModalJobs(paginateItems(cachedItems, page));
+          setModalPage(page);
+          setModalHasMore(page * PAGE_SIZE < cachedItems.length);
+          setModalError("");
+        } else {
+          setModalJobs([]);
+          setModalHasMore(false);
+          setModalError("Jobs load nahi ho paaye. Please retry.");
+        }
       } finally {
         setModalLoading(false);
       }
@@ -176,7 +212,7 @@ export default function UpdatesSection({
     (block) => {
       setViewAllModal({ open: true, block });
       setModalSearch("");
-      loadModalJobs(block, 1);
+      void loadModalJobs(block, 1);
     },
     [loadModalJobs],
   );
@@ -522,7 +558,7 @@ export default function UpdatesSection({
                         return;
                       }
 
-                      loadModalJobs(viewAllModal.block, modalPage - 1);
+                      void loadModalJobs(viewAllModal.block, modalPage - 1);
                     }}
                     disabled={modalPage <= 1 || modalLoading}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
@@ -540,7 +576,7 @@ export default function UpdatesSection({
                         return;
                       }
 
-                      loadModalJobs(viewAllModal.block, modalPage + 1);
+                      void loadModalJobs(viewAllModal.block, modalPage + 1);
                     }}
                     disabled={!modalHasMore || modalLoading}
                     className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"

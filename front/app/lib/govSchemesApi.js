@@ -102,6 +102,22 @@ async function requestJson(path, params, options = {}) {
   return response.json();
 }
 
+export async function getGovSchemesList({
+  title = "",
+  state = "",
+  city = "",
+  page = 1,
+  limit = 20,
+} = {}) {
+  return requestJson("/", {
+    title,
+    state,
+    city,
+    page,
+    limit,
+  });
+}
+
 export async function getAllGovSchemes() {
   return requestJson("/getAllSchemes");
 }
