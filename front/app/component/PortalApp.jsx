@@ -10,14 +10,12 @@ import ReminderSection from "./home/ReminderSection";
 import SchemesSection from "./home/SchemesSection";
 import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
-import { statesList as fallbackStatesList, updatesData } from "./home/data";
-import {
-  getGovSchemesList,
-  getGovSchemeStateNameOnly,
-} from "../lib/govSchemesApi";
+import { updatesData } from "./home/data";
+import { getGovSchemesList } from "../lib/govSchemesApi";
 import { useGlobalSearch } from "../lib/useGlobalSearch";
 
 const HOME_SCHEMES_LIMIT = 6;
+const DEFAULT_STATE = "All India";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -43,48 +41,6 @@ function normalizeStateName(value) {
   }
 
   return state;
-}
-
-function uniqueStrings(values = []) {
-  const seen = new Set();
-  const result = [];
-
-  values.forEach((value) => {
-    const normalized = String(value || "").trim();
-    const key = normalized.toLowerCase();
-
-    if (!normalized || seen.has(key)) {
-      return;
-    }
-
-    seen.add(key);
-    result.push(normalized);
-  });
-
-  return result;
-}
-
-function getDefaultStates() {
-  return uniqueStrings(["All India", ...asArray(fallbackStatesList).map(normalizeStateName)]);
-}
-
-function extractStateNames(payload) {
-  const candidates = asArray(payload?.states).length
-    ? payload.states
-    : asArray(payload?.data).length
-      ? payload.data
-      : asArray(payload);
-
-  const names = candidates
-    .map((item) =>
-      typeof item === "string"
-        ? item
-        : firstNonEmpty([item?.state, item?.stateName, item?.name, item?.title]),
-    )
-    .map(normalizeStateName)
-    .filter((name) => name && name !== "All India");
-
-  return uniqueStrings(names);
 }
 
 function toStringArray(value) {
@@ -235,7 +191,6 @@ function normalizeScheme(scheme, index, selectedState) {
 
 export default function PortalApp({ initialData = {} }) {
   const {
-    statesList: serverStatesList = [],
     schemes: serverSchemes = [],
     sectionBlocks: serverSectionBlocks = [],
     jobsBySection: serverJobsBySection = {},
@@ -245,7 +200,6 @@ export default function PortalApp({ initialData = {} }) {
     reminderLoaded = false,
   } = initialData;
 
-  const hasServerData = serverSchemes.length > 0 || serverSectionBlocks.length > 0;
   const hasInitialSchemes = serverSchemes.length > 0;
 
   const {
@@ -257,15 +211,10 @@ export default function PortalApp({ initialData = {} }) {
     isSearchPanelActive,
     isDebouncingSearch,
   } = useGlobalSearch();
-  const [selectedState, setSelectedState] = useState("All India");
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isHeroSearchVisible, setIsHeroSearchVisible] = useState(true);
-  const [statesList, setStatesList] = useState(() =>
-    serverStatesList.length > 1 ? serverStatesList : getDefaultStates(),
-  );
-  const [statesLoading, setStatesLoading] = useState(false);
   const [schemesData, setSchemesData] = useState(serverSchemes);
   const [schemesLoading, setSchemesLoading] = useState(!hasInitialSchemes);
   const [hasLoadedSchemes, setHasLoadedSchemes] = useState(hasInitialSchemes);
@@ -281,55 +230,7 @@ export default function PortalApp({ initialData = {} }) {
   }, []);
 
   useEffect(() => {
-    // Skip if server already provided state names
-    if (serverStatesList.length > 1) return;
-
-    let active = true;
-
-    async function loadStateNames() {
-      if (active) {
-        setStatesLoading(true);
-      }
-
-      try {
-        const payload = await getGovSchemeStateNameOnly();
-        const apiStates = extractStateNames(payload);
-        const resolvedStates = uniqueStrings(["All India", ...apiStates]);
-
-        if (!active) {
-          return;
-        }
-
-        setStatesList(resolvedStates.length > 0 ? resolvedStates : getDefaultStates());
-        setSelectedState((current) =>
-          resolvedStates.includes(current) ? current : "All India",
-        );
-      } catch {
-        if (!active) {
-          return;
-        }
-
-        const fallbackStates = getDefaultStates();
-        setStatesList(fallbackStates);
-        setSelectedState((current) =>
-          fallbackStates.includes(current) ? current : "All India",
-        );
-      } finally {
-        if (active) {
-          setStatesLoading(false);
-        }
-      }
-    }
-
-    loadStateNames();
-
-    return () => {
-      active = false;
-    };
-  }, [serverStatesList]);
-
-  useEffect(() => {
-    if (selectedState === "All India" && hasInitialSchemes) {
+    if (hasInitialSchemes) {
       setSchemesData(serverSchemes);
       setSchemesLoading(false);
       setHasLoadedSchemes(true);
@@ -345,11 +246,11 @@ export default function PortalApp({ initialData = {} }) {
 
       try {
         const payload = await getGovSchemesList({
-          state: selectedState === "All India" ? "" : selectedState,
+          state: "",
           limit: HOME_SCHEMES_LIMIT,
         });
         const schemes = extractSchemes(payload).map((scheme, index) =>
-          normalizeScheme(scheme, index, selectedState),
+          normalizeScheme(scheme, index, DEFAULT_STATE),
         );
 
         if (!active) {
@@ -377,25 +278,17 @@ export default function PortalApp({ initialData = {} }) {
     return () => {
       active = false;
     };
-  }, [hasInitialSchemes, selectedState, serverSchemes]);
+  }, [hasInitialSchemes, serverSchemes]);
 
   const localFilteredSchemes = schemesData.slice(0, HOME_SCHEMES_LIMIT);
-  const localFilteredUpdates = updatesData.filter((item) => {
-    const matchesState = selectedState === "All India" || item.state === selectedState;
-    return matchesState;
-  });
+  const filteredUpdates = updatesData;
 
   const filteredSchemes = localFilteredSchemes;
-  const filteredUpdates = localFilteredUpdates;
 
   return (
     <div className="selection:bg-indigo-500 selection:text-white flex min-h-screen flex-col bg-[#f8fafc] font-sans text-slate-800">
       <Header
         scrolled={scrolled}
-        selectedState={selectedState}
-        setSelectedState={setSelectedState}
-        statesList={statesList}
-        statesLoading={statesLoading}
         isMobileMenuOpen={isMobileMenuOpen}
         setIsMobileMenuOpen={setIsMobileMenuOpen}
         showSearch={!isHeroSearchVisible}

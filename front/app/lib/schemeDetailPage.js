@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getAllGovSchemes } from "./govSchemesApi";
 import { buildSchemeSlug, isSchemeSlugMatch } from "./schemeSlug";
 
@@ -173,3 +174,7 @@ export async function loadSchemeDetailPageData(slug) {
     };
   }
 }
+
+export const loadCachedSchemeDetailPageData = cache(async (slug) =>
+  loadSchemeDetailPageData(slug),
+);

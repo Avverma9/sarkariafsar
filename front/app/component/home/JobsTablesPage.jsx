@@ -118,7 +118,7 @@ export default function JobsTablesPage({ cards, limit, error }) {
             return (
               <section
                 key={card?.id}
-                className="flex min-h-[560px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_-24px_rgba(15,23,42,0.6)]"
+                className="flex min-h-[560px] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_-24px_rgba(15,23,42,0.6)] [content-visibility:auto] [contain-intrinsic-size:560px]"
               >
                 <header className={`flex items-center gap-2 border-b px-4 py-3 ${style.bg} ${style.border}`}>
                   <span className="rounded-lg bg-white p-1.5 shadow-sm">

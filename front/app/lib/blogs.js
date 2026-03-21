@@ -1,4 +1,7 @@
 import baseUrl from "./baseUrl";
+import { buildJsonFetchOptions } from "./fetchConfig";
+
+const BLOGS_REVALIDATE_SECONDS = 3600;
 
 const CATEGORY_SEO_KEYWORDS = {
   guides: [
@@ -243,13 +246,14 @@ function extractSingleBlog(payload) {
 }
 
 async function requestBlogs(path) {
-  const response = await fetch(buildBlogsApiUrl(path), {
-    method: "GET",
-    cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const response = await fetch(
+    buildBlogsApiUrl(path),
+    buildJsonFetchOptions({
+      method: "GET",
+      revalidate: BLOGS_REVALIDATE_SECONDS,
+      tags: ["blogs"],
+    }),
+  );
 
   if (!response.ok) {
     let errorMessage = `Request failed with status ${response.status}`;

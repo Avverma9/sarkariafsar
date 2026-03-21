@@ -1,7 +1,10 @@
 import StructuredData from "../../component/seo/StructuredData";
 import FullContent from "../../component/post/FullContent";
 import PostPageShell from "../../component/layout/PostPageShell";
-import { getFirstValue, loadPostDetailPageData } from "../../lib/postDetailPage";
+import {
+  getFirstValue,
+  loadCachedPostDetailPageData,
+} from "../../lib/postDetailPage";
 import { redirect } from "next/navigation";
 import {
   absoluteUrl,
@@ -18,28 +21,34 @@ import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
 } from "../../lib/sectionJobsPage";
+import { getPostSectionConfig } from "../../lib/postSections";
 import { buildPostDetailsHref } from "../../lib/postLink";
 
-async function loadPostData(params, searchParams) {
+async function loadPostData(params, searchParams, options = {}) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
   const rawJobUrl = String(getFirstValue(resolvedSearchParams?.jobUrl) || "");
 
-  return loadPostDetailPageData({
-    params: { slug },
-    searchParams: rawJobUrl ? { jobUrl: rawJobUrl } : {},
-  });
+  return loadCachedPostDetailPageData(
+    slug,
+    rawJobUrl,
+    options.includeFormattedHtml !== false,
+  );
 }
 
 export async function generateMetadata({ params, searchParams }) {
   const resolvedParams = await params;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
-  const sectionData = await loadSectionJobsPage({
-    slug,
-    limit: 12,
-    page: 1,
-  });
+  const sectionConfig = getPostSectionConfig(slug);
+  const sectionData = sectionConfig
+    ? await loadSectionJobsPage({
+        slug: sectionConfig.canonicalSlug,
+        sectionKeys: sectionConfig.sectionKeys,
+        limit: 12,
+        page: 1,
+      })
+    : null;
 
   if (sectionData?.section) {
     return buildPageMetadata({
@@ -52,7 +61,9 @@ export async function generateMetadata({ params, searchParams }) {
   }
 
   // Post detail metadata
-  const { fetchError, post, canonicalKey } = await loadPostData(params, searchParams);
+  const { fetchError, post, canonicalKey } = await loadPostData(params, searchParams, {
+    includeFormattedHtml: false,
+  });
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
   const title = post?.header?.title || "Job Details";
   const description =
@@ -83,10 +94,14 @@ export default async function PostSlugPage({ params, searchParams }) {
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
   const resolvedSearchParams = await searchParams;
   const query = parseSectionJobsQuery(resolvedSearchParams);
-  const initialSectionData = await loadSectionJobsPage({
-    ...query,
-    slug,
-  });
+  const sectionConfig = getPostSectionConfig(slug);
+  const initialSectionData = sectionConfig
+    ? await loadSectionJobsPage({
+        ...query,
+        slug: sectionConfig.canonicalSlug,
+        sectionKeys: sectionConfig.sectionKeys,
+      })
+    : null;
 
   if (initialSectionData?.section) {
     const path = `/post/${initialSectionData.section.slug}`;
@@ -230,8 +245,9 @@ export default async function PostSlugPage({ params, searchParams }) {
         </div>
       ) : null}
 
-      {jobUrl && !fetchError && formattedHtml ? (
+      {jobUrl && !fetchError && (jobDetail || formattedHtml) ? (
         <FullContent
+          postData={jobDetail}
           formattedHtml={formattedHtml}
           title={title}
           backHref="/post"

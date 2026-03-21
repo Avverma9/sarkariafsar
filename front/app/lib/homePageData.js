@@ -1,8 +1,5 @@
 import { getJobReminders, getSectionsWithJobs } from "./siteApi";
-import {
-  getGovSchemesList,
-  getGovSchemeStateNameOnly,
-} from "./govSchemesApi";
+import { getGovSchemesList } from "./govSchemesApi";
 import { mapSectionsWithJobs } from "./sections";
 
 function asArray(value) {
@@ -19,40 +16,12 @@ function firstNonEmpty(values = []) {
 
 function normalizeStateName(value) {
   const state = String(value || "").trim();
+
   if (!state || state.toLowerCase() === "sabhi" || state.toLowerCase() === "all") {
     return "All India";
   }
+
   return state;
-}
-
-function uniqueStrings(values = []) {
-  const seen = new Set();
-  const result = [];
-  values.forEach((value) => {
-    const text = String(value || "").trim();
-    const key = text.toLowerCase();
-    if (!text || seen.has(key)) return;
-    seen.add(key);
-    result.push(text);
-  });
-  return result;
-}
-
-function extractStateNames(payload) {
-  const candidates = asArray(payload?.states).length
-    ? payload.states
-    : asArray(payload?.data).length
-      ? payload.data
-      : asArray(payload);
-  const names = candidates
-    .map((item) =>
-      typeof item === "string"
-        ? item
-        : firstNonEmpty([item?.state, item?.stateName, item?.name, item?.title]),
-    )
-    .map(normalizeStateName)
-    .filter((name) => name && name !== "All India");
-  return uniqueStrings(names);
 }
 
 function extractSchemes(payload) {
@@ -136,10 +105,9 @@ function buildJobsBySection(sections = []) {
  * Returns a plain-serializable object safe to pass as props.
  */
 export async function loadHomePageData() {
-  const [sectionsResult, statesResult, schemesResult, remindersResult] =
+  const [sectionsResult, schemesResult, remindersResult] =
     await Promise.allSettled([
       getSectionsWithJobs({ sectionLimit: 20, jobLimit: 10 }),
-      getGovSchemeStateNameOnly(),
       getGovSchemesList({ limit: 6 }),
       getJobReminders({ days: 7 }),
     ]);
@@ -147,11 +115,6 @@ export async function loadHomePageData() {
   const rawSectionsPayload =
     sectionsResult.status === "fulfilled" ? sectionsResult.value : null;
   const sections = mapSectionsWithJobs(rawSectionsPayload?.sections);
-
-  const rawStatesPayload =
-    statesResult.status === "fulfilled" ? statesResult.value : null;
-  const apiStates = rawStatesPayload ? extractStateNames(rawStatesPayload) : [];
-  const statesList = uniqueStrings(["All India", ...apiStates]);
 
   const rawSchemesPayload =
     schemesResult.status === "fulfilled" ? schemesResult.value : null;
@@ -165,7 +128,6 @@ export async function loadHomePageData() {
   return {
     sectionBlocks: sections,
     jobsBySection: buildJobsBySection(sections),
-    statesList: statesList.length > 1 ? statesList : [],
     schemes,
     reminderDays: 7,
     reminderJobs,

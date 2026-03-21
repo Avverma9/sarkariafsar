@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { buildCanonicalKey, formatPostDetail } from "./postFormatter";
 import {
   buildFormattedJobHtml,
@@ -92,7 +93,11 @@ async function fetchJobDetailByUrl(jobUrl) {
   return getJobByUrl(cleanJobUrl);
 }
 
-export async function loadPostDetailPageData({ params, searchParams }) {
+async function loadPostDetailPageDataInternal({
+  params,
+  searchParams,
+  includeFormattedHtml = true,
+}) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
   const slug = normalizeSlug(getFirstValue(resolvedParams?.slug));
@@ -128,7 +133,7 @@ export async function loadPostDetailPageData({ params, searchParams }) {
     slug ||
     buildCanonicalKey({ title, jobUrl: normalizedJobUrl }) ||
     "post-detail";
-  const formattedHtml = buildFormattedHtml(jobDetail);
+  const formattedHtml = includeFormattedHtml ? buildFormattedHtml(jobDetail) : "";
   const jobUrl = normalizedJobUrl || String(jobDetail?.slug || slug || "").trim();
 
   return {
@@ -143,3 +148,16 @@ export async function loadPostDetailPageData({ params, searchParams }) {
     hasJobUrlParam,
   };
 }
+
+export async function loadPostDetailPageData(options) {
+  return loadPostDetailPageDataInternal(options);
+}
+
+export const loadCachedPostDetailPageData = cache(
+  async (slug, rawJobUrl = "", includeFormattedHtml = true) =>
+    loadPostDetailPageDataInternal({
+      params: { slug },
+      searchParams: rawJobUrl ? { jobUrl: rawJobUrl } : {},
+      includeFormattedHtml,
+    }),
+);

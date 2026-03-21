@@ -22,7 +22,6 @@ import {
   toSectionCategory,
 } from "../../lib/sections";
 import { buildPostDetailsHref } from "../../lib/postLink";
-import UpdatesSectionSkeleton from "../skeletons/UpdatesSectionSkeleton";
 
 const PAGE_SIZE = 10;
 
@@ -130,7 +129,6 @@ export default function UpdatesSection({
   const [modalError, setModalError] = useState("");
   const [modalSearch, setModalSearch] = useState("");
   const [isMounted, setIsMounted] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(!hasServerData);
 
   const loadModalJobs = useCallback(
     async (block, page = 1) => {
@@ -293,10 +291,6 @@ export default function UpdatesSection({
     let active = true;
 
     async function loadSectionsAndJobs() {
-      if (active) {
-        setIsInitialLoading(true);
-      }
-
       try {
         const payload = await getSectionsWithJobs({
           sectionLimit: 20,
@@ -326,10 +320,6 @@ export default function UpdatesSection({
           setJobsBySection({});
           setLoadingBySection({});
         }
-      } finally {
-        if (active) {
-          setIsInitialLoading(false);
-        }
       }
     }
 
@@ -339,10 +329,6 @@ export default function UpdatesSection({
       active = false;
     };
   }, [fallbackBlocks, hasServerData]);
-
-  if (isInitialLoading) {
-    return <UpdatesSectionSkeleton />;
-  }
 
   return (
     <section className="mb-14" aria-labelledby="latest-updates-heading">

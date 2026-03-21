@@ -48,6 +48,8 @@ export default function HeroSection({
           src="https://images.unsplash.com/photo-1593113515822-7729f2736186?auto=format&fit=crop&q=80"
           alt=""
           fill
+          priority
+          quality={60}
           sizes="(min-width: 768px) 50vw, 100vw"
           className="absolute inset-0 h-full w-full object-cover opacity-40 transition-all duration-700 group-hover:scale-105 group-hover:opacity-50"
         />
@@ -84,6 +86,8 @@ export default function HeroSection({
           src="https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&q=80"
           alt=""
           fill
+          priority
+          quality={60}
           sizes="(min-width: 768px) 50vw, 100vw"
           className="absolute inset-0 h-full w-full object-cover opacity-40 transition-all duration-700 group-hover:scale-105 group-hover:opacity-50"
         />

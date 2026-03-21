@@ -2,7 +2,7 @@
 
 import { AlarmClockCheck, ArrowRight, CalendarClock, Search } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { buildPostDetailsHref } from "../../lib/postLink";
 import { getJobReminders } from "../../lib/siteApi";
 
@@ -73,11 +73,11 @@ export default function ReminderSection({
   );
   const [loading, setLoading] = useState(!initialLoaded);
   const [error, setError] = useState("");
-  const [shouldSkipInitialFetch, setShouldSkipInitialFetch] = useState(initialLoaded);
+  const shouldSkipInitialFetchRef = useRef(initialLoaded);
 
   useEffect(() => {
-    if (shouldSkipInitialFetch && selectedDays === initialDays) {
-      setShouldSkipInitialFetch(false);
+    if (shouldSkipInitialFetchRef.current && selectedDays === initialDays) {
+      shouldSkipInitialFetchRef.current = false;
       setLoading(false);
       return;
     }
@@ -120,7 +120,7 @@ export default function ReminderSection({
     return () => {
       active = false;
     };
-  }, [initialDays, selectedDays, shouldSkipInitialFetch]);
+  }, [initialDays, selectedDays]);
 
   return (
     <section className="mb-14" aria-labelledby="job-reminder-heading">

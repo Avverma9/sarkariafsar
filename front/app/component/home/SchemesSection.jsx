@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { buildSchemeSlug } from "../../lib/schemeSlug";
-import SchemesSectionSkeleton from "../skeletons/SchemesSectionSkeleton";
 
 const schemeIcons = {
   Landmark,
@@ -27,8 +26,8 @@ export default function SchemesSection({
 }) {
   const safeSchemes = Array.isArray(filteredSchemes) ? filteredSchemes : [];
 
-  if (loading || !hasLoaded) {
-    return <SchemesSectionSkeleton />;
+  if (!hasLoaded && loading) {
+    return null;
   }
 
   return (

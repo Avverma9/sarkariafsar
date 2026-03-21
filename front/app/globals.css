@@ -25,66 +25,6 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes skeletonShimmer {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(120%);
-  }
-}
-
-@keyframes skeletonPulse {
-  0%,
-  100% {
-    opacity: 0.92;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.skeleton-shimmer {
-  position: relative;
-  overflow: hidden;
-  background-color: #e2e8f0;
-  animation: skeletonPulse 1.8s ease-in-out infinite;
-}
-
-.skeleton-shimmer::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: linear-gradient(
-    100deg,
-    transparent 20%,
-    rgba(255, 255, 255, 0.72) 50%,
-    transparent 80%
-  );
-  animation: skeletonShimmer 1.45s ease-in-out infinite;
-}
-
-.skeleton-shimmer::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: repeating-linear-gradient(
-    -45deg,
-    rgba(255, 255, 255, 0.08) 0px,
-    rgba(255, 255, 255, 0.08) 2px,
-    transparent 2px,
-    transparent 8px
-  );
-  opacity: 0.35;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-shimmer,
-  .skeleton-shimmer::before {
-    animation: none;
-  }
-}
-
 /* Keep Google Translate overlays from shifting layout when using custom language buttons. */
 .goog-te-banner-frame.skiptranslate {
   display: none !important;

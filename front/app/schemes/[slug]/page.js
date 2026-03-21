@@ -2,7 +2,7 @@ import StructuredData from "../../component/seo/StructuredData";
 import { notFound, redirect } from "next/navigation";
 import PostPageShell from "../../component/layout/PostPageShell";
 import SchemeDetailPage from "../../component/scheme/SchemeDetailPage";
-import { loadSchemeDetailPageData } from "../../lib/schemeDetailPage";
+import { loadCachedSchemeDetailPageData } from "../../lib/schemeDetailPage";
 import {
   absoluteUrl,
   buildBreadcrumbSchema,
@@ -13,7 +13,7 @@ import {
 } from "../../lib/seo";
 
 async function loadSchemeData(slug) {
-  return loadSchemeDetailPageData(slug);
+  return loadCachedSchemeDetailPageData(slug);
 }
 
 export async function generateMetadata({ params }) {

@@ -71,7 +71,10 @@ const sections = [
 
 export default function PlatformInfoSection() {
   return (
-    <section id="platform-info" className="mt-16">
+    <section
+      id="platform-info"
+      className="mt-16 [content-visibility:auto] [contain-intrinsic-size:1600px]"
+    >
       <div className="mb-8 px-2">
         <h2 className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">
           SarkariAfsar Information Hub

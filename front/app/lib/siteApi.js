@@ -1,4 +1,9 @@
 import baseUrl from "./baseUrl";
+import { buildJsonFetchOptions } from "./fetchConfig";
+
+const SECTIONS_REVALIDATE_SECONDS = 300;
+const JOB_DETAIL_REVALIDATE_SECONDS = 300;
+const REMINDERS_REVALIDATE_SECONDS = 300;
 
 function normalizeApiBaseUrl(value) {
   const candidate = String(value || "").trim();
@@ -35,19 +40,10 @@ function buildQueryString(params = {}) {
 }
 
 async function requestJson(path, options = {}) {
-  const {
-    headers = {},
-    ...restOptions
-  } = options;
-  const fetchOptions = {
+  const fetchOptions = buildJsonFetchOptions({
     method: "GET",
-    cache: "no-store",
-    headers: {
-      "Content-Type": "application/json",
-      ...headers,
-    },
-    ...restOptions,
-  };
+    ...options,
+  });
 
   const response = await fetch(`${SITE_API_BASE_URL}${path}`, fetchOptions);
 
@@ -70,7 +66,10 @@ async function requestJson(path, options = {}) {
 }
 
 export async function getStoredJobLists({ section } = {}) {
-  return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`);
+  return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`, {
+    revalidate: SECTIONS_REVALIDATE_SECONDS,
+    tags: ["jobs-sections", "jobs-stored-lists"],
+  });
 }
 
 export async function getSectionsWithJobs({
@@ -94,21 +93,33 @@ export async function getSectionsWithJobs({
       jobLimit,
       jobSearch,
     })}`,
+    {
+      revalidate: SECTIONS_REVALIDATE_SECONDS,
+      tags: ["jobs-sections"],
+    },
   );
 }
 
 export async function getJobByUrl(jobUrl = "") {
-  return requestJson(`/fetch/job-by-url${buildQueryString({ jobUrl })}`);
+  return requestJson(`/fetch/job-by-url${buildQueryString({ jobUrl })}`, {
+    revalidate: JOB_DETAIL_REVALIDATE_SECONDS,
+    tags: ["job-detail"],
+  });
 }
 
 export async function getJobBySlug(slug = "") {
   const cleanSlug = String(slug || "").trim();
 
-  return requestJson(`/jobs/get-post-details/${encodeURIComponent(cleanSlug)}`);
+  return requestJson(`/jobs/get-post-details/${encodeURIComponent(cleanSlug)}`, {
+    revalidate: JOB_DETAIL_REVALIDATE_SECONDS,
+    tags: ["job-detail"],
+  });
 }
 
 export async function getJobReminders({ days = 7, signal } = {}) {
   return requestJson(`/jobs/reminder${buildQueryString({ days })}`, {
+    revalidate: REMINDERS_REVALIDATE_SECONDS,
+    tags: ["job-reminders"],
     signal,
   });
 }

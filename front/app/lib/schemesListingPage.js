@@ -179,14 +179,25 @@ export async function loadSchemesListingPage({
   state = "All India",
 } = {}) {
   try {
-    const statesPayload = await getGovSchemeStateNameOnly();
-    const stateOptions = uniqueStrings(["All India", ...extractStateNames(statesPayload)]);
-    const selectedState = stateOptions.includes(state) ? state : "All India";
+    const requestedState = normalizeStateName(state) || "All India";
+    const statesPromise = getGovSchemeStateNameOnly();
+    const schemesPromise =
+      requestedState === "All India"
+        ? getAllGovSchemes()
+        : getGovSchemeByState(requestedState);
 
+    const [statesPayload, initialSchemesPayload] = await Promise.all([
+      statesPromise,
+      schemesPromise,
+    ]);
+    const stateOptions = uniqueStrings(["All India", ...extractStateNames(statesPayload)]);
+    const selectedState = stateOptions.includes(requestedState) ? requestedState : "All India";
     const schemesPayload =
-      selectedState === "All India"
-        ? await getAllGovSchemes()
-        : await getGovSchemeByState(selectedState);
+      selectedState === requestedState
+        ? initialSchemesPayload
+        : selectedState === "All India"
+          ? await getAllGovSchemes()
+          : await getGovSchemeByState(selectedState);
 
     const cards = extractSchemes(schemesPayload).map((scheme, index) =>
       normalizeSchemeCard(scheme, index, selectedState),
