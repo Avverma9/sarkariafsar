@@ -1,5 +1,6 @@
 import { getJobReminders, getSectionsWithJobs } from "./siteApi";
 import { getGovSchemesList } from "./govSchemesApi";
+import { assessSchemeContentQuality, createExcerpt } from "./contentQuality";
 import { mapSectionsWithJobs } from "./sections";
 
 function asArray(value) {
@@ -73,23 +74,34 @@ function normalizeScheme(scheme, index) {
   const category = firstNonEmpty([scheme?.schemetype, scheme?.schemeType, scheme?.category, "Government Scheme"]);
   const state = firstNonEmpty([normalizeStateName(scheme?.state), normalizeStateName(scheme?.stateName), "All India"]);
   const aboutScheme = firstNonEmpty([scheme?.aboutScheme, scheme?.description, scheme?.shortDesc, scheme?.benefits]);
-  const shortDesc = aboutScheme.slice(0, 180);
   const process = toProcessSteps(scheme?.process);
   const documents = toStringArray(scheme?.requiredDocs || scheme?.documents);
   const visual = getSchemeVisual(category);
-  return {
-    id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
-    type: "scheme",
+  const quality = assessSchemeContentQuality({
     title,
     category,
     state,
-    shortDesc: shortDesc || "Yojana details available in official source.",
-    benefits: aboutScheme || "Yojana details available in official source.",
-    process: process.length > 0 ? process : ["Official source par jakar scheme ki poori process check karein."],
-    documents: documents.length > 0 ? documents : ["Aadhar Card", "Bank Account Details"],
+    about: aboutScheme,
+    process,
+    documents,
+    applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
+    schemeStartDate: scheme?.schemeStartDate,
+    schemeLastDate: scheme?.schemeLastDate,
+  });
+  return {
+    id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
+    type: "scheme",
+    title: quality.title || title,
+    category,
+    state,
+    shortDesc: quality.summary || createExcerpt(aboutScheme, 180),
+    benefits: quality.about,
+    process: quality.process,
+    documents: quality.documents,
     icon: visual.icon,
     iconColor: visual.iconColor,
     applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
+    indexable: quality.cardIndexable,
   };
 }
 
@@ -119,7 +131,9 @@ export async function loadHomePageData() {
   const rawSchemesPayload =
     schemesResult.status === "fulfilled" ? schemesResult.value : null;
   const schemes = rawSchemesPayload
-    ? extractSchemes(rawSchemesPayload).map((s, i) => normalizeScheme(s, i))
+    ? extractSchemes(rawSchemesPayload)
+        .map((s, i) => normalizeScheme(s, i))
+        .filter((scheme) => scheme.indexable)
     : [];
   const rawRemindersPayload =
     remindersResult.status === "fulfilled" ? remindersResult.value : null;

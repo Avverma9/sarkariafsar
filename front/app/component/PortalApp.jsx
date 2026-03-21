@@ -13,6 +13,7 @@ import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
 import { updatesData } from "./home/data";
 import { getGovSchemesList } from "../lib/govSchemesApi";
+import { assessSchemeContentQuality, createExcerpt } from "../lib/contentQuality";
 import { useGlobalSearch } from "../lib/useGlobalSearch";
 
 const HOME_SCHEMES_LIMIT = 6;
@@ -165,28 +166,35 @@ function normalizeScheme(scheme, index, selectedState) {
     scheme?.shortDesc,
     scheme?.benefits,
   ]);
-  const shortDesc = aboutScheme.slice(0, 180);
   const process = toProcessSteps(scheme?.process);
   const documents = toStringArray(scheme?.requiredDocs || scheme?.documents);
   const visual = getSchemeVisual(category);
+  const quality = assessSchemeContentQuality({
+    title,
+    category,
+    state,
+    about: aboutScheme,
+    process,
+    documents,
+    applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
+    schemeStartDate: scheme?.schemeStartDate,
+    schemeLastDate: scheme?.schemeLastDate,
+  });
 
   return {
     id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
     type: "scheme",
-    title,
+    title: quality.title || title,
     category,
     state,
-    shortDesc: shortDesc || "Yojana details available in official source.",
-    benefits: aboutScheme || "Yojana details available in official source.",
-    process:
-      process.length > 0
-        ? process
-        : ["Official source par jakar scheme ki poori process check karein."],
-    documents:
-      documents.length > 0 ? documents : ["Aadhar Card", "Bank Account Details"],
+    shortDesc: quality.summary || createExcerpt(aboutScheme, 180),
+    benefits: quality.about,
+    process: quality.process,
+    documents: quality.documents,
     icon: visual.icon,
     iconColor: visual.iconColor,
     applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
+    indexable: quality.cardIndexable,
   };
 }
 
@@ -252,7 +260,7 @@ export default function PortalApp({ initialData = {} }) {
         });
         const schemes = extractSchemes(payload).map((scheme, index) =>
           normalizeScheme(scheme, index, DEFAULT_STATE),
-        );
+        ).filter((scheme) => scheme.indexable);
 
         if (!active) {
           return;

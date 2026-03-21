@@ -33,11 +33,15 @@ export async function generateMetadata({ params }) {
 
   return buildPageMetadata({
     title,
-    description: pageData.scheme.about || "Detailed information about this government scheme.",
+    description:
+      pageData.scheme.quality?.summary ||
+      pageData.scheme.about ||
+      "Detailed information about this government scheme.",
     path: `/schemes/${pageData.canonicalSlug || slug}`,
     keywords: ["scheme details", pageData.scheme.category, pageData.scheme.state],
     type: "article",
     category: pageData.scheme.category,
+    noIndex: Boolean(pageData.scheme.quality?.noIndex),
   });
 }
 
@@ -60,30 +64,38 @@ export default async function SchemeDetailRoute({ params }) {
     { name: "Schemes", url: "/schemes" },
     { name: pageData.scheme.title, url: path },
   ];
-  const structuredData = [
-    buildBreadcrumbSchema(breadcrumbItems, { path }),
-    buildWebPageSchema({
-      title: pageData.scheme.title,
-      description: pageData.scheme.about,
-      path,
-      breadcrumbItems,
-      mainEntityId: absoluteUrl(`${path}#service`),
-    }),
-    buildGovernmentServiceSchema({
-      title: pageData.scheme.title,
-      description: pageData.scheme.about,
-      path,
-      category: pageData.scheme.category,
-      state: pageData.scheme.state,
-      applyLink: pageData.scheme.applyLink,
-    }),
-    buildHowToSchema({
-      title: `${pageData.scheme.title} application process`,
-      description: pageData.scheme.about,
-      path,
-      steps: pageData.scheme.process,
-    }),
-  ];
+  const description =
+    pageData.scheme.quality?.summary || pageData.scheme.about || pageData.scheme.title;
+  const structuredData = pageData.scheme.quality?.noIndex
+    ? [buildBreadcrumbSchema(breadcrumbItems, { path })]
+    : [
+        buildBreadcrumbSchema(breadcrumbItems, { path }),
+        buildWebPageSchema({
+          title: pageData.scheme.title,
+          description,
+          path,
+          breadcrumbItems,
+          mainEntityId: absoluteUrl(`${path}#service`),
+        }),
+        buildGovernmentServiceSchema({
+          title: pageData.scheme.title,
+          description,
+          path,
+          category: pageData.scheme.category,
+          state: pageData.scheme.state,
+          applyLink: pageData.scheme.applyLink,
+        }),
+        ...(pageData.scheme.process?.length
+          ? [
+              buildHowToSchema({
+                title: `${pageData.scheme.title} application process`,
+                description,
+                path,
+                steps: pageData.scheme.process,
+              }),
+            ]
+          : []),
+      ];
 
   return (
     <PostPageShell>

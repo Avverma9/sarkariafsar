@@ -4,16 +4,26 @@ import SchemesListingPage from "../component/scheme/SchemesListingPage";
 import {
   loadSchemesListingPage,
   parseSchemesListingQuery,
+  SCHEMES_LISTING_DEFAULT_LIMIT,
 } from "../lib/schemesListingPage";
+import { shouldNoIndexCollectionView } from "../lib/contentQuality";
 import { absoluteUrl, buildBreadcrumbSchema, buildCollectionPageSchema, buildItemListSchema, buildPageMetadata } from "../lib/seo";
 
-export const metadata = buildPageMetadata({
-  title: "Government Schemes",
-  description:
-    "Central aur state level government schemes ka searchable listing page with state-wise filters.",
-  path: "/schemes",
-  keywords: ["government schemes", "schemes listing", "state schemes"],
-});
+export async function generateMetadata({ searchParams }) {
+  const query = parseSchemesListingQuery(await searchParams);
+
+  return buildPageMetadata({
+    title: "Government Schemes",
+    description:
+      "Central aur state level government schemes ka searchable listing page with state-wise filters.",
+    path: "/schemes",
+    keywords: ["government schemes", "schemes listing", "state schemes"],
+    noIndex: shouldNoIndexCollectionView(query, {
+      defaultLimit: SCHEMES_LISTING_DEFAULT_LIMIT,
+      defaultState: "All India",
+    }),
+  });
+}
 
 export default async function SchemesPage({ searchParams }) {
   const query = parseSchemesListingQuery(await searchParams);

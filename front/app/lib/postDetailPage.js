@@ -4,6 +4,7 @@ import {
   buildFormattedJobHtml,
   formatRichJobDetail,
 } from "./jobDetailFormatter";
+import { assessPostContentQuality } from "./contentQuality";
 import { getJobBySlug, getJobByUrl } from "./siteApi";
 
 export function getFirstValue(value) {
@@ -127,6 +128,7 @@ async function loadPostDetailPageDataInternal({
 
   const jobDetail = detailPayload?.job || null;
   const post = buildPostFromJobDetail(jobDetail);
+  const quality = assessPostContentQuality({ jobDetail, post });
   const title = post?.header?.title || jobDetail?.title || jobDetail?.jobtitle || "";
   const canonicalKey =
     normalizeSlug(jobDetail?.slug) ||
@@ -143,6 +145,7 @@ async function loadPostDetailPageDataInternal({
     detailPayload,
     jobDetail,
     post,
+    quality,
     canonicalKey,
     formattedHtml,
     hasJobUrlParam,

@@ -20,9 +20,11 @@ import SectionJobsPage from "../../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
+  SECTION_JOBS_DEFAULT_LIMIT,
 } from "../../lib/sectionJobsPage";
 import { getPostSectionConfig } from "../../lib/postSections";
 import { buildPostDetailsHref } from "../../lib/postLink";
+import { shouldNoIndexCollectionView } from "../../lib/contentQuality";
 
 async function loadPostData(params, searchParams, options = {}) {
   const resolvedParams = await params;
@@ -40,6 +42,7 @@ async function loadPostData(params, searchParams, options = {}) {
 export async function generateMetadata({ params, searchParams }) {
   const resolvedParams = await params;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
+  const query = parseSectionJobsQuery(await searchParams);
   const sectionConfig = getPostSectionConfig(slug);
   const sectionData = sectionConfig
     ? await loadSectionJobsPage({
@@ -57,18 +60,21 @@ export async function generateMetadata({ params, searchParams }) {
         sectionData.description || `Latest updates from ${sectionData.section.name}.`,
       path: `/post/${sectionData.section.slug}`,
       keywords: ["jobs section", sectionData.title, sectionData.section.slug],
+      noIndex: shouldNoIndexCollectionView(query, {
+        defaultLimit: SECTION_JOBS_DEFAULT_LIMIT,
+      }),
     });
   }
 
   // Post detail metadata
-  const { fetchError, post, canonicalKey } = await loadPostData(params, searchParams, {
+  const { fetchError, post, canonicalKey, quality } = await loadPostData(params, searchParams, {
     includeFormattedHtml: false,
   });
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
   const title = post?.header?.title || "Job Details";
   const description =
-    post?.shortInfo?.[0] ||
-    post?.importantDates?.[0] ||
+    quality?.description ||
+    post?.header?.shortInfo ||
     "Detailed government job update with important dates, eligibility and links.";
 
   if (!post || fetchError) {
@@ -86,6 +92,7 @@ export async function generateMetadata({ params, searchParams }) {
     path: `/post/${resolvedCanonicalKey}`,
     keywords: ["job details", "sarkari post", "apply online", title],
     type: "article",
+    noIndex: Boolean(quality?.noIndex),
   });
 }
 
@@ -155,7 +162,7 @@ export default async function PostSlugPage({ params, searchParams }) {
   }
 
   // Otherwise render post detail
-  const { jobUrl, fetchError, jobDetail, post, canonicalKey, formattedHtml } =
+  const { jobUrl, fetchError, jobDetail, post, canonicalKey, formattedHtml, quality } =
     await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
@@ -173,11 +180,11 @@ export default async function PostSlugPage({ params, searchParams }) {
   const path = `/post/${resolvedCanonicalKey}`;
   const title = post?.header?.title || "Job Details";
   const description =
-    post?.shortInfo?.[0] ||
-    post?.importantDates?.[0] ||
+    quality?.description ||
+    post?.header?.shortInfo ||
     "Detailed government job update with important dates, eligibility and links.";
   const structuredData =
-    jobUrl && !fetchError && jobDetail && post
+    jobUrl && !fetchError && jobDetail && post && !quality?.noIndex
       ? [
           buildBreadcrumbSchema(
             [

@@ -4,7 +4,9 @@ import SectionJobsPage from "../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
+  SECTION_JOBS_DEFAULT_LIMIT,
 } from "../lib/sectionJobsPage";
+import { shouldNoIndexCollectionView } from "../lib/contentQuality";
 import {
   absoluteUrl,
   buildBreadcrumbSchema,
@@ -14,13 +16,20 @@ import {
 } from "../lib/seo";
 import { buildPostDetailsHref } from "../lib/postLink";
 
-export const metadata = buildPageMetadata({
-  title: "Admit Cards",
-  description:
-    "Latest admit card aur exam date updates. Sarkari exams ke hall ticket links aur related details yahan milenge.",
-  path: "/admit-cards",
-  keywords: ["admit card", "hall ticket", "exam date"],
-});
+export async function generateMetadata({ searchParams }) {
+  const query = parseSectionJobsQuery(await searchParams);
+
+  return buildPageMetadata({
+    title: "Admit Cards",
+    description:
+      "Latest admit card aur exam date updates. Sarkari exams ke hall ticket links aur related details yahan milenge.",
+    path: "/admit-cards",
+    keywords: ["admit card", "hall ticket", "exam date"],
+    noIndex: shouldNoIndexCollectionView(query, {
+      defaultLimit: SECTION_JOBS_DEFAULT_LIMIT,
+    }),
+  });
+}
 
 export default async function AdmitCardsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);

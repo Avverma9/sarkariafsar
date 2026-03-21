@@ -3,10 +3,15 @@ import {
   getGovSchemeByState,
   getGovSchemeStateNameOnly,
 } from "./govSchemesApi";
+import {
+  assessSchemeContentQuality,
+  createExcerpt,
+} from "./contentQuality";
 import { buildSchemeSlug } from "./schemeSlug";
 
 const DEFAULT_LIMIT = 12;
 const ALLOWED_LIMITS = [12, 24, 36, 48, 60];
+export const SCHEMES_LISTING_DEFAULT_LIMIT = DEFAULT_LIMIT;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -125,17 +130,28 @@ function normalizeSchemeCard(scheme, index, selectedState) {
     scheme?.description,
     scheme?.shortDesc,
     scheme?.benefits,
-    "Scheme details available in official source.",
   ]);
-
-  return {
-    id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
+  const quality = assessSchemeContentQuality({
     title,
     category,
     state,
     about,
+    process: scheme?.process,
+    documents: scheme?.requiredDocs || scheme?.documents,
+    applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
+    schemeStartDate: scheme?.schemeStartDate,
+    schemeLastDate: scheme?.schemeLastDate,
+  });
+
+  return {
+    id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
+    title: quality.title || title,
+    category,
+    state,
+    about: quality.summary || createExcerpt(about, 180),
     applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
     slug: buildSchemeSlug(scheme),
+    indexable: quality.cardIndexable,
   };
 }
 
@@ -199,9 +215,9 @@ export async function loadSchemesListingPage({
           ? await getAllGovSchemes()
           : await getGovSchemeByState(selectedState);
 
-    const cards = extractSchemes(schemesPayload).map((scheme, index) =>
-      normalizeSchemeCard(scheme, index, selectedState),
-    );
+    const cards = extractSchemes(schemesPayload)
+      .map((scheme, index) => normalizeSchemeCard(scheme, index, selectedState))
+      .filter((item) => item.indexable);
     const filtered = filterSchemesByQuery(cards, query);
     const totalItems = filtered.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / limit));

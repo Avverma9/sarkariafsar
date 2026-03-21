@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { getAllGovSchemes } from "./govSchemesApi";
+import { assessSchemeContentQuality } from "./contentQuality";
 import { buildSchemeSlug, isSchemeSlugMatch } from "./schemeSlug";
 
 function asArray(value) {
@@ -122,28 +123,33 @@ function normalizeSchemeDetail(scheme) {
     scheme?.description,
     scheme?.shortDesc,
     scheme?.benefits,
-    "Scheme details available in official source.",
   ]);
   const process = toProcessSteps(scheme?.process);
   const documents = toStringArray(scheme?.requiredDocs || scheme?.documents);
   const applyLink = firstNonEmpty([scheme?.applyLink, scheme?.officialLink]);
 
-  return {
+  const normalized = {
     id: scheme?.id || scheme?._id || "",
     title,
     category,
     state,
     city,
     about,
-    process:
-      process.length > 0
-        ? process
-        : ["Official source par jakar scheme ki poori process check karein."],
-    documents:
-      documents.length > 0 ? documents : ["Aadhar Card", "Bank Account Details"],
+    process,
+    documents,
     applyLink,
     schemeStartDate: formatDate(scheme?.schemeStartDate),
-    schemeLastDate: formatDate(scheme?.schemeLastDate) || "N/A",
+    schemeLastDate: formatDate(scheme?.schemeLastDate) || "",
+  };
+  const quality = assessSchemeContentQuality(normalized);
+
+  return {
+    ...normalized,
+    about: quality.about,
+    process: quality.process,
+    documents: quality.documents,
+    schemeLastDate: normalized.schemeLastDate || "N/A",
+    quality,
   };
 }
 

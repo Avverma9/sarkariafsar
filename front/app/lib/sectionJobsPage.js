@@ -6,6 +6,7 @@ import {
 
 const DEFAULT_LIMIT = 24;
 const ALLOWED_LIMITS = [12, 24, 36, 48, 60];
+export const SECTION_JOBS_DEFAULT_LIMIT = DEFAULT_LIMIT;
 
 function getFirstValue(value) {
   if (Array.isArray(value)) {

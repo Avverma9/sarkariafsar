@@ -1,4 +1,5 @@
 import { getAllGovSchemes } from "./lib/govSchemesApi";
+import { assessSchemeContentQuality } from "./lib/contentQuality";
 import { buildSchemeSlug } from "./lib/schemeSlug";
 import { getSectionsWithJobs } from "./lib/siteApi";
 import { absoluteUrl } from "./lib/seo";
@@ -80,9 +81,10 @@ async function getSchemeEntries() {
 
     return schemes
       .map((scheme) => {
+        const quality = assessSchemeContentQuality(scheme);
         const slug = buildSchemeSlug(scheme);
 
-        if (!slug) {
+        if (!slug || quality.noIndex) {
           return null;
         }
 

@@ -4,7 +4,9 @@ import SectionJobsPage from "../component/home/SectionJobsPage";
 import {
   loadSectionJobsPage,
   parseSectionJobsQuery,
+  SECTION_JOBS_DEFAULT_LIMIT,
 } from "../lib/sectionJobsPage";
+import { shouldNoIndexCollectionView } from "../lib/contentQuality";
 import {
   absoluteUrl,
   buildBreadcrumbSchema,
@@ -14,13 +16,20 @@ import {
 } from "../lib/seo";
 import { buildPostDetailsHref } from "../lib/postLink";
 
-export const metadata = buildPageMetadata({
-  title: "Latest Results",
-  description:
-    "Sarkari exam results aur answer key updates ek jagah. Search aur pagination ke saath updated result listing.",
-  path: "/results",
-  keywords: ["exam results", "sarkari result", "answer key"],
-});
+export async function generateMetadata({ searchParams }) {
+  const query = parseSectionJobsQuery(await searchParams);
+
+  return buildPageMetadata({
+    title: "Latest Results",
+    description:
+      "Sarkari exam results aur answer key updates ek jagah. Search aur pagination ke saath updated result listing.",
+    path: "/results",
+    keywords: ["exam results", "sarkari result", "answer key"],
+    noIndex: shouldNoIndexCollectionView(query, {
+      defaultLimit: SECTION_JOBS_DEFAULT_LIMIT,
+    }),
+  });
+}
 
 export default async function ResultsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);
