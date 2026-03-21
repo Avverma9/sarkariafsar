@@ -26,9 +26,10 @@ export default async function ResultsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);
   const pageData = await loadSectionJobsPage({
     ...query,
-    sectionKeys: ["results", "result", "exam_result", "latest_result"],
+    slug: "results",
+    categoryKey: "results",
     title: "Latest Results",
-    description: "All result and answer-key related updates from configured source section URLs.",
+    description: "All result and answer-key related updates from the latest section feed.",
   });
   const breadcrumbItems = [
     { name: "Home", url: "/" },
@@ -48,12 +49,11 @@ export default async function ResultsPage({ searchParams }) {
       name: "Latest result updates",
       items: pageData.jobs.map((job) => ({
         name: job?.title || "Result update",
-        url: job?.jobUrl
-          ? buildPostDetailsHref({
-              title: job?.title,
-              jobUrl: job?.jobUrl,
-            })
-          : "/results",
+        url: buildPostDetailsHref({
+          title: job?.title,
+          slug: job?.slug,
+          jobUrl: job?.jobUrl,
+        }),
       })),
     }),
   ];

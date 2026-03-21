@@ -2,12 +2,7 @@ import { ArrowRight, Briefcase, Landmark, Search } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { buildPostDetailsHref } from "../../lib/postLink";
-import { buildSchemeSlug } from "../../lib/schemeSlug";
-
-function normalizeSearchType(value) {
-  return String(value || "").trim().toLowerCase();
-}
+import SearchResultsPanel from "../search/SearchResultsPanel";
 
 export default function HeroSection({
   searchQuery,
@@ -172,21 +167,21 @@ export default function HeroSection({
       >
         <div
           role="search"
-          aria-label="Search jobs and schemes"
+          aria-label="Search jobs, blogs and schemes"
           className="flex w-full flex-col gap-2 rounded-2xl border border-slate-100 bg-white p-2 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.3)] md:flex-row md:rounded-full md:p-3"
         >
           <div className="flex flex-grow items-center px-4 py-3 md:py-2">
             <Search className="mr-4 h-7 w-7 text-indigo-500" />
             <label htmlFor="site-search" className="sr-only">
-              Search government jobs and schemes
+              Search government jobs, blogs and schemes
             </label>
             <input
               id="site-search"
               type="text"
-              placeholder="Ex: SSC CGL, PM Kisan, UP Police..."
+              placeholder="Ex: SSC CGL, PM Kisan, scholarship, blog..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              aria-label="Search government jobs and schemes"
+              aria-label="Search government jobs, blogs and schemes"
               className="w-full bg-transparent text-lg font-bold text-slate-800 outline-none placeholder:text-slate-400 md:text-xl"
             />
           </div>
@@ -200,104 +195,13 @@ export default function HeroSection({
         </div>
 
         {showSearchResults ? (
-          <div className="mt-3 w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white/95 shadow-[0_20px_45px_-25px_rgba(15,23,42,0.45)] backdrop-blur">
-            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-              <p className="text-xs font-black tracking-wide text-slate-500 uppercase">
-                Search Results
-              </p>
-              {!searchLoading && !searchError ? (
-                <p className="text-[11px] font-bold text-slate-400">
-                  {visibleResults.length} item{visibleResults.length === 1 ? "" : "s"}
-                </p>
-              ) : null}
-            </div>
-
-            <div className="max-h-72 overflow-y-auto p-2">
-              {searchLoading ? (
-                <div className="flex items-center gap-2 rounded-xl px-3 py-4 text-sm font-semibold text-slate-500">
-                  <Search className="h-4 w-4 animate-pulse text-indigo-500" />
-                  Searching jobs and schemes...
-                </div>
-              ) : searchError ? (
-                <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2.5 text-sm font-semibold text-rose-700">
-                  {searchError}
-                </div>
-              ) : visibleResults.length > 0 ? (
-                visibleResults.map((item, index) => {
-                  const type = normalizeSearchType(item?.type);
-                  const title = String(item?.title || "Untitled");
-                  const key = `${type}-${title}-${index}`;
-                  const isJob = type === "job";
-                  const isScheme = type === "scheme";
-                  const isAdmitCard = type === "admit-card";
-                  const jobHref = item?.jobUrl
-                    ? buildPostDetailsHref({ title, jobUrl: item.jobUrl })
-                    : "";
-                  const schemeHref = isScheme ? `/schemes/${buildSchemeSlug(item)}` : "";
-                  const Icon = isScheme ? Landmark : Briefcase;
-                  const badgeClass =
-                    isScheme || isAdmitCard
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                      : "border-indigo-200 bg-indigo-50 text-indigo-700";
-                  const badgeLabel = isScheme ? "SCHEME" : isAdmitCard ? "ADMIT CARD" : "JOB";
-                  const itemClass =
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-slate-50";
-
-                  const content = (
-                    <>
-                      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
-                        <Icon className="h-4 w-4" />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-extrabold text-slate-800">{title}</p>
-                        <span
-                          className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[10px] font-black tracking-wide ${badgeClass}`}
-                        >
-                          {badgeLabel}
-                        </span>
-                      </div>
-                      <ArrowRight className="h-4 w-4 text-slate-300" />
-                    </>
-                  );
-
-                  if (isJob && jobHref) {
-                    return (
-                      <Link key={key} href={jobHref} className={itemClass}>
-                        {content}
-                      </Link>
-                    );
-                  }
-
-                  if (isAdmitCard && jobHref) {
-                    return (
-                      <Link key={key} href={jobHref} className={itemClass}>
-                        {content}
-                      </Link>
-                    );
-                  }
-
-                  if (isScheme && schemeHref) {
-                    return (
-                      <Link key={key} href={schemeHref} className={itemClass}>
-                        {content}
-                      </Link>
-                    );
-                  }
-
-                  return (
-                    <div key={key} className={itemClass}>
-                      {content}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="flex items-center gap-2 rounded-xl px-3 py-4 text-sm font-semibold text-slate-500">
-                  <Search className="h-4 w-4 text-slate-300" />
-                  No result found
-                </div>
-              )}
-            </div>
-          </div>
+          <SearchResultsPanel
+            className="mt-3 w-full"
+            searchResults={visibleResults}
+            searchLoading={searchLoading}
+            searchError={searchError}
+            limit={8}
+          />
         ) : null}
 
         <div className="mt-5 flex w-full flex-wrap justify-center gap-3 px-4">

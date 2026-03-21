@@ -1,11 +1,12 @@
-import { buildCanonicalKey } from "./lib/postFormatter";
 import { getAllGovSchemes } from "./lib/govSchemesApi";
 import { buildSchemeSlug } from "./lib/schemeSlug";
-import { getStoredJobLists } from "./lib/siteApi";
+import { getSectionsWithJobs } from "./lib/siteApi";
 import { absoluteUrl } from "./lib/seo";
-import { getBlogSlugs } from "./lib/blogs";
+import { getAllBlogPosts } from "./lib/blogs";
+import { getSectionHref, mapSectionsWithJobs } from "./lib/sections";
 
 const SITEMAP_FETCH_TIMEOUT_MS = 15000;
+export const dynamic = "force-dynamic";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -98,52 +99,42 @@ async function getSchemeEntries() {
   }
 }
 
-async function getPostEntries() {
-  try {
-    const payload = await withTimeout(getStoredJobLists());
-    const jobLists = asArray(payload?.jobLists);
-    const allPosts = jobLists.flatMap((list) => asArray(list?.postList));
-    const admitCardPosts = jobLists.flatMap((list) => asArray(list?.admitCardPostList));
+function getPostEntries(sections = []) {
+  return asArray(sections).flatMap((section) =>
+    asArray(section?.jobs)
+      .map((job) => {
+        const slug = String(job?.slug || "").trim();
 
-    const postEntries = allPosts.flatMap((post) => {
-      const title = String(post?.title || "").trim();
-      const jobUrl = String(post?.jobUrl || "").trim();
-      const canonicalKey = buildCanonicalKey({ title, jobUrl });
-
-      if (!canonicalKey) {
-        return [];
-      }
-
-      const lastModified = post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date();
-
-      return [
-        createEntry(`/post/${canonicalKey}`, {
-          changeFrequency: "hourly",
-          priority: 0.8,
-          lastModified,
-        }),
-      ];
-    });
-
-    const admitCardEntries = admitCardPosts
-      .map((post) => {
-        const title = String(post?.title || "").trim();
-        const jobUrl = String(post?.jobUrl || "").trim();
-        const canonicalKey = buildCanonicalKey({ title, jobUrl });
-
-        if (!canonicalKey) {
+        if (!slug) {
           return null;
         }
 
-        return createEntry(`/admit-cards/${canonicalKey}`, {
+        return createEntry(`/post/${slug}`, {
           changeFrequency: "hourly",
           priority: 0.8,
-          lastModified: post?.fetchedAt || post?.updatedAt || post?.createdAt || new Date(),
         });
       })
-      .filter(Boolean);
+      .filter(Boolean),
+  );
+}
 
-    return [...postEntries, ...admitCardEntries];
+function getSectionEntries(sections = []) {
+  return asArray(sections).map((section) =>
+    createEntry(getSectionHref(section), {
+      changeFrequency: "hourly",
+      priority: 0.9,
+      lastModified: section?.updatedAt || section?.createdAt || new Date(),
+    }),
+  );
+}
+
+async function getSitemapSections() {
+  try {
+    const payload = await withTimeout(
+      getSectionsWithJobs({ sectionLimit: 100, jobLimit: 100 }),
+    );
+
+    return mapSectionsWithJobs(payload?.sections);
   } catch {
     return [];
   }
@@ -151,27 +142,26 @@ async function getPostEntries() {
 
 export default async function sitemap() {
   const now = new Date();
-  const blogEntries = getBlogSlugs().map((slug) =>
-    createEntry(`/blog/${slug}`, {
-      changeFrequency: "weekly",
-      priority: 0.6,
-      lastModified: now,
-    }),
-  );
+  const blogPosts = await withTimeout(getAllBlogPosts()).catch(() => []);
+  const blogEntries = asArray(blogPosts)
+    .map((post) => {
+      const slug = String(post?.slug || "").trim();
+
+      if (!slug) {
+        return null;
+      }
+
+      return createEntry(`/blog/${slug}`, {
+        changeFrequency: "weekly",
+        priority: 0.6,
+        lastModified: post?.updatedAt || post?.publishedAt || now,
+      });
+    })
+    .filter(Boolean);
 
   const staticEntries = [
     createEntry("/", { changeFrequency: "hourly", priority: 1.0, lastModified: now }),
     createEntry("/post", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
-    createEntry("/post/new-jobs", {
-      changeFrequency: "hourly",
-      priority: 0.9,
-      lastModified: now,
-    }),
-    createEntry("/post/admissions", {
-      changeFrequency: "daily",
-      priority: 0.8,
-      lastModified: now,
-    }),
     createEntry("/results", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
     createEntry("/admit-cards", {
       changeFrequency: "hourly",
@@ -204,10 +194,18 @@ export default async function sitemap() {
     }),
   ];
 
-  const [schemeEntries, postEntries] = await Promise.all([
+  const [schemeEntries, sections] = await Promise.all([
     getSchemeEntries(),
-    getPostEntries(),
+    getSitemapSections(),
   ]);
+  const postEntries = getPostEntries(sections);
+  const sectionEntries = getSectionEntries(sections);
 
-  return dedupeEntries([...staticEntries, ...blogEntries, ...schemeEntries, ...postEntries]);
+  return dedupeEntries([
+    ...staticEntries,
+    ...blogEntries,
+    ...schemeEntries,
+    ...postEntries,
+    ...sectionEntries,
+  ]);
 }

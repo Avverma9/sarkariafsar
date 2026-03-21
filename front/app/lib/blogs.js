@@ -1,4 +1,4 @@
-import { BLOG_POSTS } from "./blogData";
+import baseUrl from "./baseUrl";
 
 const CATEGORY_SEO_KEYWORDS = {
   guides: [
@@ -56,6 +56,34 @@ const TEXT_TOKEN_REPLACEMENTS = [
 
 function normalizeSlug(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeAbsoluteUrl(value) {
+  const candidate = String(value || "").trim();
+
+  if (!candidate) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(candidate)) {
+    return candidate.replace(/\/+$/g, "");
+  }
+
+  return "";
+}
+
+const BLOGS_API_BASE_URL =
+  normalizeAbsoluteUrl(process.env.NEXT_PUBLIC_SITE_API_BASE_URL) ||
+  normalizeAbsoluteUrl(process.env.SITE_API_BASE_URL) ||
+  normalizeAbsoluteUrl(baseUrl);
+
+function buildBlogsApiUrl(path) {
+  const normalizedPath = String(path || "").startsWith("/")
+    ? String(path)
+    : `/${String(path || "")}`;
+  const routePrefix = /\/blog$/i.test(BLOGS_API_BASE_URL) ? "" : "/blog";
+
+  return `${BLOGS_API_BASE_URL}${routePrefix}${normalizedPath}`;
 }
 
 function safelyDecodeUriComponent(value) {
@@ -174,16 +202,103 @@ function enrichBlogPost(post) {
   };
 }
 
-export function getAllBlogPosts() {
-  return BLOG_POSTS.map(enrichBlogPost);
+function extractBlogCollection(payload) {
+  if (Array.isArray(payload?.blogs)) {
+    return payload.blogs;
+  }
+
+  if (Array.isArray(payload?.data?.blogs)) {
+    return payload.data.blogs;
+  }
+
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return [];
 }
 
-export function getBlogPostBySlug(slug) {
+function extractSingleBlog(payload) {
+  if (payload?.blog && typeof payload.blog === "object") {
+    return payload.blog;
+  }
+
+  if (payload?.data?.blog && typeof payload.data.blog === "object") {
+    return payload.data.blog;
+  }
+
+  if (payload?.data && !Array.isArray(payload.data) && typeof payload.data === "object") {
+    return payload.data;
+  }
+
+  if (payload && !Array.isArray(payload) && typeof payload === "object") {
+    return payload;
+  }
+
+  return null;
+}
+
+async function requestBlogs(path) {
+  const response = await fetch(buildBlogsApiUrl(path), {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    let errorMessage = `Request failed with status ${response.status}`;
+
+    try {
+      const errorPayload = await response.json();
+      errorMessage = errorPayload?.message || errorMessage;
+    } catch {
+      // Keep the generic message when the body is not valid JSON.
+    }
+
+    const error = new Error(errorMessage);
+    error.status = response.status;
+    throw error;
+  }
+
+  return response.json();
+}
+
+export async function getAllBlogPosts() {
+  const payload = await requestBlogs("/get-all-blogs");
+  return extractBlogCollection(payload).map(enrichBlogPost);
+}
+
+export async function getBlogPostBySlug(slug) {
   const normalizedSlug = normalizeSlug(slug);
+
+  if (!normalizedSlug) {
+    return null;
+  }
+
+  try {
+    const payload = await requestBlogs(`/get-all-blogs/${encodeURIComponent(normalizedSlug)}`);
+    const directPost = enrichBlogPost(extractSingleBlog(payload));
+
+    if (directPost?.slug) {
+      return directPost;
+    }
+  } catch (error) {
+    if (error?.status && error.status !== 404) {
+      throw error;
+    }
+  }
+
   const slugifiedValue = slugifyValue(slug);
   const compactSlug = slugifiedValue.replace(/-/g, "");
+  const posts = await getAllBlogPosts();
   const matchedPost =
-    BLOG_POSTS.find((post) => {
+    posts.find((post) => {
       const lookupKeys = getPostLookupKeys(post);
 
       return (
@@ -196,6 +311,7 @@ export function getBlogPostBySlug(slug) {
   return matchedPost ? enrichBlogPost(matchedPost) : null;
 }
 
-export function getBlogSlugs() {
-  return BLOG_POSTS.map((post) => post.slug);
+export async function getBlogSlugs() {
+  const posts = await getAllBlogPosts();
+  return posts.map((post) => post.slug).filter(Boolean);
 }

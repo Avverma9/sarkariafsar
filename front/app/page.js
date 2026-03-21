@@ -1,6 +1,7 @@
 import StructuredData from "./component/seo/StructuredData";
 import PortalApp from "./component/PortalApp";
 import { loadHomePageData } from "./lib/homePageData";
+import { getSectionHref } from "./lib/sections";
 import { buildSchemeSlug } from "./lib/schemeSlug";
 import {
   absoluteUrl,
@@ -9,28 +10,6 @@ import {
   buildPageMetadata,
   buildWebPageSchema,
 } from "./lib/seo";
-
-function getSectionHref(block) {
-  const category = String(block?.categoryKey || "").toLowerCase();
-
-  if (category === "latest-jobs") {
-    return "/post/new-jobs";
-  }
-
-  if (category === "results") {
-    return "/results";
-  }
-
-  if (category === "admit-cards") {
-    return "/admit-cards";
-  }
-
-  if (category === "admissions") {
-    return "/post/admissions";
-  }
-
-  return "/post";
-}
 
 export const metadata = buildPageMetadata({
   title: "Latest Sarkari Jobs, Results, Admit Cards and Yojana",

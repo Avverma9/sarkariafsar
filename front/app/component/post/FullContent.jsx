@@ -49,7 +49,13 @@ const purifyConfig = {
   ADD_ATTR: ["target"],
 };
 
-export default function FullContent({ formattedHtml, title, backHref }) {
+export default function FullContent({
+  formattedHtml,
+  title,
+  backHref = "",
+  backLabel = "Back",
+  badgeText = "Job Details",
+}) {
   if (!formattedHtml) {
     return (
       <div className="min-h-screen bg-slate-100 px-4 py-12">
@@ -69,7 +75,7 @@ export default function FullContent({ formattedHtml, title, backHref }) {
           <div>
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold tracking-wide uppercase backdrop-blur-sm">
               <FileText className="h-3.5 w-3.5" />
-              Full Detail View
+              {badgeText}
             </div>
             <h1 className="max-w-3xl text-2xl font-black tracking-tight sm:text-4xl">
               {title || "Job Details"}
@@ -82,7 +88,7 @@ export default function FullContent({ formattedHtml, title, backHref }) {
               className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-white/20"
             >
               <ArrowLeft className="h-4 w-4" />
-              Back to Summary
+              {backLabel}
             </Link>
           ) : null}
         </div>

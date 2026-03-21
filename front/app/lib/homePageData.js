@@ -1,8 +1,9 @@
-import { getJobSections, getStoredJobLists } from "./siteApi";
+import { getJobReminders, getSectionsWithJobs } from "./siteApi";
 import {
   getAllGovSchemes,
   getGovSchemeStateNameOnly,
 } from "./govSchemesApi";
+import { mapSectionsWithJobs } from "./sections";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -123,100 +124,11 @@ function normalizeScheme(scheme, index) {
   };
 }
 
-function normalizeCategory(value) {
-  return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function toCanonicalCategory(value) {
-  const n = normalizeCategory(value);
-  if (["latestjob", "latestjobs", "newjob", "newjobs", "new_jobs", "latest_form", "toponlineform", "hotjob"].includes(n)) return "latest-jobs";
-  if (["result", "results", "examresult", "latestresult", "answerkey", "answerkeys"].includes(n)) return "results";
-  if (["admitcard", "admitcards"].includes(n)) return "admit-cards";
-  if (["admission", "admissions"].includes(n)) return "admissions";
-  return n;
-}
-
-function getThemeByCategory(category) {
-  if (category === "latest-jobs") return { icon: "Briefcase", color: "text-emerald-600", bg: "bg-emerald-50", border: "border-emerald-200" };
-  if (category === "results") return { icon: "CheckCircle", color: "text-rose-600", bg: "bg-rose-50", border: "border-rose-200" };
-  if (category === "admit-cards") return { icon: "FileText", color: "text-indigo-600", bg: "bg-indigo-50", border: "border-indigo-200" };
-  if (category === "admissions") return { icon: "GraduationCap", color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" };
-  return { icon: "FileText", color: "text-slate-600", bg: "bg-slate-100", border: "border-slate-200" };
-}
-
-function mapSectionsToBlocks(sections) {
-  return asArray(sections).map((section, index) => {
-    const source = section || {};
-    const canonical = toCanonicalCategory(source.key || source.name);
-    const theme = getThemeByCategory(canonical);
-    return {
-      id: source.id || source.key || `section-${index + 1}`,
-      key: source.key,
-      title: source.name || source.key || `Section ${index + 1}`,
-      categoryKey: canonical,
-      ...theme,
-    };
-  });
-}
-
-function buildStoredJobListLookup(jobLists) {
-  return asArray(jobLists).reduce((lookup, jobList) => {
-    const source = jobList || {};
-    const keys = [
-      source.section,
-      source.sectionName,
-      toCanonicalCategory(source.section),
-      toCanonicalCategory(source.sectionName),
-    ].filter(Boolean);
-    keys.forEach((key) => {
-      lookup[String(key).toLowerCase()] = asArray(source.postList);
-    });
-    return lookup;
+function buildJobsBySection(sections = []) {
+  return asArray(sections).reduce((result, section) => {
+    result[section.id] = asArray(section.jobs);
+    return result;
   }, {});
-}
-
-function getStoredJobsForBlock(block, jobLookup) {
-  const canonical = toCanonicalCategory(block?.categoryKey || block?.key || block?.title);
-  const candidates = [
-    block?.key,
-    block?.title,
-    canonical,
-    canonical === "latest-jobs" ? "new_jobs" : "",
-    canonical === "admit-cards" ? "admit_cards" : "",
-  ].filter(Boolean).map((v) => String(v).toLowerCase());
-  for (const c of candidates) {
-    if (c in jobLookup) return asArray(jobLookup[c]);
-  }
-  return [];
-}
-
-function buildCanonicalKeyForJob(job) {
-  const title = String(job?.title || "").trim();
-  const url = String(job?.jobUrl || "").trim();
-  if (!title && !url) return "";
-  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80);
-  if (!url) return slug;
-  try {
-    const parsed = new URL(url);
-    const hash = parsed.pathname.split("/").filter(Boolean).pop() || "";
-    return slug ? `${slug}-${hash.slice(0, 8)}` : hash;
-  } catch {
-    return slug;
-  }
-}
-
-function mapStoredJobsToItems(jobs, block) {
-  return asArray(jobs).map((job, index) => {
-    const canonicalId = job?.jobUrlHash || buildCanonicalKeyForJob(job) || `job-${index + 1}`;
-    return {
-      id: `${block.id}-${canonicalId}`,
-      title: job?.title || "Untitled Job",
-      jobUrl: job?.jobUrl || "",
-      fetchedAt: job?.fetchedAt || "",
-      lastDate: "LIVE UPDATE",
-      _fromApi: true,
-    };
-  });
 }
 
 /**
@@ -224,50 +136,40 @@ function mapStoredJobsToItems(jobs, block) {
  * Returns a plain-serializable object safe to pass as props.
  */
 export async function loadHomePageData() {
-  const [sectionsResult, jobListsResult, statesResult, schemesResult] =
+  const [sectionsResult, statesResult, schemesResult, remindersResult] =
     await Promise.allSettled([
-      getJobSections(),
-      getStoredJobLists(),
+      getSectionsWithJobs({ sectionLimit: 20, jobLimit: 10 }),
       getGovSchemeStateNameOnly(),
       getAllGovSchemes(),
+      getJobReminders({ days: 7 }),
     ]);
 
-  // --- Sections + Jobs ---
-  const sectionsPayload =
+  const rawSectionsPayload =
     sectionsResult.status === "fulfilled" ? sectionsResult.value : null;
-  const jobListsPayload =
-    jobListsResult.status === "fulfilled" ? jobListsResult.value : null;
+  const sections = mapSectionsWithJobs(rawSectionsPayload?.sections);
 
-  const mappedBlocks = mapSectionsToBlocks(sectionsPayload?.sections);
-  const blocks = mappedBlocks.length > 0 ? mappedBlocks : [];
-
-  const jobLists = asArray(jobListsPayload?.jobLists);
-  const jobLookup = buildStoredJobListLookup(jobLists);
-  const jobsBySection = blocks.reduce((result, block) => {
-    result[block.id] = mapStoredJobsToItems(
-      getStoredJobsForBlock(block, jobLookup),
-      block,
-    );
-    return result;
-  }, {});
-
-  // --- States ---
   const rawStatesPayload =
     statesResult.status === "fulfilled" ? statesResult.value : null;
   const apiStates = rawStatesPayload ? extractStateNames(rawStatesPayload) : [];
   const statesList = uniqueStrings(["All India", ...apiStates]);
 
-  // --- Schemes ---
   const rawSchemesPayload =
     schemesResult.status === "fulfilled" ? schemesResult.value : null;
   const schemes = rawSchemesPayload
     ? extractSchemes(rawSchemesPayload).map((s, i) => normalizeScheme(s, i))
     : [];
+  const rawRemindersPayload =
+    remindersResult.status === "fulfilled" ? remindersResult.value : null;
+  const reminderJobs = rawRemindersPayload ? asArray(rawRemindersPayload?.jobs) : [];
 
   return {
-    sectionBlocks: blocks,
-    jobsBySection,
+    sectionBlocks: sections,
+    jobsBySection: buildJobsBySection(sections),
     statesList: statesList.length > 1 ? statesList : [],
     schemes,
+    reminderDays: 7,
+    reminderJobs,
+    reminderTotal: rawRemindersPayload ? Number(rawRemindersPayload?.total) || reminderJobs.length : 0,
+    reminderLoaded: remindersResult.status === "fulfilled",
   };
 }

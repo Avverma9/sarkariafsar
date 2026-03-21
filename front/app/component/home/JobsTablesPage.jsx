@@ -3,15 +3,17 @@ import {
   Briefcase,
   CheckCircle2,
   ChevronRight,
-  ExternalLink,
   FileText,
   GraduationCap,
   Search,
 } from "lucide-react";
 import { buildPostDetailsHref } from "../../lib/postLink";
+import { toSectionCategory } from "../../lib/sections";
 
 function getStyleByType(type) {
-  if (type === "admission") {
+  const category = toSectionCategory(type);
+
+  if (category === "admissions") {
     return {
       icon: GraduationCap,
       text: "text-purple-700",
@@ -20,7 +22,7 @@ function getStyleByType(type) {
     };
   }
 
-  if (type === "admitcards") {
+  if (category === "admit-cards") {
     return {
       icon: FileText,
       text: "text-indigo-700",
@@ -29,7 +31,7 @@ function getStyleByType(type) {
     };
   }
 
-  if (type === "results") {
+  if (category === "results") {
     return {
       icon: CheckCircle2,
       text: "text-rose-700",
@@ -46,25 +48,10 @@ function getStyleByType(type) {
   };
 }
 
-function getSectionListingHref(type) {
-  if (type === "results") {
-    return "/results";
-  }
-
-  if (type === "admitcards") {
-    return "/admit-cards";
-  }
-
-  if (type === "admission") {
-    return "/post/admissions";
-  }
-
-  return "/post/new-jobs";
-}
-
 function JobRow({ item }) {
   const detailsHref = buildPostDetailsHref({
     title: item?.title,
+    slug: item?.slug,
     jobUrl: item?.jobUrl,
   });
 
@@ -80,7 +67,7 @@ function JobRow({ item }) {
             {item?.title || "Untitled Job"}
           </p>
           <p className="mt-0.5 text-[10px] font-black tracking-wider text-slate-400 uppercase">
-            LIVE UPDATE
+            {item?.status || "LIVE UPDATE"}
           </p>
         </div>
       </Link>
@@ -124,11 +111,9 @@ export default function JobsTablesPage({ cards, limit, error }) {
       {!error && safeCards.length > 0 ? (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {safeCards.map((card) => {
-            const style = getStyleByType(card?.type);
+            const style = getStyleByType(card?.categoryKey);
             const Icon = style.icon;
-            const hasMore = Number(card?.totalPosts || 0) > Number(card?.shownCount || 0);
-            const sourceSectionUrl = card?.items?.[0]?.sourceSectionUrl || "";
-            const listingHref = getSectionListingHref(card?.type);
+            const listingHref = card?.href || "/post";
 
             return (
               <section

@@ -1,5 +1,5 @@
 import StructuredData from "../../component/seo/StructuredData";
-import PostDetails from "../../component/post/PostDetails";
+import FullContent from "../../component/post/FullContent";
 import PostPageShell from "../../component/layout/PostPageShell";
 import { getFirstValue, loadPostDetailPageData } from "../../lib/postDetailPage";
 import { redirect } from "next/navigation";
@@ -20,24 +20,6 @@ import {
 } from "../../lib/sectionJobsPage";
 import { buildPostDetailsHref } from "../../lib/postLink";
 
-// Known section slugs under /post/[section]
-const SECTION_CONFIGS = {
-  "new-jobs": {
-    sectionKeys: ["new_jobs", "newjob", "latest_job", "latestjobs"],
-    title: "Latest Jobs",
-    description: "All available job updates from configured source section URLs.",
-  },
-  admissions: {
-    sectionKeys: ["admission", "admissions"],
-    title: "Latest Admissions",
-    description: "All admission-related updates from configured source section URLs.",
-  },
-};
-
-function getSectionConfig(slug) {
-  return SECTION_CONFIGS[slug] || null;
-}
-
 async function loadPostData(params, searchParams) {
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
@@ -53,15 +35,19 @@ async function loadPostData(params, searchParams) {
 export async function generateMetadata({ params, searchParams }) {
   const resolvedParams = await params;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
+  const sectionData = await loadSectionJobsPage({
+    slug,
+    limit: 12,
+    page: 1,
+  });
 
-  // Section page metadata
-  const sectionConfig = getSectionConfig(slug);
-  if (sectionConfig) {
+  if (sectionData?.section) {
     return buildPageMetadata({
-      title: sectionConfig.title,
-      description: sectionConfig.description,
-      path: `/post/${slug}`,
-      keywords: ["jobs section", sectionConfig.title, slug],
+      title: sectionData.title,
+      description:
+        sectionData.description || `Latest updates from ${sectionData.section.name}.`,
+      path: `/post/${sectionData.section.slug}`,
+      keywords: ["jobs section", sectionData.title, sectionData.section.slug],
     });
   }
 
@@ -95,22 +81,32 @@ export async function generateMetadata({ params, searchParams }) {
 export default async function PostSlugPage({ params, searchParams }) {
   const resolvedParams = await params;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
+  const resolvedSearchParams = await searchParams;
+  const query = parseSectionJobsQuery(resolvedSearchParams);
+  const initialSectionData = await loadSectionJobsPage({
+    ...query,
+    slug,
+  });
 
-  // Render section listing page if slug is a known section
-  const sectionConfig = getSectionConfig(slug);
-  if (sectionConfig) {
-    const query = parseSectionJobsQuery(await searchParams);
-    const pageData = await loadSectionJobsPage({
-      ...query,
-      sectionKeys: sectionConfig.sectionKeys,
-      title: sectionConfig.title,
-      description: sectionConfig.description,
-    });
-    const path = `/post/${slug}`;
+  if (initialSectionData?.section) {
+    const path = `/post/${initialSectionData.section.slug}`;
+    const paramsString = new URLSearchParams(resolvedSearchParams || {}).toString();
+
+    if (slug !== initialSectionData.section.slug) {
+      redirect(paramsString ? `${path}?${paramsString}` : path);
+    }
+
+    const resolvedDescription =
+      initialSectionData.description ||
+      `Latest updates from ${initialSectionData.section.name}.`;
+    const pageData = {
+      ...initialSectionData,
+      description: resolvedDescription,
+    };
     const breadcrumbItems = [
       { name: "Home", url: "/" },
       { name: "Jobs", url: "/post" },
-      { name: sectionConfig.title, url: path },
+      { name: pageData.title, url: path },
     ];
     const structuredData = [
       buildBreadcrumbSchema(breadcrumbItems, { path }),
@@ -126,12 +122,11 @@ export default async function PostSlugPage({ params, searchParams }) {
         name: `${pageData.title} updates`,
         items: pageData.jobs.map((job) => ({
           name: job?.title || "Job update",
-          url: job?.jobUrl
-            ? buildPostDetailsHref({
-                title: job?.title,
-                jobUrl: job?.jobUrl,
-              })
-            : path,
+          url: buildPostDetailsHref({
+            title: job?.title,
+            slug: job?.slug,
+            jobUrl: job?.jobUrl,
+          }),
         })),
       }),
     ];
@@ -139,13 +134,13 @@ export default async function PostSlugPage({ params, searchParams }) {
     return (
       <PostPageShell>
         <StructuredData data={structuredData} />
-        <SectionJobsPage basePath={`/post/${slug}`} {...pageData} />
+        <SectionJobsPage basePath={path} {...pageData} />
       </PostPageShell>
     );
   }
 
   // Otherwise render post detail
-  const { jobUrl, fetchError, jobDetail, post, canonicalKey } =
+  const { jobUrl, fetchError, jobDetail, post, canonicalKey, formattedHtml } =
     await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
@@ -167,7 +162,7 @@ export default async function PostSlugPage({ params, searchParams }) {
     post?.importantDates?.[0] ||
     "Detailed government job update with important dates, eligibility and links.";
   const structuredData =
-    jobUrl && !fetchError && jobDetail?.jsonData && post
+    jobUrl && !fetchError && jobDetail && post
       ? [
           buildBreadcrumbSchema(
             [
@@ -227,7 +222,7 @@ export default async function PostSlugPage({ params, searchParams }) {
             </div>
           </div>
         </div>
-      ) : fetchError || !jobDetail?.jsonData || !post ? (
+      ) : fetchError || !jobDetail || !post ? (
         <div className="px-4 py-12">
           <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
             <p className="text-sm font-semibold">{fetchError || "Post detail data not available."}</p>
@@ -235,8 +230,14 @@ export default async function PostSlugPage({ params, searchParams }) {
         </div>
       ) : null}
 
-      {jobUrl && !fetchError && jobDetail?.jsonData && post ? (
-        <PostDetails post={post} jobUrl={jobUrl} canonicalKey={resolvedCanonicalKey} />
+      {jobUrl && !fetchError && formattedHtml ? (
+        <FullContent
+          formattedHtml={formattedHtml}
+          title={title}
+          backHref="/post"
+          backLabel="Back to Jobs"
+          badgeText="Job Details"
+        />
       ) : null}
     </PostPageShell>
   );

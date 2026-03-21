@@ -1,10 +1,9 @@
-import baseUrl from "./baseUrl";
 import { buildCanonicalKey, formatPostDetail } from "./postFormatter";
 import {
-  CACHE_TAGS,
-  buildCachedFetchOptions,
-  buildScopedCacheTag,
-} from "./fetchCache";
+  buildFormattedJobHtml,
+  formatRichJobDetail,
+} from "./jobDetailFormatter";
+import { getJobBySlug, getJobByUrl } from "./siteApi";
 
 export function getFirstValue(value) {
   if (Array.isArray(value)) {
@@ -53,214 +52,44 @@ function normalizeSlug(value) {
     .replace(/^-+|-+$/g, "");
 }
 
-function slugify(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
+function buildPostFromJobDetail(jobDetail) {
+  if (!jobDetail) {
+    return null;
+  }
+
+  return formatRichJobDetail(jobDetail) || formatPostDetail(jobDetail);
 }
 
-function stripHashSuffix(value) {
-  return String(value || "").replace(/-[a-z0-9]{4,8}$/i, "");
-}
-
-function isSlugMatch(slug, job) {
-  const normalizedSlug = normalizeSlug(slug);
-
-  if (!normalizedSlug) {
-    return false;
-  }
-
-  const canonical = normalizeSlug(
-    buildCanonicalKey({ title: job?.title, jobUrl: job?.jobUrl }),
-  );
-
-  if (!canonical) {
-    return false;
-  }
-
-  if (normalizedSlug === canonical) {
-    return true;
-  }
-
-  if (normalizedSlug === stripHashSuffix(canonical)) {
-    return true;
-  }
-
-  const titleSlug = slugify(job?.title);
-  return Boolean(titleSlug && normalizedSlug === titleSlug);
-}
-
-function buildJobUrlCandidates(value) {
-  const normalized = normalizeJobUrl(value);
-
-  if (!normalized) {
-    return [];
-  }
-
-  const candidates = new Set([normalized]);
-
-  try {
-    const parsed = new URL(normalized);
-    const withoutSearch = `${parsed.origin}${parsed.pathname}`;
-    candidates.add(withoutSearch);
-
-    if (withoutSearch.endsWith("/")) {
-      candidates.add(withoutSearch.slice(0, -1));
-    } else {
-      candidates.add(`${withoutSearch}/`);
-    }
-  } catch {
-    // No-op, normalized URL was already added.
-  }
-
-  return Array.from(candidates).filter(Boolean);
-}
-
-function extractSearchResults(payload) {
-  if (Array.isArray(payload?.results)) {
-    return payload.results;
-  }
-
-  if (Array.isArray(payload?.data?.results)) {
-    return payload.data.results;
-  }
-
-  if (Array.isArray(payload?.data)) {
-    return payload.data;
-  }
-
-  return [];
-}
-
-function slugToSearchKeyword(slug) {
-  return String(slug || "")
-    .replace(/-[a-z0-9]{4,8}$/i, "")
-    .replace(/-/g, " ")
-    .trim()
-    .slice(0, 120);
-}
-
-export function getJobUrlFromSearchParams(searchParams) {
-  const rawJobUrl = getFirstValue(searchParams?.jobUrl);
-  return normalizeJobUrl(rawJobUrl);
-}
-
-async function fetchStoredJobLists() {
-  const response = await fetch(
-    `${baseUrl}/fetch-stored-joblist`,
-    buildCachedFetchOptions({
-      tags: [CACHE_TAGS.jobLists],
-    })
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch stored job lists (${response.status})`);
-  }
-
-  const payload = await response.json();
-  return Array.isArray(payload?.jobLists) ? payload.jobLists : [];
-}
-
-async function resolveJobUrlBySlug(slug) {
-  if (!slug) {
+function buildFormattedHtml(jobDetail) {
+  if (!jobDetail) {
     return "";
   }
 
-  const jobLists = await fetchStoredJobLists();
-
-  for (const jobList of jobLists) {
-    const postList = Array.isArray(jobList?.postList) ? jobList.postList : [];
-
-    for (const job of postList) {
-      const normalizedUrl = normalizeJobUrl(job?.jobUrl);
-
-      if (!normalizedUrl) {
-        continue;
-      }
-
-      if (isSlugMatch(slug, { title: job?.title, jobUrl: normalizedUrl })) {
-        return normalizedUrl;
-      }
-    }
+  if (typeof jobDetail?.formattedHtml === "string" && jobDetail.formattedHtml.trim()) {
+    return jobDetail.formattedHtml;
   }
 
-  const keyword = slugToSearchKeyword(slug);
-
-  if (keyword.length < 3) {
-    return "";
-  }
-
-  try {
-    const query = new URLSearchParams({ keyword });
-    const response = await fetch(
-      `${baseUrl}/find-by-title-job-and-scheme?${query.toString()}`,
-      buildCachedFetchOptions({
-        tags: [CACHE_TAGS.jobSearch, CACHE_TAGS.jobDetails],
-        revalidate: 180,
-      })
-    );
-
-    if (!response.ok) {
-      return "";
-    }
-
-    const payload = await response.json();
-    const candidates = extractSearchResults(payload).filter(
-      (item) => String(item?.type || "").toLowerCase() === "job" && item?.jobUrl,
-    );
-
-    for (const candidate of candidates) {
-      const normalizedUrl = normalizeJobUrl(candidate?.jobUrl);
-
-      if (!normalizedUrl) {
-        continue;
-      }
-
-      if (isSlugMatch(slug, { title: candidate?.title, jobUrl: normalizedUrl })) {
-        return normalizedUrl;
-      }
-    }
-
-    if (candidates.length > 0) {
-      return normalizeJobUrl(candidates[0]?.jobUrl);
-    }
-  } catch {
-    return "";
-  }
-
-  return "";
+  return buildFormattedJobHtml(jobDetail);
 }
 
-export async function fetchJobDetailByUrl(jobUrl) {
-  const candidates = buildJobUrlCandidates(jobUrl);
-  let lastError = null;
+async function fetchJobDetailBySlug(slug) {
+  const cleanSlug = normalizeSlug(slug);
 
-  for (const candidate of candidates) {
-    const query = new URLSearchParams({ jobUrl: candidate });
-    const response = await fetch(
-      `${baseUrl}/fetch/job-by-url?${query.toString()}`,
-      buildCachedFetchOptions({
-        tags: [
-          CACHE_TAGS.jobDetails,
-          buildScopedCacheTag(CACHE_TAGS.jobDetails, candidate),
-        ],
-      })
-    );
-
-    if (response.ok) {
-      return response.json();
-    }
-
-    lastError = new Error(`Failed to fetch post details (${response.status})`);
-
-    if (response.status !== 404) {
-      throw lastError;
-    }
+  if (!cleanSlug) {
+    throw new Error("Slug is required");
   }
 
-  throw lastError || new Error("Failed to fetch post details");
+  return getJobBySlug(cleanSlug);
+}
+
+async function fetchJobDetailByUrl(jobUrl) {
+  const cleanJobUrl = normalizeJobUrl(jobUrl);
+
+  if (!cleanJobUrl) {
+    throw new Error("Job URL is invalid");
+  }
+
+  return getJobByUrl(cleanJobUrl);
 }
 
 export async function loadPostDetailPageData({ params, searchParams }) {
@@ -269,33 +98,38 @@ export async function loadPostDetailPageData({ params, searchParams }) {
   const slug = normalizeSlug(getFirstValue(resolvedParams?.slug));
   const rawJobUrl = getFirstValue(resolvedSearchParams?.jobUrl);
   const hasJobUrlParam = Boolean(rawJobUrl);
-  let jobUrl = normalizeJobUrl(rawJobUrl);
+  const normalizedJobUrl = normalizeJobUrl(rawJobUrl);
 
   let detailPayload = null;
   let fetchError = "";
 
-  if (!jobUrl && slug) {
+  if (slug) {
     try {
-      jobUrl = await resolveJobUrlBySlug(slug);
+      detailPayload = await fetchJobDetailBySlug(slug);
     } catch (error) {
-      fetchError = error?.message || "Unable to resolve job URL from slug";
+      fetchError = error?.message || "Unable to fetch post detail";
     }
   }
 
-  if (jobUrl) {
+  if (!detailPayload && normalizedJobUrl) {
     try {
-      detailPayload = await fetchJobDetailByUrl(jobUrl);
+      detailPayload = await fetchJobDetailByUrl(normalizedJobUrl);
+      fetchError = "";
     } catch (error) {
       fetchError = error?.message || "Unable to fetch post detail";
     }
   }
 
   const jobDetail = detailPayload?.job || null;
-  const post = jobDetail?.jsonData ? formatPostDetail(jobDetail) : null;
-  const title = post?.header?.title || jobDetail?.title || "";
-  const canonicalKey = buildCanonicalKey({ title, jobUrl }) || slug || "post-detail";
-  const formattedHtml =
-    typeof jobDetail?.formattedHtml === "string" ? jobDetail.formattedHtml : "";
+  const post = buildPostFromJobDetail(jobDetail);
+  const title = post?.header?.title || jobDetail?.title || jobDetail?.jobtitle || "";
+  const canonicalKey =
+    normalizeSlug(jobDetail?.slug) ||
+    slug ||
+    buildCanonicalKey({ title, jobUrl: normalizedJobUrl }) ||
+    "post-detail";
+  const formattedHtml = buildFormattedHtml(jobDetail);
+  const jobUrl = normalizedJobUrl || String(jobDetail?.slug || slug || "").trim();
 
   return {
     slug,

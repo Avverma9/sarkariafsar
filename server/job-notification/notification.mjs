@@ -2,7 +2,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import nodemailer from "nodemailer";
 import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cron from "node-cron";
@@ -17,6 +17,7 @@ const DEFAULT_NEW_POST_EMAIL_MAX_POSTS = Number.parseInt(
   String(process.env.NEW_POST_EMAIL_MAX_POSTS || "25"),
   10
 );
+
 const DEFAULT_HEADERS = {
   "User-Agent":
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
@@ -40,12 +41,39 @@ const DEFAULT_JOB_SKIP_PATTERNS = [
   /\bdisclaimer\b/i,
   /\babout(\s+us)?\b/i,
 ];
+const GENERIC_TITLE_PATTERNS = [
+  /^click here$/i,
+  /^join whatsapp$/i,
+  /^join telegram$/i,
+  /^read more$/i,
+  /^download now$/i,
+  /^apply now$/i,
+  /^view more$/i,
+  /^here$/i,
+];
+const BLOCKED_HOSTNAME_PATTERNS = [
+  /(^|\.)whatsapp\.com$/i,
+  /(^|\.)t\.me$/i,
+  /(^|\.)telegram\.me$/i,
+  /(^|\.)play\.google\.com$/i,
+  /(^|\.)apps\.apple\.com$/i,
+  /(^|\.)youtube\.com$/i,
+  /(^|\.)facebook\.com$/i,
+  /(^|\.)instagram\.com$/i,
+  /(^|\.)x\.com$/i,
+  /(^|\.)twitter\.com$/i,
+];
 const DEFAULT_STATE_FILE_PATH = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   String(process.env.JOB_NOTIFICATION_STATE_FILE || "").trim() || ".notification-state.json"
 );
 const DEFAULT_SECTION_PAGINATION_MAX_PAGES = 25;
 const DEFAULT_SECTION_PAGINATION_MAX_EMPTY_PAGES = 2;
+const DEFAULT_FETCH_RETRY_ATTEMPTS = 3;
+const DEFAULT_FETCH_RETRY_DELAY_MS = 1200;
+const DEFAULT_RUN_HISTORY_LIMIT = 25;
+const DEFAULT_DELIVERY_LOG_LIMIT = 100;
+const DEFAULT_PENDING_NOTIFICATION_LIMIT = 100;
 
 const toBoolean = (value, fallback = false) => {
   if (typeof value === "boolean") return value;
@@ -58,6 +86,11 @@ const toBoolean = (value, fallback = false) => {
   if (normalized === "false") return false;
   return fallback;
 };
+
+const DETAIL_FETCH_FOR_NEW_JOBS = toBoolean(
+  process.env.JOB_NOTIFICATION_FETCH_DETAIL_FOR_NEW,
+  false
+);
 
 const toCleanText = (value = "") => String(value || "").replace(/\s+/g, " ").trim();
 
@@ -97,6 +130,8 @@ const toPositiveInteger = (value, fallback = 0) => {
   if (Number.isNaN(parsed) || parsed <= 0) return fallback;
   return parsed;
 };
+
+const sleep = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const createRegex = (value) => {
   if (!value) return null;
@@ -185,6 +220,12 @@ const cleanJobTitle = (value = "") =>
     .replace(/\s+-\s+online form.*$/i, "")
     .trim();
 
+const toComparableTitle = (value = "") =>
+  cleanJobTitle(value)
+    .replace(/[–—-]\s*(out|soon|updated|start|started|date extend|date extended|answer key|admit card|result)\b.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 const inferLabelFromUrl = (url = "") => {
   try {
     const parsed = new URL(url);
@@ -211,16 +252,77 @@ const inferSectionNameFromUrls = (sectionUrls = []) => {
   return "Jobs";
 };
 
-const fetchHtml = async (url, requestConfig = {}) => {
-  const response = await axios.get(url, {
-    timeout: 30000,
-    headers: DEFAULT_HEADERS,
-    responseType: "text",
-    transformResponse: [(data) => data],
-    ...requestConfig,
-  });
+const isBlockedHostname = (url = "") => {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, "").trim();
+    return BLOCKED_HOSTNAME_PATTERNS.some((pattern) => pattern.test(hostname));
+  } catch {
+    return false;
+  }
+};
 
-  return typeof response.data === "string" ? response.data : String(response.data || "");
+const isGenericListingTitle = (title = "") => {
+  const cleanTitleValue = toCleanText(title);
+  if (!cleanTitleValue) return true;
+  return GENERIC_TITLE_PATTERNS.some((pattern) => pattern.test(cleanTitleValue));
+};
+
+const formatErrorMessage = (error) => {
+  if (!error) return "Unknown error";
+  if (Array.isArray(error?.errors) && error.errors.length > 0) {
+    return error.errors
+      .map((item) => item?.message || String(item))
+      .filter(Boolean)
+      .join(" | ");
+  }
+  if (error?.cause) {
+    return error?.cause?.message || String(error.cause);
+  }
+  return error?.message || String(error);
+};
+
+const appendRunHistory = (history = [], entry = {}, limit = DEFAULT_RUN_HISTORY_LIMIT) =>
+  [entry, ...(Array.isArray(history) ? history : [])].slice(0, limit);
+
+const appendLimitedEntries = (entries = [], additions = [], limit = 0) =>
+  [...(Array.isArray(additions) ? additions : []), ...(Array.isArray(entries) ? entries : [])].slice(
+    0,
+    limit
+  );
+
+const fetchHtml = async (url, requestConfig = {}) => {
+  const safeAttempts = toPositiveInteger(
+    requestConfig?.retryAttempts,
+    DEFAULT_FETCH_RETRY_ATTEMPTS
+  );
+  const safeDelayMs = toPositiveInteger(
+    requestConfig?.retryDelayMs,
+    DEFAULT_FETCH_RETRY_DELAY_MS
+  );
+
+  let lastError = null;
+  for (let attempt = 1; attempt <= safeAttempts; attempt += 1) {
+    try {
+      const response = await axios.get(url, {
+        timeout: 30000,
+        headers: DEFAULT_HEADERS,
+        responseType: "text",
+        transformResponse: [(data) => data],
+        maxRedirects: 5,
+        family: attempt === 1 ? 4 : undefined,
+        ...requestConfig,
+      });
+
+      return typeof response.data === "string" ? response.data : String(response.data || "");
+    } catch (error) {
+      lastError = error;
+      if (attempt < safeAttempts) {
+        await sleep(safeDelayMs * attempt);
+      }
+    }
+  }
+
+  throw new Error(formatErrorMessage(lastError));
 };
 
 const getJobAnchorCandidates = ($) => {
@@ -295,23 +397,411 @@ const createUpdateChanges = ({ previousPost = {}, currentPost = {} } = {}) => {
     }));
 };
 
+const normalizeStateShape = (rawState = {}) => {
+  if (rawState && typeof rawState === "object" && !Array.isArray(rawState)) {
+    if (rawState.siteSnapshots || rawState.trackedJobs || rawState.meta) {
+      return {
+        meta: rawState.meta && typeof rawState.meta === "object" ? rawState.meta : {},
+        siteSnapshots:
+          rawState.siteSnapshots && typeof rawState.siteSnapshots === "object"
+            ? rawState.siteSnapshots
+            : {},
+        trackedJobs:
+          rawState.trackedJobs && typeof rawState.trackedJobs === "object"
+            ? rawState.trackedJobs
+            : {},
+        lastRun:
+          rawState.lastRun && typeof rawState.lastRun === "object"
+            ? rawState.lastRun
+            : {},
+        runHistory: Array.isArray(rawState.runHistory) ? rawState.runHistory : [],
+        deliveryLog: Array.isArray(rawState.deliveryLog) ? rawState.deliveryLog : [],
+        pendingNotifications: Array.isArray(rawState.pendingNotifications)
+          ? rawState.pendingNotifications
+          : [],
+      };
+    }
+
+    return {
+      meta: {
+        version: 2,
+        migratedFromLegacy: true,
+      },
+      siteSnapshots: rawState,
+      trackedJobs: {},
+      lastRun: {},
+      runHistory: [],
+      deliveryLog: [],
+      pendingNotifications: [],
+    };
+  }
+
+  return {
+    meta: {
+      version: 2,
+    },
+    siteSnapshots: {},
+    trackedJobs: {},
+    lastRun: {},
+    runHistory: [],
+    deliveryLog: [],
+    pendingNotifications: [],
+  };
+};
+
+const createNotificationDeliveryEntry = ({
+  type = "",
+  sectionName = "",
+  title = "",
+  jobUrl = "",
+  sourceSites = [],
+  changedFields = [],
+  response = {},
+} = {}) => {
+  const createdAt = new Date().toISOString();
+  const normalizedType = String(type || "").trim() || "notification";
+  const normalizedSectionName = String(sectionName || "").trim();
+  const normalizedTitle = String(title || "").trim();
+  const normalizedJobUrl = String(jobUrl || "").trim();
+  const normalizedChangedFields = normalizeArrayField(changedFields);
+  const deliveryKey = hashValue(
+    JSON.stringify({
+      type: normalizedType,
+      title: normalizedTitle,
+      jobUrl: normalizedJobUrl,
+      sectionName: normalizedSectionName,
+      changedFields: normalizedChangedFields,
+    })
+  ).slice(0, 24);
+
+  return {
+    id: hashValue(`${deliveryKey}:${createdAt}`).slice(0, 24),
+    deliveryKey,
+    type: normalizedType,
+    sectionName: normalizedSectionName,
+    title: normalizedTitle,
+    jobUrl: normalizedJobUrl,
+    sourceSites: normalizeArrayField(sourceSites),
+    changedFields: normalizedChangedFields,
+    status: response?.sent ? "sent" : "pending",
+    reason: String(response?.reason || "").trim(),
+    error: String(response?.error || "").trim(),
+    messageId: String(response?.messageId || "").trim(),
+    createdAt,
+  };
+};
+
+const buildEntityKey = ({ title = "", jobUrl = "" } = {}) => {
+  const comparableTitle = toComparableTitle(title);
+  if (comparableTitle) {
+    return hashValue(`title:${normalizeTextForHash(comparableTitle)}`);
+  }
+
+  return hashValue(`url:${normalizeJobUrlForHash(jobUrl)}`);
+};
+
+const normalizeArrayField = (values = []) =>
+  toUniqueArray(values)
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .sort((left, right) => left.localeCompare(right));
+
+const shortenPreview = (value = "", maxLength = 500) => {
+  const normalized = toCleanText(value);
+  if (!normalized) return "(empty)";
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 3)}...`;
+};
+
+const buildArrayChangePreview = (beforeValues = [], afterValues = []) => {
+  const before = normalizeArrayField(beforeValues);
+  const after = normalizeArrayField(afterValues);
+  const beforeSet = new Set(before);
+  const afterSet = new Set(after);
+  const added = after.filter((item) => !beforeSet.has(item));
+  const removed = before.filter((item) => !afterSet.has(item));
+
+  const beforePreview = before.length > 0 ? before.join(", ") : "(empty)";
+  const afterPreview = after.length > 0 ? after.join(", ") : "(empty)";
+
+  if (added.length === 0 && removed.length === 0) {
+    return {
+      beforePreview,
+      afterPreview,
+    };
+  }
+
+  return {
+    beforePreview: `${beforePreview}${removed.length > 0 ? ` | Removed: ${removed.join(", ")}` : ""}`,
+    afterPreview: `${afterPreview}${added.length > 0 ? ` | Added: ${added.join(", ")}` : ""}`,
+  };
+};
+
+const shouldFetchDetailForJob = ({ previousJob = null } = {}) =>
+  Boolean(previousJob) || DETAIL_FETCH_FOR_NEW_JOBS;
+
+const fetchJobDetailSnapshot = async ({ jobUrl = "", requestConfig = {} } = {}) => {
+  const normalizedJobUrl = toAbsoluteUrl(jobUrl, jobUrl);
+  if (!normalizedJobUrl) {
+    return {
+      canonicalUrl: "",
+      pageTitle: "",
+      metaDescription: "",
+      contentHash: "",
+      headingSnapshot: [],
+      contentPreview: "",
+    };
+  }
+
+  try {
+    const html = await fetchHtml(normalizedJobUrl, requestConfig);
+    const $ = cheerio.load(html);
+    const textContent = toCleanText($.root().text());
+    const pageTitle = toCleanText($("title").first().text());
+    const metaDescription = toCleanText($('meta[name="description"]').attr("content"));
+    const canonicalUrl = toAbsoluteUrl($('link[rel="canonical"]').attr("href"), normalizedJobUrl) || "";
+    const headingSnapshot = normalizeArrayField(
+      $("h1, h2, h3")
+        .toArray()
+        .map((element) => $(element).text())
+        .map((value) => shortenPreview(value, 160))
+        .filter(Boolean)
+    ).slice(0, 12);
+
+    return {
+      canonicalUrl,
+      pageTitle,
+      metaDescription,
+      contentHash: hashValue(textContent || html || normalizedJobUrl),
+      headingSnapshot,
+      contentPreview: shortenPreview(textContent, 700),
+    };
+  } catch (error) {
+    return {
+      canonicalUrl: "",
+      pageTitle: "",
+      metaDescription: "",
+      contentHash: "",
+      headingSnapshot: [],
+      contentPreview: "",
+      detailError: error?.message || String(error),
+    };
+  }
+};
+
+const aggregateTrackedJobs = ({
+  siteResults = [],
+  previousTrackedJobs = {},
+} = {}) => {
+  const aggregateMap = new Map();
+
+  for (const siteResult of siteResults || []) {
+    for (const post of siteResult?.posts || []) {
+      const entityKey = buildEntityKey({
+        title: post?.title,
+        jobUrl: post?.jobUrl,
+      });
+      const current = aggregateMap.get(entityKey) || {
+        entityKey,
+        title: String(post?.title || "").trim(),
+        comparableTitle: toComparableTitle(post?.title || ""),
+        primaryJobUrl: String(post?.jobUrl || "").trim(),
+        sourceSites: [],
+        sourceSectionUrls: [],
+        sourceJobUrls: [],
+        sourceTitles: [],
+        sourceRecords: [],
+        detailRequestConfig: siteResult?.requestConfig || {},
+      };
+
+      current.title =
+        String(current.title || "").trim().length >= String(post?.title || "").trim().length
+          ? current.title
+          : String(post?.title || "").trim();
+      current.primaryJobUrl = current.primaryJobUrl || String(post?.jobUrl || "").trim();
+      current.sourceSites.push(siteResult?.sectionName || "");
+      current.sourceSectionUrls.push(post?.sourceSectionUrl || "");
+      current.sourceJobUrls.push(post?.jobUrl || "");
+      current.sourceTitles.push(post?.title || "");
+      current.sourceRecords.push({
+        sectionName: siteResult?.sectionName || "",
+        sectionUrls: siteResult?.sectionUrls || [],
+        sourceSectionUrl: post?.sourceSectionUrl || "",
+        title: post?.title || "",
+        jobUrl: post?.jobUrl || "",
+      });
+      aggregateMap.set(entityKey, current);
+    }
+  }
+
+  return Promise.all(
+    [...aggregateMap.values()].map(async (item) => {
+      const previousJob = previousTrackedJobs?.[item.entityKey] || null;
+      const detail = shouldFetchDetailForJob({ previousJob })
+        ? await fetchJobDetailSnapshot({
+            jobUrl: item.primaryJobUrl,
+            requestConfig: item.detailRequestConfig || {},
+          })
+        : {
+            canonicalUrl: String(previousJob?.canonicalUrl || "").trim(),
+            pageTitle: String(previousJob?.pageTitle || "").trim(),
+            metaDescription: String(previousJob?.metaDescription || "").trim(),
+            contentHash: String(previousJob?.contentHash || "").trim(),
+            headingSnapshot: Array.isArray(previousJob?.headingSnapshot)
+              ? previousJob.headingSnapshot
+              : [],
+            contentPreview: String(previousJob?.contentPreview || "").trim(),
+            detailError: "",
+          };
+
+      const effectiveCanonicalUrl =
+        String(detail?.canonicalUrl || "").trim() ||
+        String(previousJob?.canonicalUrl || "").trim();
+      const effectivePageTitle =
+        String(detail?.pageTitle || "").trim() ||
+        String(previousJob?.pageTitle || "").trim();
+      const effectiveMetaDescription =
+        String(detail?.metaDescription || "").trim() ||
+        String(previousJob?.metaDescription || "").trim();
+      const effectiveContentHash =
+        String(detail?.contentHash || "").trim() ||
+        String(previousJob?.contentHash || "").trim();
+      const effectiveHeadingSnapshot =
+        Array.isArray(detail?.headingSnapshot) && detail.headingSnapshot.length > 0
+          ? normalizeArrayField(detail.headingSnapshot)
+          : normalizeArrayField(previousJob?.headingSnapshot || []);
+      const effectiveContentPreview =
+        String(detail?.contentPreview || "").trim() ||
+        String(previousJob?.contentPreview || "").trim();
+
+      return {
+      entityKey: item.entityKey,
+      title: item.title,
+      comparableTitle: item.comparableTitle,
+      jobUrl: item.primaryJobUrl,
+      canonicalUrl: effectiveCanonicalUrl,
+      pageTitle: effectivePageTitle,
+      metaDescription: effectiveMetaDescription,
+      contentHash: effectiveContentHash,
+      headingSnapshot: effectiveHeadingSnapshot,
+      contentPreview: effectiveContentPreview,
+      detailError: String(detail?.detailError || "").trim(),
+      sourceSites: normalizeArrayField(item.sourceSites),
+      sourceSectionUrls: normalizeArrayField(item.sourceSectionUrls),
+      sourceJobUrls: normalizeArrayField(item.sourceJobUrls),
+      sourceTitles: normalizeArrayField(item.sourceTitles),
+      sourceRecords: item.sourceRecords,
+      seenOnSourcesCount: normalizeArrayField(item.sourceSites).length,
+      updatedAt: new Date().toISOString(),
+      };
+    })
+  ).then((trackedJobs) =>
+    trackedJobs.sort((left, right) => left.title.localeCompare(right.title))
+  );
+};
+
+const buildTrackedJobChanges = ({ previousJob = {}, currentJob = {} } = {}) => {
+  const fields = [
+    ["title", "Title"],
+    ["jobUrl", "Job URL"],
+    ["canonicalUrl", "Canonical URL"],
+    ["pageTitle", "Page Title"],
+    ["metaDescription", "Meta Description"],
+    ["sourceSites", "Source Sites"],
+    ["sourceSectionUrls", "Source Section URLs"],
+    ["sourceJobUrls", "Source Job URLs"],
+    ["headingSnapshot", "Page Headings"],
+  ];
+
+  const changes = [];
+  for (const [key, label] of fields) {
+    const before = Array.isArray(previousJob?.[key])
+      ? normalizeArrayField(previousJob[key])
+      : String(previousJob?.[key] || "");
+    const after = Array.isArray(currentJob?.[key])
+      ? normalizeArrayField(currentJob[key])
+      : String(currentJob?.[key] || "");
+
+    const beforeComparable = Array.isArray(before) ? JSON.stringify(before) : before;
+    const afterComparable = Array.isArray(after) ? JSON.stringify(after) : after;
+
+    if (beforeComparable === afterComparable) continue;
+
+    const preview = Array.isArray(before) || Array.isArray(after)
+      ? buildArrayChangePreview(before, after)
+      : {
+          beforePreview: shortenPreview(before),
+          afterPreview: shortenPreview(after),
+        };
+
+    changes.push({
+      path: key,
+      label,
+      beforePreview: preview.beforePreview,
+      afterPreview: preview.afterPreview,
+    });
+  }
+
+  const previousContentHash = String(previousJob?.contentHash || "").trim();
+  const currentContentHash = String(currentJob?.contentHash || "").trim();
+  const previousContentPreview = String(previousJob?.contentPreview || "").trim();
+  const currentContentPreview = String(currentJob?.contentPreview || "").trim();
+
+  if (
+    previousContentHash &&
+    currentContentHash &&
+    previousContentHash !== currentContentHash &&
+    previousContentPreview !== currentContentPreview
+  ) {
+    changes.push({
+      path: "contentPreview",
+      label: "Page Content Preview",
+      beforePreview: shortenPreview(previousContentPreview, 700),
+      afterPreview: shortenPreview(currentContentPreview, 700),
+    });
+  }
+
+  return changes;
+};
+
 const loadNotificationState = async (stateFilePath = DEFAULT_STATE_FILE_PATH) => {
   try {
     const content = await readFile(stateFilePath, "utf8");
     const parsed = JSON.parse(content);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed;
-    }
+    return normalizeStateShape(parsed);
   } catch {
-    return {};
+    return normalizeStateShape({});
   }
-
-  return {};
 };
 
 const saveNotificationState = async (state = {}, stateFilePath = DEFAULT_STATE_FILE_PATH) => {
   await mkdir(path.dirname(stateFilePath), { recursive: true });
-  await writeFile(stateFilePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  const serialized = `${JSON.stringify(state, null, 2)}\n`;
+  const tempFilePath = `${stateFilePath}.tmp`;
+  const backupFilePath = `${stateFilePath}.bak`;
+
+  try {
+    await copyFile(stateFilePath, backupFilePath);
+  } catch {
+    // First write or backup unavailable is acceptable.
+  }
+
+  await writeFile(tempFilePath, serialized, "utf8");
+  await rename(tempFilePath, stateFilePath);
+};
+
+const parseNotificationTargets = (value = process.env.JOB_NOTIFICATION_TARGETS || "") => {
+  const rawTargets = String(value || "").trim();
+  if (!rawTargets) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(rawTargets);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    throw new Error(`Invalid JOB_NOTIFICATION_TARGETS JSON: ${error?.message || error}`);
+  }
 };
 
 const EMAIL_NOTIFICATIONS_ENABLED = toBoolean(
@@ -380,6 +870,45 @@ const isMailerConfigured = () =>
   Boolean(EMAIL_FROM) &&
   EMAIL_TO.length > 0;
 
+const classifyMailFailure = (error) => {
+  const message = formatErrorMessage(error);
+  const normalized = String(message || "").toLowerCase();
+
+  if (
+    normalized.includes("disabled by user from hpanel") ||
+    (normalized.includes("554") && normalized.includes("5.7.1"))
+  ) {
+    return {
+      reason: "provider_disabled",
+      message,
+    };
+  }
+
+  if (normalized.includes("auth") || normalized.includes("invalid login")) {
+    return {
+      reason: "auth_failed",
+      message,
+    };
+  }
+
+  if (
+    normalized.includes("econnrefused") ||
+    normalized.includes("etimedout") ||
+    normalized.includes("ehostunreach") ||
+    normalized.includes("esocket")
+  ) {
+    return {
+      reason: "transport_unavailable",
+      message,
+    };
+  }
+
+  return {
+    reason: "send_failed",
+    message,
+  };
+};
+
 const sendMailMessage = async ({
   subject = "",
   text = "",
@@ -391,20 +920,36 @@ const sendMailMessage = async ({
   }
 
   const mailTransporter = getTransporter();
-  const info = await mailTransporter.sendMail({
-    from: EMAIL_FROM,
-    to: EMAIL_TO,
-    subject,
-    text,
-    html,
-  });
+  try {
+    const info = await mailTransporter.sendMail({
+      from: EMAIL_FROM,
+      to: EMAIL_TO,
+      subject,
+      text,
+      html,
+    });
 
-  return {
-    sent: true,
-    messageId: info.messageId || "",
-    accepted: Array.isArray(info.accepted) ? info.accepted : [],
-    rejected: Array.isArray(info.rejected) ? info.rejected : [],
-  };
+    return {
+      sent: true,
+      messageId: info.messageId || "",
+      accepted: Array.isArray(info.accepted) ? info.accepted : [],
+      rejected: Array.isArray(info.rejected) ? info.rejected : [],
+    };
+  } catch (error) {
+    const failure = classifyMailFailure(error);
+    transporter = null;
+    console.error(
+      `[job-notification-mailer] ${failure.reason}: ${failure.message}`
+    );
+
+    return {
+      sent: false,
+      reason: failure.reason,
+      error: failure.message,
+      accepted: [],
+      rejected: [],
+    };
+  }
 };
 
 const buildJobUpdateSubject = ({ jobTitle = "", changedFields = [] } = {}) => {
@@ -563,6 +1108,9 @@ const buildNewPostsTextBody = ({
 
   for (const post of newPosts) {
     lines.push(`- ${post.title}`);
+    if (Array.isArray(post.sourceSites) && post.sourceSites.length > 0) {
+      lines.push(`  Sources: ${post.sourceSites.join(", ")}`);
+    }
     if (post.applyLastDate) lines.push(`  Apply Last Date: ${post.applyLastDate}`);
     lines.push(`  URL: ${post.jobUrl}`);
   }
@@ -587,7 +1135,13 @@ const buildNewPostsHtmlBody = ({
         <tr>
           <td style="padding:10px;border:1px solid #d0d7de;vertical-align:top;"><strong>${escapeHtml(
             post.title
-          )}</strong></td>
+          )}</strong>${
+            Array.isArray(post.sourceSites) && post.sourceSites.length > 0
+              ? `<div style="margin-top:6px;color:#57606a;font-size:12px;">Sources: ${escapeHtml(
+                  post.sourceSites.join(", ")
+                )}</div>`
+              : ""
+          }</td>
           <td style="padding:10px;border:1px solid #d0d7de;vertical-align:top;">${escapeHtml(
             post.applyLastDate || "-"
           )}</td>
@@ -802,10 +1356,12 @@ export const scrapeSectionPostsForNotification = async ({
         const href = $element.attr("href");
         const jobUrl = toAbsoluteUrl(href, pageUrl);
         if (!jobUrl) continue;
+        if (isBlockedHostname(jobUrl)) continue;
 
         const rawTitle = toCleanText($element.text()) || toCleanText($element.attr("title"));
         const matchTarget = `${rawTitle} ${jobUrl}`.trim();
         if (!rawTitle) continue;
+        if (isGenericListingTitle(rawTitle)) continue;
         if (includePattern && !includePattern.test(matchTarget)) continue;
         if (excludePatterns.some((pattern) => pattern.test(matchTarget))) continue;
 
@@ -838,6 +1394,7 @@ export const scrapeSectionPostsForNotification = async ({
   return {
     sectionName: sectionName || null,
     sectionUrls: normalizedSectionUrls,
+    requestConfig,
     totalPosts: jobs.length,
     posts: jobs,
     fetchedAt: new Date().toISOString(),
@@ -882,7 +1439,7 @@ export const notifyStandaloneSectionPosts = async ({
       sectionUrls: scrapeResult.sectionUrls,
     });
   const state = await loadNotificationState(stateFilePath);
-  const previousSnapshot = state[finalStateKey] || null;
+  const previousSnapshot = state?.siteSnapshots?.[finalStateKey] || null;
   const previousHashes = new Set(
     ((previousSnapshot && previousSnapshot.posts) || [])
       .map((post) => String(post?.dedupeHash || "").trim())
@@ -946,14 +1503,15 @@ export const notifyStandaloneSectionPosts = async ({
     });
   }
 
-  state[finalStateKey] = {
+  const nextState = normalizeStateShape(state);
+  nextState.siteSnapshots[finalStateKey] = {
     sectionName: finalSectionName,
     sectionUrls: scrapeResult.sectionUrls,
     updatedAt: new Date().toISOString(),
     totalPosts: scrapeResult.totalPosts,
     posts: scrapeResult.posts,
   };
-  await saveNotificationState(state, stateFilePath);
+  await saveNotificationState(nextState, stateFilePath);
 
   return {
     sent: Boolean(newPostNotification?.sent) || updateNotifications.some((item) => item?.response?.sent),
@@ -985,24 +1543,298 @@ export const runStandaloneJobNotifications = async ({
     throw new Error("targets array is required");
   }
 
-  const results = [];
+  const state = await loadNotificationState(stateFilePath);
+  const previousTrackedJobs = state?.trackedJobs || {};
+  const siteSnapshots = { ...(state?.siteSnapshots || {}) };
+  const siteResults = [];
+  const errors = [];
+
   for (const target of targets) {
-    results.push(
-      await notifyStandaloneSectionPosts({
+    try {
+      const siteResult = await scrapeSectionPostsForNotification({
         ...target,
-        stateFilePath,
-        notifyOnFirstRun:
-          typeof target?.notifyOnFirstRun === "boolean"
-            ? target.notifyOnFirstRun
-            : notifyOnFirstRun,
-      })
-    );
+      });
+      const finalSectionName =
+        String(target?.sectionName || "").trim() ||
+        inferSectionNameFromUrls(siteResult.sectionUrls);
+      const siteKey =
+        String(target?.stateKey || "").trim() ||
+        buildStateKey({
+          sectionName: finalSectionName,
+          sectionUrls: siteResult.sectionUrls,
+        });
+
+      const normalizedSiteResult = {
+        siteKey,
+        sectionName: finalSectionName,
+        sectionUrls: siteResult.sectionUrls,
+        requestConfig: target?.requestConfig || {},
+        totalPosts: siteResult.totalPosts,
+        posts: siteResult.posts,
+        fetchedAt: siteResult.fetchedAt,
+      };
+
+      siteSnapshots[siteKey] = {
+        sectionName: finalSectionName,
+        sectionUrls: siteResult.sectionUrls,
+        updatedAt: new Date().toISOString(),
+        totalPosts: siteResult.totalPosts,
+        posts: siteResult.posts,
+      };
+      siteResults.push(normalizedSiteResult);
+    } catch (error) {
+      const finalSectionName =
+        String(target?.sectionName || "").trim() ||
+        inferSectionNameFromUrls(toStringArray(target?.sectionUrls || target?.sectionUrl || []));
+      errors.push({
+        sectionName: finalSectionName,
+        sectionUrls: toStringArray(target?.sectionUrls || target?.sectionUrl || []),
+        error: formatErrorMessage(error),
+      });
+    }
+  }
+
+  const mergedSiteResults = Object.entries(siteSnapshots).map(([siteKey, snapshot]) => ({
+    siteKey,
+    sectionName: snapshot?.sectionName || "",
+    sectionUrls: snapshot?.sectionUrls || [],
+    requestConfig: {},
+    totalPosts: Number(snapshot?.totalPosts || 0),
+    posts: Array.isArray(snapshot?.posts) ? snapshot.posts : [],
+    fetchedAt: snapshot?.updatedAt || "",
+  }));
+
+  const trackedJobsList = await aggregateTrackedJobs({
+    siteResults: mergedSiteResults,
+    previousTrackedJobs,
+  });
+  const nextTrackedJobs = Object.fromEntries(
+    trackedJobsList.map((job) => [job.entityKey, job])
+  );
+
+  const newJobs = [];
+  const updatedJobs = [];
+  for (const job of trackedJobsList) {
+    const previousJob = previousTrackedJobs[job.entityKey];
+    if (!previousJob) {
+      newJobs.push(job);
+      continue;
+    }
+
+    const changes = buildTrackedJobChanges({
+      previousJob,
+      currentJob: job,
+    });
+    if (changes.length === 0) continue;
+
+    updatedJobs.push({
+      ...job,
+      changedFields: changes.map((change) => change.label),
+      changes,
+    });
+  }
+
+  const shouldSendNewPostNotification =
+    Object.keys(previousTrackedJobs).length > 0
+      ? newJobs.length > 0
+      : notifyOnFirstRun && newJobs.length > 0;
+  let newPostNotification = { sent: false, reason: "no_new_posts" };
+  let updateNotifications = [];
+  const deliveryLogEntries = [];
+  const pendingDeliveryEntries = [];
+  const successfulDeliveryKeys = new Set();
+
+  if (shouldSendNewPostNotification) {
+    newPostNotification = await sendNewPostsNotification({
+      sectionName: "Tracked Sources",
+      newPosts: newJobs.map((job) => ({
+        title: job.title,
+        jobUrl: job.jobUrl,
+        sourceSites: job.sourceSites,
+      })),
+    });
+
+    const deliveryEntry = createNotificationDeliveryEntry({
+      type: "new_jobs",
+      sectionName: "Tracked Sources",
+      title: `${newJobs.length} new jobs detected`,
+      sourceSites: newJobs.flatMap((job) => job.sourceSites || []),
+      response: newPostNotification,
+    });
+    deliveryLogEntries.push(deliveryEntry);
+
+    if (deliveryEntry.status === "sent") {
+      successfulDeliveryKeys.add(deliveryEntry.deliveryKey);
+    } else {
+      pendingDeliveryEntries.push({
+        ...deliveryEntry,
+        payload: {
+          totalJobs: newJobs.length,
+          jobs: newJobs.map((job) => ({
+            title: job.title,
+            jobUrl: job.jobUrl,
+            sourceSites: job.sourceSites,
+          })),
+        },
+      });
+    }
+  }
+
+  for (const job of updatedJobs) {
+    const response = await sendJobUpdateNotification({
+      jobTitle: job.title,
+      jobUrl: job.jobUrl,
+      matchedBy: job.sourceSites.join(", ") || "tracked_sources",
+      changedFields: job.changedFields,
+      changes: job.changes,
+      omittedChangeCount: 0,
+    });
+    const deliveryEntry = createNotificationDeliveryEntry({
+      type: "job_update",
+      sectionName: job.sourceSites.join(", ") || "tracked_sources",
+      title: job.title,
+      jobUrl: job.jobUrl,
+      sourceSites: job.sourceSites,
+      changedFields: job.changedFields,
+      response,
+    });
+    deliveryLogEntries.push(deliveryEntry);
+
+    if (deliveryEntry.status === "sent") {
+      successfulDeliveryKeys.add(deliveryEntry.deliveryKey);
+    } else {
+      pendingDeliveryEntries.push({
+        ...deliveryEntry,
+        payload: {
+          changes: job.changes,
+        },
+      });
+    }
+
+    updateNotifications.push({
+      jobUrl: job.jobUrl,
+      title: job.title,
+      response,
+      delivery: deliveryEntry,
+    });
+  }
+
+  const pendingDeliveryKeys = new Set(
+    pendingDeliveryEntries.map((entry) => String(entry?.deliveryKey || "").trim()).filter(Boolean)
+  );
+  const preservedPendingNotifications = (state?.pendingNotifications || []).filter((entry) => {
+    const deliveryKey = String(entry?.deliveryKey || "").trim();
+    if (!deliveryKey) return true;
+    if (successfulDeliveryKeys.has(deliveryKey)) return false;
+    if (pendingDeliveryKeys.has(deliveryKey)) return false;
+    return true;
+  });
+  const deliverySummary = {
+    attempted: deliveryLogEntries.length,
+    sent: deliveryLogEntries.filter((entry) => entry.status === "sent").length,
+    pending: pendingDeliveryEntries.length,
+    failures: pendingDeliveryEntries.map((entry) => ({
+      type: entry.type,
+      reason: entry.reason,
+      title: entry.title,
+      jobUrl: entry.jobUrl,
+    })),
+  };
+
+  const nextState = {
+    meta: {
+      version: 2,
+      updatedAt: new Date().toISOString(),
+      targetsConfigured: targets.length,
+      targetsSucceeded: siteResults.length,
+      targetsFailed: errors.length,
+      lastSuccessfulRunAt:
+        siteResults.length > 0
+          ? new Date().toISOString()
+          : state?.meta?.lastSuccessfulRunAt || null,
+    },
+    siteSnapshots,
+    trackedJobs: nextTrackedJobs,
+    lastRun: {
+      updatedAt: new Date().toISOString(),
+      totalUniqueJobs: trackedJobsList.length,
+      newJobs: newJobs.length,
+      updatedJobs: updatedJobs.length,
+      processedTargets: siteResults.length,
+      preservedSnapshots: Math.max(0, Object.keys(siteSnapshots).length - siteResults.length),
+      delivery: deliverySummary,
+      errors,
+    },
+    runHistory: appendRunHistory(state?.runHistory, {
+      updatedAt: new Date().toISOString(),
+      processedTargets: siteResults.length,
+      failedTargets: errors.length,
+      totalUniqueJobs: trackedJobsList.length,
+      newJobs: newJobs.length,
+      updatedJobs: updatedJobs.length,
+      deliveryPending: deliverySummary.pending,
+      deliverySent: deliverySummary.sent,
+    }),
+    deliveryLog: appendLimitedEntries(
+      state?.deliveryLog,
+      deliveryLogEntries,
+      DEFAULT_DELIVERY_LOG_LIMIT
+    ),
+    pendingNotifications: appendLimitedEntries(
+      preservedPendingNotifications,
+      pendingDeliveryEntries,
+      DEFAULT_PENDING_NOTIFICATION_LIMIT
+    ),
+  };
+  await saveNotificationState(nextState, stateFilePath);
+
+  if (errors.length > 0) {
+    try {
+      await sendSystemEventNotification({
+        title: "Job Notification Target Failures",
+        eventType: "job_notification_partial_failure",
+        summary: `${errors.length} target(s) failed, ${siteResults.length} target(s) succeeded`,
+        details: {
+          errors,
+          processedTargets: siteResults.length,
+          configuredTargets: targets.length,
+        },
+      });
+    } catch {
+      // Best-effort notification only.
+    }
   }
 
   return {
-    targets: results.length,
-    sent: results.filter((item) => item.sent).length,
-    results,
+    targets: targets.length,
+    processedTargets: siteResults.length,
+    failedTargets: errors.length,
+    sentCount:
+      (newPostNotification?.sent ? 1 : 0) +
+      updateNotifications.filter((item) => item?.response?.sent).length,
+    sent:
+      Boolean(newPostNotification?.sent) ||
+      updateNotifications.some((item) => item?.response?.sent),
+    totalUniqueJobs: trackedJobsList.length,
+    newJobs: newJobs.length,
+    updatedJobs: updatedJobs.length,
+    errors,
+    delivery: deliverySummary,
+    newJobNotification: {
+      sent: Boolean(newPostNotification?.sent),
+      total: newJobs.length,
+      response: newPostNotification,
+    },
+    updateJobNotification: {
+      sent: updateNotifications.some((item) => item?.response?.sent),
+      total: updatedJobs.length,
+      responses: updateNotifications,
+    },
+    results: mergedSiteResults.map((site) => ({
+      sectionName: site.sectionName,
+      totalPosts: site.totalPosts,
+      fetchedAt: site.fetchedAt,
+    })),
   };
 };
 
@@ -1043,12 +1875,18 @@ export const startStandaloneJobNotificationCron = ({
   timezone = process.env.JOB_NOTIFICATION_CRON_TIMEZONE || "Asia/Kolkata",
   enabled = toBoolean(process.env.JOB_NOTIFICATION_CRON_ENABLED, true),
   runOnStart = toBoolean(process.env.JOB_NOTIFICATION_CRON_RUN_ON_START, true),
-  targets = [],
+  targets = parseNotificationTargets(),
   stateFilePath = DEFAULT_STATE_FILE_PATH,
-  notifyOnFirstRun = false,
+  notifyOnFirstRun = toBoolean(process.env.JOB_NOTIFICATION_NOTIFY_ON_FIRST_RUN, false),
 } = {}) => {
   if (cronTask) return cronTask;
   if (!enabled) return null;
+  if (!Array.isArray(targets) || targets.length === 0) {
+    console.warn(
+      "[job-notification-cron] skipped start because JOB_NOTIFICATION_TARGETS is empty"
+    );
+    return null;
+  }
   if (!cron.validate(schedule)) {
     throw new Error(`Invalid notification cron schedule: ${schedule}`);
   }
@@ -1063,7 +1901,7 @@ export const startStandaloneJobNotificationCron = ({
       })
         .then((result) => {
           console.log(
-            `[job-notification-cron] completed in ${result.durationMs}ms | targets=${result.targets} sent=${result.sent}`
+            `[job-notification-cron] completed in ${result.durationMs}ms | targets=${result.targets} sent=${result.sent} pendingMail=${result.delivery?.pending || 0}`
           );
         })
         .catch((error) => {
@@ -1086,7 +1924,7 @@ export const startStandaloneJobNotificationCron = ({
       })
         .then((result) => {
           console.log(
-            `[job-notification-cron] initial run completed in ${result.durationMs}ms | targets=${result.targets} sent=${result.sent}`
+            `[job-notification-cron] initial run completed in ${result.durationMs}ms | targets=${result.targets} sent=${result.sent} pendingMail=${result.delivery?.pending || 0}`
           );
         })
         .catch((error) => {
@@ -1107,16 +1945,9 @@ export const stopStandaloneJobNotificationCron = () => {
 const runFromCli = async () => {
   const shouldRunCron =
     process.argv.includes("--cron") || process.argv.includes("cron");
-  const rawTargets = String(process.env.JOB_NOTIFICATION_TARGETS || "").trim();
-  if (!rawTargets) {
+  const targets = parseNotificationTargets();
+  if (targets.length === 0) {
     throw new Error("JOB_NOTIFICATION_TARGETS env is required");
-  }
-
-  let targets = [];
-  try {
-    targets = JSON.parse(rawTargets);
-  } catch (error) {
-    throw new Error(`Invalid JOB_NOTIFICATION_TARGETS JSON: ${error?.message || error}`);
   }
   const notifyOnFirstRun = toBoolean(process.env.JOB_NOTIFICATION_NOTIFY_ON_FIRST_RUN, false);
 

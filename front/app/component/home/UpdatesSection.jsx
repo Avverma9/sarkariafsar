@@ -14,9 +14,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { updateBlocks as fallbackUpdateBlocks } from "./data";
-import baseUrl from "../../lib/baseUrl";
-import { buildBrowserCachedFetchOptions } from "../../lib/fetchCache";
-import { buildCanonicalKey } from "../../lib/postFormatter";
+import { getSectionsWithJobs } from "../../lib/siteApi";
+import {
+  mapSectionsWithJobs,
+  normalizeSection,
+  toSectionCategory,
+} from "../../lib/sections";
 import { buildPostDetailsHref } from "../../lib/postLink";
 import UpdatesSectionSkeleton from "../skeletons/UpdatesSectionSkeleton";
 
@@ -33,212 +36,57 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
-function normalizeCategory(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
-}
-
-function toCanonicalCategory(value) {
-  const normalized = normalizeCategory(value);
-
-  if (
-    [
-      "latestjob",
-      "latestjobs",
-      "newjob",
-      "newjobs",
-      "new_jobs",
-      "latest_form",
-      "toponlineform",
-      "hotjob",
-    ].includes(normalized)
-  ) {
-    return "latest-jobs";
-  }
-
-  if (
-    [
-      "result",
-      "results",
-      "examresult",
-      "latestresult",
-      "answerkey",
-      "answerkeys",
-    ].includes(normalized)
-  ) {
-    return "results";
-  }
-
-  if (["admitcard", "admitcards"].includes(normalized)) {
-    return "admit-cards";
-  }
-
-  if (["admission", "admissions"].includes(normalized)) {
-    return "admissions";
-  }
-
-  return normalized;
-}
-
-function getThemeByCategory(category) {
-  if (category === "latest-jobs") {
-    return {
-      icon: "Briefcase",
-      color: "text-emerald-600",
-      bg: "bg-emerald-50",
-      border: "border-emerald-200",
-    };
-  }
-
-  if (category === "results") {
-    return {
-      icon: "CheckCircle",
-      color: "text-rose-600",
-      bg: "bg-rose-50",
-      border: "border-rose-200",
-    };
-  }
-
-  if (category === "admit-cards") {
-    return {
-      icon: "FileText",
-      color: "text-indigo-600",
-      bg: "bg-indigo-50",
-      border: "border-indigo-200",
-    };
-  }
-
-  if (category === "admissions") {
-    return {
-      icon: "GraduationCap",
-      color: "text-purple-600",
-      bg: "bg-purple-50",
-      border: "border-purple-200",
-    };
-  }
-
-  return {
-    icon: "FileText",
-    color: "text-slate-600",
-    bg: "bg-slate-100",
-    border: "border-slate-200",
-  };
-}
-
 function mapFallbackBlocks(blocks) {
-  return blocks.map((block, index) => ({
-    ...block,
-    id: block.id || `fallback-${index + 1}`,
-    title: block.title || block.id || `Section ${index + 1}`,
-    categoryKey: toCanonicalCategory(block.id || block.title),
-  }));
-}
-
-function mapSectionsToBlocks(sections) {
-  return asArray(sections).map((section, index) => {
-    const source = section || {};
-    const canonical = toCanonicalCategory(source.key || source.name);
-    const theme = getThemeByCategory(canonical);
+  return asArray(blocks).map((block, index) => {
+    const normalized = normalizeSection(
+      {
+        name: block?.title || block?.id || `Section ${index + 1}`,
+        canonicalUrl: block?.id || block?.title || `section-${index + 1}`,
+      },
+      index,
+    );
 
     return {
-      id: source.id || source.key || `section-${index + 1}`,
-      key: source.key,
-      title: source.name || source.key || `Section ${index + 1}`,
-      categoryKey: canonical,
-      ...theme,
+      ...normalized,
+      icon: block?.icon || normalized.icon,
+      color: block?.color || normalized.color,
+      bg: block?.bg || normalized.bg,
+      border: block?.border || normalized.border,
     };
   });
 }
 
-async function fetchStoredJobLists() {
-  const response = await fetch(
-    `${baseUrl}/fetch-stored-joblist`,
-    buildBrowserCachedFetchOptions()
-  );
+function buildJobsLookupFromSections(sections = []) {
+  return asArray(sections).reduce((result, section) => {
+    result[section.id] = asArray(section.jobs);
+    return result;
+  }, {});
+}
 
-  if (!response.ok) {
-    throw new Error(`Failed to load jobs (${response.status})`);
+function getItemMeta(item) {
+  if (item?.status) {
+    return item.status;
   }
 
-  const payload = await response.json();
-  return asArray(payload?.jobLists);
-}
+  if (item?.lastDate) {
+    return item.lastDate;
+  }
 
-function mapStoredJobsToItems(jobs, block) {
-  return asArray(jobs).map((job, index) => {
-    const canonicalId =
-      job?.jobUrlHash ||
-      (job?.jobUrl || job?.title
-        ? buildCanonicalKey({ title: job?.title, jobUrl: job?.jobUrl })
-        : `job-${index + 1}`);
+  if (item?.applyLastDate) {
+    return String(item.applyLastDate);
+  }
 
-    return {
-      id: `${block.id}-${canonicalId}`,
-      title: job?.title || "Untitled Job",
-      jobUrl: job?.jobUrl || "",
-      fetchedAt: job?.fetchedAt || "",
-      lastDate: "LIVE UPDATE",
-      _fromApi: true,
-    };
-  });
+  if (item?.jobUrl || item?.slug) {
+    return "OPEN LINK";
+  }
+
+  return "";
 }
 
 function paginateItems(items, page = 1) {
   const safeItems = asArray(items);
   const start = (page - 1) * PAGE_SIZE;
   return safeItems.slice(start, start + PAGE_SIZE);
-}
-
-function buildStoredJobListLookup(jobLists) {
-  return asArray(jobLists).reduce((lookup, jobList) => {
-    const source = jobList || {};
-    const keys = [
-      source.section,
-      source.sectionName,
-      toCanonicalCategory(source.section),
-      toCanonicalCategory(source.sectionName),
-    ].filter(Boolean);
-
-    keys.forEach((key) => {
-      lookup[String(key).toLowerCase()] = asArray(source.postList);
-    });
-
-    return lookup;
-  }, {});
-}
-
-function getStoredJobsForBlock(block, jobLookup) {
-  const canonical = toCanonicalCategory(block?.categoryKey || block?.key || block?.title);
-  const candidates = [
-    block?.key,
-    block?.title,
-    canonical,
-    canonical === "latest-jobs" ? "new_jobs" : "",
-    canonical === "admit-cards" ? "admit_cards" : "",
-  ]
-    .filter(Boolean)
-    .map((value) => String(value).toLowerCase());
-
-  for (const candidate of candidates) {
-    if (candidate in jobLookup) {
-      return asArray(jobLookup[candidate]);
-    }
-  }
-
-  return [];
-}
-
-function getItemMeta(item) {
-  if (item?.lastDate) {
-    return item.lastDate;
-  }
-
-  if (item?.jobUrl) {
-    return "OPEN LINK";
-  }
-
-  return "";
 }
 
 export default function UpdatesSection({
@@ -248,14 +96,21 @@ export default function UpdatesSection({
   serverJobsBySection = {},
 }) {
   const router = useRouter();
-  const hasServerData =
-    serverSectionBlocks.length > 0 && Object.keys(serverJobsBySection).length > 0;
   const fallbackBlocks = useMemo(() => mapFallbackBlocks(fallbackUpdateBlocks), []);
+  const initialJobsBySection = useMemo(() => {
+    if (Object.keys(serverJobsBySection || {}).length > 0) {
+      return serverJobsBySection;
+    }
+
+    return buildJobsLookupFromSections(serverSectionBlocks);
+  }, [serverJobsBySection, serverSectionBlocks]);
+  const hasServerData =
+    serverSectionBlocks.length > 0 && Object.keys(initialJobsBySection).length > 0;
   const [sectionBlocks, setSectionBlocks] = useState(
     hasServerData ? serverSectionBlocks : fallbackBlocks,
   );
   const [jobsBySection, setJobsBySection] = useState(
-    hasServerData ? serverJobsBySection : {},
+    hasServerData ? initialJobsBySection : {},
   );
   const [loadingBySection, setLoadingBySection] = useState({});
   const [viewAllModal, setViewAllModal] = useState({ open: false, block: null });
@@ -288,11 +143,11 @@ export default function UpdatesSection({
           return;
         }
 
-        const blockCategory = toCanonicalCategory(
+        const blockCategory = toSectionCategory(
           block.categoryKey || block.key || block.id || block.title,
         );
         const allFallbackItems = filteredUpdates
-          .filter((item) => toCanonicalCategory(item.category) === blockCategory)
+          .filter((item) => toSectionCategory(item.category) === blockCategory)
           .map((item, index) => ({
             ...item,
             id: item.id || `${block.id}-fallback-${index + 1}`,
@@ -337,18 +192,19 @@ export default function UpdatesSection({
 
   const openPostDetailsPage = useCallback(
     (item, shouldCloseModal = false) => {
-      if (!item?.jobUrl) {
+      const href = buildPostDetailsHref({
+        title: item?.title,
+        slug: item?.slug,
+        jobUrl: item?.jobUrl,
+      });
+
+      if (!href) {
         return;
       }
 
       if (shouldCloseModal) {
         closeViewAllModal();
       }
-
-      const href = buildPostDetailsHref({
-        title: item?.title,
-        jobUrl: item?.jobUrl,
-      });
 
       router.push(href);
     },
@@ -396,7 +252,6 @@ export default function UpdatesSection({
   }, [viewAllModal.open, closeViewAllModal]);
 
   useEffect(() => {
-    // Skip fetching if server already provided data
     if (hasServerData) return;
 
     let active = true;
@@ -407,45 +262,19 @@ export default function UpdatesSection({
       }
 
       try {
-        const sectionResponse = await fetch(
-          `${baseUrl}/job-sections`,
-          buildBrowserCachedFetchOptions()
-        );
-
-        if (!sectionResponse.ok) {
-          throw new Error(`Failed to load sections (${sectionResponse.status})`);
-        }
-
-        const sectionPayload = await sectionResponse.json();
-        const mappedBlocks = mapSectionsToBlocks(sectionPayload?.sections);
-        const blocks = mappedBlocks.length > 0 ? mappedBlocks : fallbackBlocks;
-        const initialLoadingState = blocks.reduce((result, block) => {
-          result[block.id] = true;
-          return result;
-        }, {});
+        const payload = await getSectionsWithJobs({
+          sectionLimit: 20,
+          jobLimit: PAGE_SIZE,
+        });
+        const sections = mapSectionsWithJobs(payload?.sections);
+        const blocks = sections.length > 0 ? sections : fallbackBlocks;
 
         if (!active) {
           return;
         }
 
-        setLoadingBySection(initialLoadingState);
         setSectionBlocks(blocks);
-
-        const jobLists = await fetchStoredJobLists();
-        const jobLookup = buildStoredJobListLookup(jobLists);
-        const mappedJobs = blocks.reduce((result, block) => {
-          result[block.id] = mapStoredJobsToItems(
-            getStoredJobsForBlock(block, jobLookup),
-            block,
-          );
-          return result;
-        }, {});
-
-        if (!active) {
-          return;
-        }
-
-        setJobsBySection(mappedJobs);
+        setJobsBySection(buildJobsLookupFromSections(sections));
         setLoadingBySection(
           blocks.reduce((result, block) => {
             result[block.id] = false;
@@ -457,6 +286,7 @@ export default function UpdatesSection({
           console.error("Failed to fetch job sections:", error);
         }
         if (active) {
+          setSectionBlocks(fallbackBlocks);
           setJobsBySection({});
           setLoadingBySection({});
         }
@@ -495,11 +325,11 @@ export default function UpdatesSection({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-4">
         {sectionBlocks.map((block) => {
-          const blockCategory = toCanonicalCategory(
+          const blockCategory = toSectionCategory(
             block.categoryKey || block.key || block.id || block.title,
           );
           const fallbackItems = filteredUpdates
-            .filter((item) => toCanonicalCategory(item.category) === blockCategory)
+            .filter((item) => toSectionCategory(item.category) === blockCategory)
             .slice(0, PAGE_SIZE);
           const apiItems = jobsBySection[block.id];
           const items =
@@ -546,7 +376,7 @@ export default function UpdatesSection({
                       <button
                         key={item.id}
                         onClick={() => {
-                          if (item._fromApi && item.jobUrl) {
+                          if (item._fromApi || item.slug || item.jobUrl) {
                             openPostDetailsPage(item, false);
                             return;
                           }
@@ -589,7 +419,7 @@ export default function UpdatesSection({
                   disabled={isLoading}
                   className="text-xs font-bold text-slate-500 transition-colors hover:text-indigo-600 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isLoading ? "Loading..." : "View All →"}
+                  {isLoading ? "Loading..." : "View All ->"}
                 </button>
               </div>
             </div>
@@ -651,7 +481,7 @@ export default function UpdatesSection({
                         <button
                           key={item.id}
                           onClick={() => {
-                            if (item._fromApi && item.jobUrl) {
+                            if (item._fromApi || item.slug || item.jobUrl) {
                               openPostDetailsPage(item, true);
                               return;
                             }

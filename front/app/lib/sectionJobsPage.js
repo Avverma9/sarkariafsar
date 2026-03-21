@@ -1,8 +1,12 @@
-import { getJobSections, getSectionJobsByUrls } from "./siteApi";
+import { getSectionsWithJobs } from "./siteApi";
+import {
+  findSectionByIdentifier,
+  mapSectionsWithJobs,
+} from "./sections";
 
 const DEFAULT_LIMIT = 24;
 const ALLOWED_LIMITS = [12, 24, 36, 48, 60];
-const MAX_API_PAGES = 30;
+const MAX_SECTION_JOB_LIMIT = 100;
 
 function getFirstValue(value) {
   if (Array.isArray(value)) {
@@ -12,12 +16,6 @@ function getFirstValue(value) {
   return value || "";
 }
 
-function normalizeToken(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
-}
-
 function toPositiveInt(value, fallback) {
   const parsed = Number.parseInt(String(value || ""), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -25,26 +23,6 @@ function toPositiveInt(value, fallback) {
 
 function normalizeQueryText(value) {
   return String(value || "").trim().replace(/\s+/g, " ").slice(0, 120);
-}
-
-function findSectionByKeys(sections, sectionKeys) {
-  const desired = new Set((sectionKeys || []).map(normalizeToken).filter(Boolean));
-
-  if (desired.size === 0) {
-    return null;
-  }
-
-  return (Array.isArray(sections) ? sections : []).find((section) => {
-    const candidates = [
-      section?.key,
-      section?.name,
-      ...(Array.isArray(section?.aliases) ? section.aliases : []),
-    ]
-      .map(normalizeToken)
-      .filter(Boolean);
-
-    return candidates.some((candidate) => desired.has(candidate));
-  });
 }
 
 function filterJobsByQuery(jobs, query) {
@@ -61,63 +39,12 @@ function filterJobsByQuery(jobs, query) {
   );
 }
 
-function dedupeJobs(jobs) {
-  const seen = new Set();
-  const result = [];
-
-  (Array.isArray(jobs) ? jobs : []).forEach((job, index) => {
-    const key = String(job?.jobUrl || job?.title || index);
-
-    if (seen.has(key)) {
-      return;
-    }
-
-    seen.add(key);
-    result.push(job);
-  });
-
-  return result;
-}
-
-function getTotalFromPayload(payload, fallback) {
-  const parsed = Number.parseInt(String(payload?.db?.totalPosts || ""), 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
-}
-
-async function fetchSectionJobsPage(sectionUrls, { limit, page }) {
-  const payload = await getSectionJobsByUrls({
-    sectionUrls: Array.isArray(sectionUrls) ? sectionUrls : [],
-    limit,
-    page,
-  });
-  const jobs = dedupeJobs(payload?.jobs);
-  const total = getTotalFromPayload(payload, jobs.length);
-
-  return {
-    jobs,
-    total,
-  };
-}
-
-async function fetchAllSectionJobs(sectionUrls, { limit }) {
-  const allJobs = [];
-  let total = 0;
-
-  for (let page = 1; page <= MAX_API_PAGES; page += 1) {
-    const payload = await fetchSectionJobsPage(sectionUrls, { limit, page });
-    allJobs.push(...payload.jobs);
-    total = Math.max(total, payload.total);
-
-    if (payload.jobs.length < limit) {
-      break;
-    }
-
-    if (total > 0 && allJobs.length >= total) {
-      break;
-    }
+function getRequestedJobLimit({ limit, page, query }) {
+  if (normalizeQueryText(query)) {
+    return MAX_SECTION_JOB_LIMIT;
   }
 
-  return dedupeJobs(allJobs);
+  return Math.min(MAX_SECTION_JOB_LIMIT, Math.max(limit, page * limit));
 }
 
 export function parseSectionJobsQuery(searchParams = {}) {
@@ -136,8 +63,10 @@ export function parseSectionJobsQuery(searchParams = {}) {
 }
 
 export async function loadSectionJobsPage({
+  slug = "",
   sectionKeys = [],
-  title = "Jobs",
+  categoryKey = "",
+  title = "",
   description = "",
   view = "list",
   limit = DEFAULT_LIMIT,
@@ -145,15 +74,20 @@ export async function loadSectionJobsPage({
   query = "",
 } = {}) {
   try {
-    const sectionsPayload = await getJobSections();
-    const sections = Array.isArray(sectionsPayload?.sections)
-      ? sectionsPayload.sections
-      : [];
-    const section = findSectionByKeys(sections, sectionKeys);
+    const payload = await getSectionsWithJobs({
+      sectionLimit: 20,
+      jobLimit: getRequestedJobLimit({ limit, page, query }),
+    });
+    const sections = mapSectionsWithJobs(payload?.sections);
+    const section = findSectionByIdentifier(sections, {
+      slug,
+      sectionKeys,
+      categoryKey,
+    });
 
     if (!section) {
       return {
-        title,
+        title: title || "Jobs",
         description,
         section: null,
         jobs: [],
@@ -167,60 +101,30 @@ export async function loadSectionJobsPage({
       };
     }
 
-    const sectionUrls = Array.isArray(section?.urls) ? section.urls : [];
-
-    if (normalizeQueryText(query)) {
-      const allJobs = await fetchAllSectionJobs(sectionUrls, { limit });
-      const filteredJobs = filterJobsByQuery(allJobs, query);
-      const totalPosts = filteredJobs.length;
-      const totalPages = Math.max(1, Math.ceil(totalPosts / limit));
-      const safePage = Math.min(Math.max(page, 1), totalPages);
-      const start = (safePage - 1) * limit;
-      const jobs = filteredJobs.slice(start, start + limit);
-
-      return {
-        title,
-        description,
-        section,
-        jobs,
-        totalPosts,
-        totalPages,
-        page: safePage,
-        limit,
-        view,
-        query: normalizeQueryText(query),
-        error: "",
-      };
-    }
-
-    let safePage = Math.max(page, 1);
-    let payload = await fetchSectionJobsPage(sectionUrls, { limit, page: safePage });
-    let totalPosts = payload.total;
-    let totalPages = Math.max(1, Math.ceil(totalPosts / limit));
-
-    if (safePage > totalPages) {
-      safePage = totalPages;
-      payload = await fetchSectionJobsPage(sectionUrls, { limit, page: safePage });
-      totalPosts = payload.total;
-      totalPages = Math.max(1, Math.ceil(totalPosts / limit));
-    }
+    const resolvedTitle = title || section.name || "Jobs";
+    const filteredJobs = filterJobsByQuery(section.jobs, query);
+    const totalPosts = filteredJobs.length;
+    const totalPages = Math.max(1, Math.ceil(totalPosts / limit));
+    const safePage = Math.min(Math.max(page, 1), totalPages);
+    const start = (safePage - 1) * limit;
+    const jobs = filteredJobs.slice(start, start + limit);
 
     return {
-      title,
+      title: resolvedTitle,
       description,
       section,
-      jobs: payload.jobs,
+      jobs,
       totalPosts,
       totalPages,
       page: safePage,
       limit,
       view,
-      query: "",
+      query: normalizeQueryText(query),
       error: "",
     };
   } catch (error) {
     return {
-      title,
+      title: title || "Jobs",
       description,
       section: null,
       jobs: [],

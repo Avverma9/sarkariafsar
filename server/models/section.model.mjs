@@ -1,37 +1,49 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-const jobSectionSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true  // Added for completeness; adjust as needed
+const toCanonicalUrl = (value = "") =>
+  String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+
+const jobSectionSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    canonicalUrl: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
   },
-  status: {
-    type: String,
-    enum: ["active", "inactive"],
-    default: "active"  // Optional default value [web:27]
-  },
-  canonicalUrl: {
-    type: String,
-    unique: true,  // Ensures uniqueness for URLs
-    sparse: true   // Allows nulls for uniqueness checks
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
-// Pre-save hook: Generate canonicalUrl from name if not set (e.g., "My Job" → "my-job")
-jobSectionSchema.pre('save', function(next) {
+jobSectionSchema.pre("save", function ensureCanonicalUrl(next) {
   if (this.name && !this.canonicalUrl) {
-    this.canonicalUrl = this.name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')  // Remove special chars
-      .trim()
-      .replace(/\s+/g, '-')         // Spaces to hyphens
-      .replace(/-+/g, '-');         // Collapse hyphens
+    this.canonicalUrl = toCanonicalUrl(this.name);
   }
   next();
 });
 
-const JobSection = mongoose.model('JobSection', jobSectionSchema);
+const JobSection =
+  mongoose.models.JobSection ||
+  mongoose.model("JobSection", jobSectionSchema);
+
+export { toCanonicalUrl };
 
 export default JobSection;

@@ -26,9 +26,10 @@ export default async function AdmitCardsPage({ searchParams }) {
   const query = parseSectionJobsQuery(await searchParams);
   const pageData = await loadSectionJobsPage({
     ...query,
-    sectionKeys: ["admit_card", "admitcard", "admit_cards"],
-    title: "Admit Cards",
-    description: "All admit card updates from configured source section URLs.",
+    slug: "recent-admit-cards",
+    categoryKey: "admit-cards",
+    title: "Recent Admit Cards",
+    description: "All admit card updates from the latest section feed.",
   });
   const breadcrumbItems = [
     { name: "Home", url: "/" },
@@ -48,12 +49,11 @@ export default async function AdmitCardsPage({ searchParams }) {
       name: "Latest admit card updates",
       items: pageData.jobs.map((job) => ({
         name: job?.title || "Admit card update",
-        url: job?.jobUrl
-          ? buildPostDetailsHref({
-              title: job?.title,
-              jobUrl: job?.jobUrl,
-            })
-          : "/admit-cards",
+        url: buildPostDetailsHref({
+          title: job?.title,
+          slug: job?.slug,
+          jobUrl: job?.jobUrl,
+        }),
       })),
     }),
   ];

@@ -12,10 +12,10 @@ export function getSectionConfig(sectionSlug) {
 
   if (["newjobs", "latestjobs", "jobs"].includes(normalized)) {
     return {
-      canonicalSlug: "new-jobs",
+      canonicalSlug: "latest-gov-jobs",
       sectionKeys: ["new_jobs", "newjob", "latest_job", "latestjobs"],
       title: "Latest Jobs",
-      description: "All available job updates from configured source section URLs.",
+      description: "All available job updates from configured section data.",
     };
   }
 
@@ -24,26 +24,25 @@ export function getSectionConfig(sectionSlug) {
       canonicalSlug: "results",
       sectionKeys: ["results", "result", "exam_result", "latest_result"],
       title: "Latest Results",
-      description:
-        "All result and answer-key related updates from configured source section URLs.",
+      description: "All result and answer-key related updates from configured section data.",
     };
   }
 
   if (["admitcards", "admitcard"].includes(normalized)) {
     return {
-      canonicalSlug: "admit-cards",
+      canonicalSlug: "recent-admit-cards",
       sectionKeys: ["admit_card", "admitcard", "admit_cards"],
       title: "Admit Cards",
-      description: "All admit card updates from configured source section URLs.",
+      description: "All admit card updates from configured section data.",
     };
   }
 
   if (["admission", "admissions"].includes(normalized)) {
     return {
-      canonicalSlug: "admissions",
+      canonicalSlug: "admission",
       sectionKeys: ["admission", "admissions"],
       title: "Latest Admissions",
-      description: "All admission-related updates from configured source section URLs.",
+      description: "All admission-related updates from configured section data.",
     };
   }
 
@@ -53,14 +52,6 @@ export function getSectionConfig(sectionSlug) {
 function getCanonicalPath(config) {
   if (!config) {
     return "/post";
-  }
-
-  if (config.canonicalSlug === "results") {
-    return "/results";
-  }
-
-  if (config.canonicalSlug === "admit-cards") {
-    return "/admit-cards";
   }
 
   return `/post/${config.canonicalSlug}`;

@@ -12,8 +12,16 @@ import { buildPostDetailsHref } from "../../lib/postLink";
 
 const SOURCE_LABEL = "sarkariafsar.com";
 
-function getSourceHost(url) {
-  return String(url || "").trim() ? SOURCE_LABEL : "";
+function getMetaLabel(job) {
+  if (String(job?.status || "").trim()) {
+    return String(job.status).trim();
+  }
+
+  if (String(job?.jobUrl || "").trim()) {
+    return SOURCE_LABEL;
+  }
+
+  return "";
 }
 
 function buildListingHref(basePath, { view, q, limit, page }) {
@@ -51,8 +59,8 @@ function getPaginationItems(currentPage, totalPages) {
 function JobCard({ job, index }) {
   const jobTitle = job?.title || "Untitled Job";
   const jobUrl = job?.jobUrl || "";
-  const detailsHref = buildPostDetailsHref({ title: jobTitle, jobUrl });
-  const sourceHost = getSourceHost(jobUrl);
+  const detailsHref = buildPostDetailsHref({ title: jobTitle, slug: job?.slug, jobUrl });
+  const metaLabel = getMetaLabel(job);
 
   return (
     <article
@@ -64,9 +72,9 @@ function JobCard({ job, index }) {
       </p>
 
       <div className="mt-2 min-h-[20px]">
-        {sourceHost ? (
+        {metaLabel ? (
           <p className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-            {sourceHost}
+            {metaLabel}
           </p>
         ) : null}
       </div>
@@ -89,8 +97,8 @@ function JobCard({ job, index }) {
 function JobListItem({ job, index }) {
   const jobTitle = job?.title || "Untitled Job";
   const jobUrl = job?.jobUrl || "";
-  const detailsHref = buildPostDetailsHref({ title: jobTitle, jobUrl });
-  const sourceHost = getSourceHost(jobUrl);
+  const detailsHref = buildPostDetailsHref({ title: jobTitle, slug: job?.slug, jobUrl });
+  const metaLabel = getMetaLabel(job);
 
   return (
     <article
@@ -99,9 +107,9 @@ function JobListItem({ job, index }) {
     >
       <div className="min-w-0">
         <p className="break-words text-sm leading-6 font-bold text-slate-800">{jobTitle}</p>
-        {sourceHost ? (
+        {metaLabel ? (
           <p className="mt-1 text-xs font-semibold tracking-wide text-slate-400 uppercase">
-            {sourceHost}
+            {metaLabel}
           </p>
         ) : null}
       </div>

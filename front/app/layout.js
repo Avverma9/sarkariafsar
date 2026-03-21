@@ -10,8 +10,6 @@ import {
   getSiteUrl,
 } from "./lib/seo";
 
-export const revalidate = 300;
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

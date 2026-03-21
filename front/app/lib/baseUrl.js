@@ -1,3 +1,3 @@
-const baseUrl = process.env.NEXT_PUBLIC_SITE_API_BASE_URL || "https://sarkariafsar.com/api/site";
-
+const baseUrl = "https://sarkariafsar.com/api/site";
+// const baseUrl = "http://localhost:5000/api"
 export default baseUrl;

@@ -10,22 +10,6 @@ import {
   buildPageMetadata,
 } from "../lib/seo";
 
-function getSectionHref(type) {
-  if (type === "results") {
-    return "/results";
-  }
-
-  if (type === "admitcards") {
-    return "/admit-cards";
-  }
-
-  if (type === "admission") {
-    return "/post/admissions";
-  }
-
-  return "/post/new-jobs";
-}
-
 export const metadata = buildPageMetadata({
   title: "Jobs Dashboard",
   description:
@@ -55,7 +39,7 @@ export default async function PostIndexPage() {
       name: "Government jobs dashboard sections",
       items: pageData.cards.map((card) => ({
         name: card.name,
-        url: getSectionHref(card.type),
+        url: card.href || "/post",
       })),
     }),
   ];

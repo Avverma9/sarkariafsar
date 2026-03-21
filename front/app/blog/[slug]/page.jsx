@@ -30,7 +30,7 @@ function formatDate(value) {
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
   const slug = String(resolvedParams?.slug || "");
-  const post = getBlogPostBySlug(slug);
+  const post = await getBlogPostBySlug(slug);
 
   if (!post) {
     return buildPageMetadata({
@@ -58,13 +58,15 @@ export async function generateMetadata({ params }) {
 export default async function BlogDetailPage({ params }) {
   const resolvedParams = await params;
   const slug = String(resolvedParams?.slug || "");
-  const post = getBlogPostBySlug(slug);
+  const post = await getBlogPostBySlug(slug);
 
   if (!post) {
     notFound();
   }
 
-  const relatedPosts = getAllBlogPosts().filter((item) => item.slug !== post.slug).slice(0, 3);
+  const relatedPosts = (await getAllBlogPosts())
+    .filter((item) => item.slug !== post.slug)
+    .slice(0, 3);
   const breadcrumbItems = [
     { name: "Home", url: "/" },
     { name: "Blog", url: "/blog" },

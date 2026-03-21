@@ -34,8 +34,8 @@ function formatDate(value) {
   });
 }
 
-export default function BlogListingPage() {
-  const posts = getAllBlogPosts();
+export default async function BlogListingPage() {
+  const posts = await getAllBlogPosts();
   const breadcrumbItems = [
     { name: "Home", url: "/" },
     { name: "Blog", url: "/blog" },

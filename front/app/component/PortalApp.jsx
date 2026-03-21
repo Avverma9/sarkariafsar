@@ -6,20 +6,17 @@ import Footer from "./layout/Footer";
 import Breadcrumbs from "./layout/Breadcrumbs";
 import HeroSection from "./home/HeroSection";
 import UpdatesSection from "./home/UpdatesSection";
+import ReminderSection from "./home/ReminderSection";
 import SchemesSection from "./home/SchemesSection";
 import PlatformInfoSection from "./home/PlatformInfoSection";
 import DetailsModal from "./home/DetailsModal";
 import { statesList as fallbackStatesList, updatesData } from "./home/data";
-import baseUrl from "../lib/baseUrl";
-import { buildBrowserCachedFetchOptions } from "../lib/fetchCache";
 import {
   getAllGovSchemes,
   getGovSchemeByState,
   getGovSchemeStateNameOnly,
 } from "../lib/govSchemesApi";
-
-const MIN_SEARCH_LENGTH = 2;
-const DEBOUNCE_MS = 400;
+import { useGlobalSearch } from "../lib/useGlobalSearch";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -185,22 +182,6 @@ function extractSchemes(payload) {
   return asArray(payload);
 }
 
-function extractSearchResults(payload) {
-  if (Array.isArray(payload?.results)) {
-    return payload.results;
-  }
-
-  if (Array.isArray(payload?.data?.results)) {
-    return payload.data.results;
-  }
-
-  if (Array.isArray(payload?.data)) {
-    return payload.data;
-  }
-
-  return asArray(payload);
-}
-
 function normalizeScheme(scheme, index, selectedState) {
   const title = firstNonEmpty([
     scheme?.schemeTitle,
@@ -257,15 +238,23 @@ export default function PortalApp({ initialData = {} }) {
     schemes: serverSchemes = [],
     sectionBlocks: serverSectionBlocks = [],
     jobsBySection: serverJobsBySection = {},
+    reminderDays = 7,
+    reminderJobs = [],
+    reminderTotal = 0,
+    reminderLoaded = false,
   } = initialData;
 
   const hasServerData = serverSchemes.length > 0 || serverSectionBlocks.length > 0;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
+  const {
+    searchQuery,
+    setSearchQuery,
+    searchResults,
+    searchLoading,
+    searchError,
+    isSearchPanelActive,
+    isDebouncingSearch,
+  } = useGlobalSearch();
   const [selectedState, setSelectedState] = useState("All India");
   const [selectedItem, setSelectedItem] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -279,6 +268,11 @@ export default function PortalApp({ initialData = {} }) {
   const [schemesLoading, setSchemesLoading] = useState(!hasServerData);
   const [hasLoadedSchemes, setHasLoadedSchemes] = useState(hasServerData);
   const [schemesError, setSchemesError] = useState("");
+  const shouldSkipInitialSchemeFetch =
+    selectedState === "All India" &&
+    hasServerData &&
+    schemesData.length > 0 &&
+    !hasLoadedSchemes;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -288,74 +282,6 @@ export default function PortalApp({ initialData = {} }) {
       window.removeEventListener("scroll", handleScroll);
     };
   }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery.trim());
-    }, DEBOUNCE_MS);
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [searchQuery]);
-
-  useEffect(() => {
-    if (debouncedSearchQuery.length < MIN_SEARCH_LENGTH) {
-      setSearchResults([]);
-      setSearchError("");
-      setSearchLoading(false);
-      return;
-    }
-
-    const controller = new AbortController();
-    let active = true;
-
-    async function runSearch() {
-      try {
-        if (active) {
-          setSearchLoading(true);
-          setSearchError("");
-        }
-
-        const response = await fetch(
-          `${baseUrl}/find-by-title-job-and-scheme?keyword=${encodeURIComponent(
-            debouncedSearchQuery,
-          )}`,
-          buildBrowserCachedFetchOptions({}, { signal: controller.signal }),
-        );
-
-        if (!response.ok) {
-          throw new Error("Search failed");
-        }
-
-        const payload = await response.json();
-
-        if (!active) {
-          return;
-        }
-
-        setSearchResults(extractSearchResults(payload));
-      } catch (error) {
-        if (!active || error?.name === "AbortError") {
-          return;
-        }
-
-        setSearchResults([]);
-        setSearchError(error?.message || "Search failed");
-      } finally {
-        if (active) {
-          setSearchLoading(false);
-        }
-      }
-    }
-
-    runSearch();
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, [debouncedSearchQuery]);
 
   useEffect(() => {
     // Skip if server already provided state names
@@ -406,8 +332,7 @@ export default function PortalApp({ initialData = {} }) {
   }, [serverStatesList]);
 
   useEffect(() => {
-    // Skip the initial "All India" load if server already provided schemes
-    if (selectedState === "All India" && hasServerData && schemesData.length > 0 && !hasLoadedSchemes) {
+    if (shouldSkipInitialSchemeFetch) {
       setHasLoadedSchemes(true);
       return;
     }
@@ -452,17 +377,14 @@ export default function PortalApp({ initialData = {} }) {
     return () => {
       active = false;
     };
-  }, [selectedState]);
+  }, [selectedState, shouldSkipInitialSchemeFetch]);
 
-  const trimmedSearchQuery = searchQuery.trim();
   const localFilteredSchemes = schemesData.slice(0, 6);
   const localFilteredUpdates = updatesData.filter((item) => {
     const matchesState = selectedState === "All India" || item.state === selectedState;
     return matchesState;
   });
 
-  const isSearchPanelActive = trimmedSearchQuery.length >= MIN_SEARCH_LENGTH;
-  const isDebouncingSearch = isSearchPanelActive && debouncedSearchQuery !== trimmedSearchQuery;
   const filteredSchemes = localFilteredSchemes;
   const filteredUpdates = localFilteredUpdates;
 
@@ -502,6 +424,13 @@ export default function PortalApp({ initialData = {} }) {
           onSelectItem={setSelectedItem}
           serverSectionBlocks={serverSectionBlocks}
           serverJobsBySection={serverJobsBySection}
+        />
+
+        <ReminderSection
+          initialDays={reminderDays}
+          initialJobs={reminderJobs}
+          initialTotal={reminderTotal}
+          initialLoaded={reminderLoaded}
         />
 
         <SchemesSection
