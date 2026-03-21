@@ -24,49 +24,33 @@ export default function Header({
 
   return (
     <header
-      className={`fixed top-0 z-40 w-full transition-all duration-500 ${
-        scrolled
-          ? "bg-white/80 py-3 shadow-sm backdrop-blur-xl"
-          : "bg-transparent py-5"
+      className={`fixed top-0 z-50 w-full border-b border-slate-200/80 bg-white/95 backdrop-blur-xl transition-all duration-300 ${
+        scrolled ? "py-3 shadow-sm" : "py-3.5"
       }`}
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3" aria-label="Sarkari Afsar home">
-            <div
-              className={`rounded-2xl p-2 transition-colors duration-500 ${
-                scrolled ? "bg-indigo-600" : "bg-white/10 backdrop-blur-md"
-              }`}
-            >
+            <div className="rounded-2xl bg-slate-900 p-2 text-white shadow-sm transition-transform duration-300">
               <Landmark className="h-6 w-6 text-white sm:h-8 sm:w-8" />
             </div>
             <div>
-              <span
-                className={`text-xl leading-none font-black tracking-tight sm:text-2xl ${
-                  scrolled ? "text-slate-900" : "text-white"
-                }`}
-              >
+              <span className="text-xl leading-none font-black tracking-tight text-slate-900 sm:text-2xl">
                 Sarkari
-                <span className={scrolled ? "text-indigo-600" : "text-indigo-300"}>
-                  Afsar
-                </span>
+                <span className="text-indigo-600">Afsar</span>
               </span>
             </div>
           </Link>
 
           <nav
             aria-label="Primary"
-            className="hidden items-center gap-8 rounded-full border border-white/20 bg-white/10 px-6 py-2.5 shadow-sm backdrop-blur-md xl:flex"
+            className="hidden items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-2 py-2 xl:flex"
           >
             {menuItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className={`text-sm font-bold tracking-wide transition-colors ${
-                  scrolled
-                    ? "text-slate-700 hover:text-indigo-600"
-                    : "text-white hover:text-indigo-200"
-                }`}
+                className="rounded-full px-4 py-2 text-sm font-bold tracking-wide text-slate-700 transition-colors hover:bg-white hover:text-indigo-600"
               >
                 {item.label}
               </Link>
@@ -111,11 +95,7 @@ export default function Header({
           </div>
 
           <button
-            className={`rounded-xl p-2 transition-colors md:hidden ${
-              scrolled
-                ? "text-slate-800 hover:bg-slate-100"
-                : "text-white hover:bg-white/10"
-            }`}
+            className="rounded-xl p-2 text-slate-800 transition-colors hover:bg-slate-100 md:hidden"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
             aria-expanded={isMobileMenuOpen}
             aria-controls="mobile-primary-navigation"

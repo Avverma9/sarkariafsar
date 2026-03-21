@@ -34,7 +34,7 @@ export default function HeroSection({
 
   return (
     // Force flex-row on mobile, mb-24 to give space for the overlapping search bar
-    <section className="relative flex flex-row w-full overflow-visible bg-slate-900 mb-20 md:mb-16 mt-14 md:mt-0">
+    <section className="relative mt-[76px] mb-20 flex w-full flex-row overflow-visible bg-slate-900 md:mt-[88px] md:mb-16">
       <h1 className="sr-only">
         Sarkari Afsar: latest sarkari jobs, results, admit cards and government schemes
       </h1>
@@ -115,9 +115,9 @@ export default function HeroSection({
         </div>
       </div>
 
-      {/* SVG DECORATIONS (Desktop only) */}
-      <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-30 hidden w-20 -translate-x-1/2 items-center justify-center md:flex">
-        <svg viewBox="0 0 100 1000" className="absolute h-[110%] w-full overflow-visible text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]">
+      {/* SVG DECORATIONS (Vertical line for BOTH Mobile and Desktop) */}
+      <div className="pointer-events-none absolute top-0 bottom-0 left-1/2 z-30 flex w-10 md:w-20 -translate-x-1/2 items-center justify-center">
+        <svg viewBox="0 0 100 1000" className="absolute h-[110%] w-full overflow-visible text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.6)] md:drop-shadow-[0_0_15px_rgba(250,204,21,0.8)]">
           <path d="M 50 0 L 20 350 L 70 350 L 30 700 L 80 700 L 40 1100" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
           <path d="M 50 0 L 20 350 L 70 350 L 30 700 L 80 700 L 40 1100" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
