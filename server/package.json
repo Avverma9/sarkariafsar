@@ -6,6 +6,8 @@
   "scripts": {
     "start": "node start.mjs",
     "dev": "nodemon start.mjs",
+    "notify:jobs": "node job-notification/notification.mjs",
+    "notify:jobs:cron": "node job-notification/notification.mjs --cron",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

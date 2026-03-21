@@ -4,7 +4,7 @@ import {
   clearApiCacheByPrefix,
   getApiCacheStats,
 } from "./apiCache.mjs";
-import { sendSystemEventNotification } from "./jobUpdateMailer.mjs";
+import { sendSystemEventNotification } from "../job-notification/notification.mjs";
 
 const API_CACHE_TARGET_PREFIXES = {
   all: [""],

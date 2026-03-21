@@ -1,2 +1,5 @@
 import "./utils/loadEnv.mjs";
-await import("./index.mjs");
+import { startStandaloneJobNotificationCron } from "./job-notification/notification.mjs";
+
+console.log("[startup] Notification-only mode enabled");
+startStandaloneJobNotificationCron();
