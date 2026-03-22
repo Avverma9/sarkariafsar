@@ -25,6 +25,48 @@ const toObject = (value) => {
   return value;
 };
 
+const mergeDeepObjects = (baseValue, patchValue) => {
+  if (Array.isArray(patchValue)) {
+    return [...patchValue];
+  }
+
+  if (!patchValue || typeof patchValue !== "object") {
+    return patchValue;
+  }
+
+  const base = toObject(baseValue);
+  const patch = toObject(patchValue);
+  const merged = { ...base };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (Array.isArray(value)) {
+      merged[key] = [...value];
+      continue;
+    }
+
+    if (value && typeof value === "object") {
+      merged[key] = mergeDeepObjects(base[key], value);
+      continue;
+    }
+
+    merged[key] = value;
+  }
+
+  return merged;
+};
+
+const hasOwn = (value, key) =>
+  Boolean(value) && Object.prototype.hasOwnProperty.call(value, key);
+
+const syncAliasPair = (target, patch, leftKey, rightKey) => {
+  if (hasOwn(patch, leftKey)) {
+    target[rightKey] = patch[leftKey];
+  }
+  if (hasOwn(patch, rightKey)) {
+    target[leftKey] = patch[rightKey];
+  }
+};
+
 const escapeRegExp = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -181,6 +223,7 @@ export const addJob = async (req, res, next) => {
         created: Number(counts.created || 0),
         updated: Number(counts.updated || 0),
         cloned: Number(counts.cloned || 0),
+        ignoredClosed: Number(counts.ignored_closed || 0),
         ignoredExpired: Number(counts.ignored_expired || 0),
       });
     }
@@ -381,17 +424,20 @@ export const updateJob = async (req, res, next) => {
     }
 
     const body = getRequestPayload(req);
-    const mergedPayload = {
-      ...existing.toObject({ versionKey: false }),
-      ...toObject(body || {}),
-      ...(body?.post ? toObject(body.post) : {}),
-    };
+    const mergedPayload = mergeDeepObjects(
+      mergeDeepObjects(existing.toObject({ versionKey: false }), toObject(body || {})),
+      body?.post ? toObject(body.post) : {}
+    );
+    syncAliasPair(mergedPayload, toObject(body || {}), "advertisementNumber", "advertisement_number");
+    syncAliasPair(mergedPayload, toObject(body || {}), "conductingAuthority", "conducting_authority");
     delete mergedPayload._id;
     delete mergedPayload.createdAt;
     delete mergedPayload.updatedAt;
 
-    const payload = await prepareNormalizedPayload(mergedPayload);
-    Object.assign(existing, payload);
+    const payload = await prepareNormalizedPayload(mergedPayload, {
+      mode: "manual",
+    });
+    existing.set(payload);
     await existing.save();
 
     return res.status(200).json({

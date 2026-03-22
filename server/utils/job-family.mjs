@@ -22,6 +22,21 @@ const DIRECT_LINK_KEYS = [
   "corrigendum_link",
 ];
 
+const CLOSED_JOB_PATTERNS = [
+  /application(?:\s+window)?\s+closed/i,
+  /registration(?:s)?\s+closed/i,
+  /apply(?:\s+online)?\s+closed/i,
+  /window\s+closed/i,
+  /form(?:s)?\s+closed/i,
+  /last\s+date(?:\s+to\s+apply|\s+for\s+apply|\s+for\s+registration|\s+for\s+submission)?\s+(?:is\s+)?over/i,
+  /no\s+longer\s+accepting\s+applications/i,
+  /recruitment\s+(?:process\s+)?closed/i,
+  /vacancy\s+closed/i,
+  /application\s+process\s+closed/i,
+  /\bwithdrawn\b/i,
+  /\bcancelled\b/i,
+];
+
 const toText = (value = "") => String(value || "").trim();
 
 const normalizeUrl = (value = "") => {
@@ -42,6 +57,22 @@ const collectTexts = (...values) =>
     .flatMap((value) => (Array.isArray(value) ? value : [value]))
     .map((value) => toText(value))
     .filter(Boolean);
+
+const hasExplicitClosedSignal = (source = {}) => {
+  if (inferPostType(source) !== "job") return false;
+
+  const texts = collectTexts(
+    source.title,
+    source.jobtitle,
+    source.status,
+    source.statusReason,
+    source.meta?.description,
+    source.official_links?.heading,
+    source.official_links?.links?.map((item) => `${item?.label || ""} ${item?.status || ""}`)
+  );
+
+  return texts.some((text) => CLOSED_JOB_PATTERNS.some((pattern) => pattern.test(text)));
+};
 
 const detectPostTypeFromText = (value = "") => {
   for (const rule of POST_TYPE_PATTERNS) {
@@ -207,6 +238,25 @@ const shouldIgnoreExpiredCandidate = (source = {}, { expiryGraceDays = 15 } = {}
   return applyLastDate.getTime() < threshold.getTime();
 };
 
+const getIgnoredJobAction = (source = {}, { expiryGraceDays = 15 } = {}) => {
+  if (inferPostType(source) !== "job") return "";
+
+  const lifecycleStage = inferLifecycleStage(source);
+  if (hasExplicitClosedSignal(source)) return "ignored_closed";
+
+  if (shouldIgnoreExpiredCandidate(source, { expiryGraceDays })) {
+    return "ignored_expired";
+  }
+
+  if (source.isActive === false) return "ignored_closed";
+
+  if (lifecycleStage === "application_closed") {
+    return "ignored_closed";
+  }
+
+  return "";
+};
+
 const buildLifecycleMetadata = (source = {}) => {
   const postType = inferPostType(source);
   const recruitmentKey = buildRecruitmentKey({ ...source, postType });
@@ -234,6 +284,8 @@ export {
   buildRecruitmentKey,
   detectPostTypeFromText,
   extractSourceDomain,
+  getIgnoredJobAction,
+  hasExplicitClosedSignal,
   inferIsActive,
   inferLifecycleStage,
   inferPostType,
@@ -247,6 +299,8 @@ export default {
   buildRecruitmentKey,
   detectPostTypeFromText,
   extractSourceDomain,
+  getIgnoredJobAction,
+  hasExplicitClosedSignal,
   inferIsActive,
   inferLifecycleStage,
   inferPostType,

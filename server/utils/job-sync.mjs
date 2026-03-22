@@ -6,8 +6,8 @@ import { normalizeJobInput, toComparableText } from "./job-normalize.mjs";
 import {
   buildLifecycleMetadata,
   buildRecruitmentKey,
+  getIgnoredJobAction,
   inferPostType,
-  shouldIgnoreExpiredCandidate,
 } from "./job-family.mjs";
 
 const STAGE_CLONE_EXCLUDED_FIELDS = new Set([
@@ -174,12 +174,21 @@ const buildBaseClonePayload = (doc) => {
   );
 };
 
-const prepareNormalizedPayload = async (rawPayload = {}) => {
+const prepareNormalizedPayload = async (
+  rawPayload = {},
+  { mode = "automated" } = {}
+) => {
+  const isManualMode = String(mode || "").trim() === "manual";
   const lifecycleMetadata = buildLifecycleMetadata(rawPayload);
-  const title = ensureStageTitle({
-    title: rawPayload.jobtitle || rawPayload.title || "",
-    postType: lifecycleMetadata.postType,
-  });
+  const manualTitle = normalizeTitle(rawPayload.title || rawPayload.jobtitle || "");
+  const manualJobTitle = normalizeTitle(rawPayload.jobtitle || rawPayload.title || "");
+  const title = isManualMode
+    ? manualTitle || manualJobTitle
+    : ensureStageTitle({
+        title: rawPayload.jobtitle || rawPayload.title || "",
+        postType: lifecycleMetadata.postType,
+      });
+  const jobtitle = isManualMode ? manualJobTitle || title : title;
   const section =
     rawPayload.sectionName && rawPayload.sectionCanonicalUrl
       ? {
@@ -188,7 +197,7 @@ const prepareNormalizedPayload = async (rawPayload = {}) => {
         }
       : await resolveJobSection({
           postType: lifecycleMetadata.postType,
-          title,
+          title: jobtitle || title,
           status: rawPayload.status || "",
         });
 
@@ -197,8 +206,8 @@ const prepareNormalizedPayload = async (rawPayload = {}) => {
     ...lifecycleMetadata,
     sectionName: section.name,
     sectionCanonicalUrl: section.canonicalUrl,
-    title,
-    jobtitle: title,
+    title: title || jobtitle,
+    jobtitle: jobtitle || title,
     status: buildHumanStatus({
       postType: lifecycleMetadata.postType,
       applyLastDate: rawPayload.applyLastDate,
@@ -210,7 +219,11 @@ const prepareNormalizedPayload = async (rawPayload = {}) => {
     nextPayload.recruitmentKey = buildRecruitmentKey(nextPayload);
   }
 
-  return attachJobAiMonitoring(normalizeJobInput(nextPayload));
+  return attachJobAiMonitoring(
+    normalizeJobInput(nextPayload, {
+      preserveExplicitNullApplyLastDate: isManualMode,
+    })
+  );
 };
 
 const buildStageClonePayload = async ({ baseDoc = null, incomingPayload = {} } = {}) => {
@@ -336,9 +349,10 @@ const syncSingleJobPost = async (rawPayload = {}, { dryRun = false } = {}) => {
     };
   }
 
-  if (shouldIgnoreExpiredCandidate(normalizedIncoming)) {
+  const ignoredJobAction = getIgnoredJobAction(normalizedIncoming);
+  if (ignoredJobAction) {
     return {
-      action: "ignored_expired",
+      action: ignoredJobAction,
       job: dryRun ? normalizedIncoming : null,
       familyCount: familyDocs.length,
       dryRun,

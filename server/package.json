@@ -17,7 +17,7 @@
     "notify:jobs": "node job-notification/notification.mjs",
     "notify:jobs:cron": "node job-notification/notification.mjs --cron",
     "test": "node --test tests/job-family.test.mjs tests/official-source-sync.test.mjs tests/source-post-ai.test.mjs tests/job-status.test.mjs",
-    "test:job-sync": "node --test tests/job-sync.integration.test.mjs"
+    "test:job-sync": "node --test tests/job-sync.integration.test.mjs tests/jobs-controller.test.mjs"
   },
   "keywords": [],
   "author": "",

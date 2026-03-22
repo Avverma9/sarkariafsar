@@ -360,7 +360,7 @@ const prepareCandidatesForSync = async (candidates = [], { dryRun = false } = {}
   for (const candidate of candidates) {
     const preview = await syncSingleJobPost(candidate, { dryRun: true });
 
-    if (preview.action === "ignored_expired") {
+    if (preview.action === "ignored_expired" || preview.action === "ignored_closed") {
       preflightResults.push({
         ...preview,
         dryRun,
@@ -1360,6 +1360,7 @@ const summarizeOfficialSyncResults = (results = []) =>
       created: 0,
       updated: 0,
       cloned: 0,
+      ignored_closed: 0,
       ignored_expired: 0,
       ignored_incomplete: 0,
       errors: 0,

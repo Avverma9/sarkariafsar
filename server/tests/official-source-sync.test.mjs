@@ -42,7 +42,7 @@ test("summarizeOfficialSyncResults counts dry-run and actions", () => {
     {
       candidateCount: 1,
       error: "boom",
-      results: [{ action: "ignored_expired" }],
+      results: [{ action: "ignored_closed" }, { action: "ignored_expired" }],
     },
   ]);
 
@@ -50,6 +50,7 @@ test("summarizeOfficialSyncResults counts dry-run and actions", () => {
   assert.equal(summary.candidates, 3);
   assert.equal(summary.created, 1);
   assert.equal(summary.updated, 1);
+  assert.equal(summary.ignored_closed, 1);
   assert.equal(summary.ignored_expired, 1);
   assert.equal(summary.errors, 1);
   assert.equal(summary.dryRunSources, 1);

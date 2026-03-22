@@ -253,4 +253,29 @@ test("syncSingleJobPost creates, patches, clones lifecycle posts, and ignores tr
     }),
     0
   );
+
+  const ignoredClosed = await syncSingleJobPost({
+    title: `${baseTitle} Closed Recruitment`,
+    jobtitle: `${baseTitle} Closed Recruitment`,
+    advertisement_number: `${baseAdvertisementNumber}-CLOSED`,
+    conducting_authority: authority,
+    official_links: {
+      heading: "Official Website & Links",
+      official_website: "https://example.org/recruitment",
+      advertisement_number: `${baseAdvertisementNumber}-CLOSED`,
+    },
+    sourceUrl: "https://example.org/recruitment/closed",
+    status: "Application Closed on the official portal.",
+  });
+
+  assert.equal(ignoredClosed.action, "ignored_closed");
+  assert.equal(
+    await JobDetails.countDocuments({
+      $or: [
+        { advertisement_number: `${baseAdvertisementNumber}-CLOSED` },
+        { advertisementNumber: `${baseAdvertisementNumber}-CLOSED` },
+      ],
+    }),
+    0
+  );
 });

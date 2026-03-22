@@ -25,8 +25,11 @@ const normalizeStageKey = (value = "") =>
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
 
+const hasOwn = (value, key) =>
+  Boolean(value) && Object.prototype.hasOwnProperty.call(value, key);
+
 const extractAdvertisementNumber = (source = {}) => {
-  const direct = String(source?.advertisement_number || "").trim();
+  const direct = String(source?.advertisement_number || source?.advertisementNumber || "").trim();
   if (direct) return direct;
 
   const fromOfficialLinks = String(
@@ -167,7 +170,23 @@ const collectApplyDateCandidates = (value, candidates = []) => {
   return candidates;
 };
 
-const extractApplyLastDate = (source = {}) => {
+const extractApplyLastDate = (
+  source = {},
+  { preserveExplicitNullApplyLastDate = false } = {}
+) => {
+  if (hasOwn(source, "applyLastDate")) {
+    if (
+      preserveExplicitNullApplyLastDate &&
+      (source.applyLastDate === null || source.applyLastDate === "")
+    ) {
+      return null;
+    }
+
+    if (source.applyLastDate) {
+      return source.applyLastDate;
+    }
+  }
+
   if (source.applyLastDate) {
     return source.applyLastDate;
   }
@@ -183,7 +202,10 @@ const extractApplyLastDate = (source = {}) => {
   return parsedDates[0] || undefined;
 };
 
-const normalizeJobInput = (value = {}) => {
+const normalizeJobInput = (
+  value = {},
+  { preserveExplicitNullApplyLastDate = false } = {}
+) => {
   const root = toObject(value);
   const source = { ...(root.post ? toObject(root.post) : root) };
   const postType = normalizeStageKey(source.postType || "job") || "job";
@@ -196,8 +218,17 @@ const normalizeJobInput = (value = {}) => {
     toSlug(postType === "job" ? jobtitle || title : `${jobtitle || title}-${postType}`);
   const slug = String(slugBase || "").trim();
   const advertisementNumber = extractAdvertisementNumber(source);
+  const conductingAuthority = String(
+    source.conducting_authority || source.conductingAuthority || ""
+  ).trim();
   const postDate = toDate(source.postDate, "postDate");
-  const applyLastDate = toDate(extractApplyLastDate(source), "applyLastDate");
+  const resolvedApplyLastDate = extractApplyLastDate(source, {
+    preserveExplicitNullApplyLastDate,
+  });
+  const hasExplicitNullApplyLastDate = resolvedApplyLastDate === null;
+  const applyLastDate = hasExplicitNullApplyLastDate
+    ? null
+    : toDate(resolvedApplyLastDate, "applyLastDate");
   const dedupeBase =
     postType === "job"
       ? advertisementNumber || `${sectionCanonicalUrl}:${toComparableText(jobtitle)}`
@@ -231,7 +262,13 @@ const normalizeJobInput = (value = {}) => {
     source.advertisement_number = advertisementNumber;
     source.advertisementNumber = String(source.advertisementNumber || advertisementNumber).trim();
   }
-  if (applyLastDate) {
+  if (conductingAuthority) {
+    source.conducting_authority = conductingAuthority;
+    source.conductingAuthority = conductingAuthority;
+  }
+  if (hasExplicitNullApplyLastDate) {
+    source.applyLastDate = null;
+  } else if (applyLastDate) {
     source.applyLastDate = applyLastDate;
   } else {
     delete source.applyLastDate;

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildRecruitmentKey,
+  getIgnoredJobAction,
   inferPostType,
   normalizeDirectLinks,
 } from "../utils/job-family.mjs";
@@ -84,5 +85,26 @@ test("parseLooseDate supports day-first dates used by official notices", () => {
   assert.equal(
     parseLooseDate("18-03-2026")?.toISOString(),
     new Date(2026, 2, 18).toISOString()
+  );
+});
+
+test("closed jobs are ignored for new creation while active jobs are not", () => {
+  assert.equal(
+    getIgnoredJobAction({
+      title: "Example Recruitment 2026",
+      postType: "job",
+      status: "Application Closed on the official portal.",
+    }),
+    "ignored_closed"
+  );
+
+  assert.equal(
+    getIgnoredJobAction({
+      title: "Example Recruitment 2026",
+      postType: "job",
+      status: "Online application window is currently open on the official portal.",
+      applyLastDate: "2026-12-31T00:00:00.000Z",
+    }),
+    ""
   );
 });
