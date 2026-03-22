@@ -18,6 +18,13 @@ const toComparableText = (value = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
+const normalizeStageKey = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
 const extractAdvertisementNumber = (source = {}) => {
   const direct = String(source?.advertisement_number || "").trim();
   if (direct) return direct;
@@ -37,6 +44,7 @@ const extractAdvertisementNumber = (source = {}) => {
   for (const text of candidates) {
     const match =
       text.match(/(?:advt\.?|advertisement)\s*no\.?\s*[:\-]?\s*([a-z0-9./-]+)/i) ||
+      text.match(/\b(CEN(?:[-\s]+RPF|[-\s]+RRC)?[-\s]*\d{1,3}\/\d{4})\b/i) ||
       text.match(/\b(\d{1,4}\/[a-z0-9-]{2,}\/\d{4})\b/i);
 
     if (match?.[1]) {
@@ -72,9 +80,45 @@ const normalizeDateString = (value = "") =>
     .replace(/\s+/g, " ")
     .trim();
 
+const buildLocalDate = ({
+  year,
+  month,
+  day,
+  hours = 0,
+  minutes = 0,
+}) => {
+  const parsed = new Date(year, month - 1, day, hours, minutes);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const parseLooseDate = (value) => {
   const normalized = normalizeDateString(value);
   if (!normalized) return null;
+
+  const dayFirstMatch = normalized.match(
+    /\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:\s*[-,]?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?\b/i
+  );
+
+  if (dayFirstMatch) {
+    let [, day, month, year, hours = "0", minutes = "0", meridiem = ""] = dayFirstMatch;
+    let resolvedYear = Number(year);
+    if (resolvedYear < 100) resolvedYear += resolvedYear >= 70 ? 1900 : 2000;
+
+    let resolvedHours = Number(hours);
+    const resolvedMinutes = Number(minutes);
+    const normalizedMeridiem = String(meridiem || "").toLowerCase();
+    if (normalizedMeridiem === "pm" && resolvedHours < 12) resolvedHours += 12;
+    if (normalizedMeridiem === "am" && resolvedHours === 12) resolvedHours = 0;
+
+    const parsedDayFirst = buildLocalDate({
+      year: resolvedYear,
+      month: Number(month),
+      day: Number(day),
+      hours: resolvedHours,
+      minutes: resolvedMinutes,
+    });
+    if (parsedDayFirst) return parsedDayFirst;
+  }
 
   const parsed = new Date(normalized);
   if (Number.isNaN(parsed.getTime())) return null;
@@ -142,18 +186,22 @@ const extractApplyLastDate = (source = {}) => {
 const normalizeJobInput = (value = {}) => {
   const root = toObject(value);
   const source = { ...(root.post ? toObject(root.post) : root) };
-  const slug = String(source.slug || toSlug(source.jobtitle || source.title || "")).trim();
+  const postType = normalizeStageKey(source.postType || "job") || "job";
+  const title = String(source.title || source.jobtitle || "").trim();
   const sectionCanonicalUrl = String(source.sectionCanonicalUrl || "").trim();
   const sectionName = String(source.sectionName || "").trim();
   const jobtitle = String(source.jobtitle || source.title || "").trim();
+  const slugBase =
+    source.slug ||
+    toSlug(postType === "job" ? jobtitle || title : `${jobtitle || title}-${postType}`);
+  const slug = String(slugBase || "").trim();
   const advertisementNumber = extractAdvertisementNumber(source);
   const postDate = toDate(source.postDate, "postDate");
-  const applyLastDate = toDate(extractApplyLastDate(source), "applyLastDate", {
-    required: true,
-  });
+  const applyLastDate = toDate(extractApplyLastDate(source), "applyLastDate");
   const dedupeBase =
-    advertisementNumber ||
-    `${sectionCanonicalUrl}:${toComparableText(jobtitle)}`;
+    postType === "job"
+      ? advertisementNumber || `${sectionCanonicalUrl}:${toComparableText(jobtitle)}`
+      : `${advertisementNumber || sectionCanonicalUrl}:${toComparableText(jobtitle)}:${postType}`;
   const dedupeKey = toSlug(dedupeBase);
 
   if (!slug) {
@@ -177,9 +225,16 @@ const normalizeJobInput = (value = {}) => {
   source.sectionCanonicalUrl = sectionCanonicalUrl;
   source.sectionName = sectionName;
   source.jobtitle = jobtitle;
-  source.applyLastDate = applyLastDate;
+  source.title = title || jobtitle;
+  source.postType = postType;
   if (advertisementNumber) {
     source.advertisement_number = advertisementNumber;
+    source.advertisementNumber = String(source.advertisementNumber || advertisementNumber).trim();
+  }
+  if (applyLastDate) {
+    source.applyLastDate = applyLastDate;
+  } else {
+    delete source.applyLastDate;
   }
 
   if (postDate) {
@@ -196,6 +251,7 @@ export {
   extractAdvertisementNumber,
   extractApplyLastDate,
   normalizeJobInput,
+  normalizeStageKey,
   parseLooseDate,
   toComparableText,
   toDate,

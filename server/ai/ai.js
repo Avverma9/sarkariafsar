@@ -908,8 +908,8 @@ export const repairAllJobDocuments = async ({ limit = 0 } = {}) => {
   for (const doc of docs) {
     const baselineJob = buildPersistableBaselineJob(doc);
     if (shouldRepairJobDocument(doc, baselineJob)) {
-      doc.set(baselineJob);
-      await doc.save();
+      const persistable = toPersistableJobDocument(baselineJob);
+      await JobDetails.updateOne({ _id: String(doc._id) }, { $set: persistable });
       repaired += 1;
     }
   }

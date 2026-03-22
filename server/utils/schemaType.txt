@@ -1,0 +1,317 @@
+// models/JobPost.js
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+// ─── Reusable Sub-Schemas ────────────────────────────────────────────────────
+
+const FeeEntrySchema = new Schema(
+  {
+    category: { type: String },
+    amount: { type: Number },
+    currency: { type: String, default: "INR" },
+    note: { type: String },
+  },
+  { _id: false }
+);
+
+const DateEventSchema = new Schema(
+  {
+    event: { type: String },
+    date: { type: String }, // kept String – some values are "TBA", "To Be Notified"
+  },
+  { _id: false }
+);
+
+const StepSchema = new Schema(
+  {
+    step: { type: Number },
+    action: { type: String },
+  },
+  { _id: false }
+);
+
+const SelectionStageSchema = new Schema(
+  {
+    step: { type: Number },
+    name: { type: String },
+    description: { type: String },
+  },
+  { _id: false }
+);
+
+const OfficialLinkEntrySchema = new Schema(
+  {
+    label: { type: String },
+    url: { type: String },
+    status: { type: String },
+  },
+  { _id: false }
+);
+
+const VacancyEntrySchema = new Schema(
+  {
+    // exam-type (AFCAT)
+    branch: { type: String },
+    post: { type: String },
+    male: { type: Number },
+    female: { type: Number },
+    // job-type (category-wise)
+    category: { type: String },
+    posts: { type: Number },
+    // common
+    note: { type: String },
+    post_name: { type: String },
+  },
+  { _id: false }
+);
+
+const FAQSchema = new Schema(
+  {
+    question: { type: String },
+    answer: { type: String },
+  },
+  { _id: false }
+);
+
+const EligibilityPostSchema = new Schema(
+  {
+    // job-type
+    post_name: { type: String },
+    academic_qualification: { type: String },
+    technical_qualification: [{ type: String }],
+    skill_requirements: [{ type: String }],
+    human_note: { type: String },
+    // exam-type (AFCAT branches)
+    branch: { type: String },
+    academic: { type: String },
+    physical: { type: Schema.Types.Mixed },
+    // exam-type (UPTET papers)
+    paper: { type: String },
+    level: { type: String },
+    classes: { type: String },
+    qualifications: [{ type: String }],
+  },
+  { _id: false }
+);
+
+const AgeCategorySchema = new Schema(
+  {
+    branch: { type: String },
+    category: { type: String },
+    min_age: { type: Number },
+    max_age: { type: Number },
+  },
+  { _id: false }
+);
+
+const AIMonitoringSourceSchema = new Schema(
+  {
+    url: { type: String },
+    title: { type: String },
+    reason: { type: String },
+  },
+  { _id: false }
+);
+
+const PreparationTipSchema = new Schema(
+  {
+    tip: { type: String },
+    detail: { type: String },
+  },
+  { _id: false }
+);
+
+// ─── Main Schema ─────────────────────────────────────────────────────────────
+
+const JobPostSchema = new Schema(
+  {
+    // ── Identity & Routing ──────────────────────────────────────────────────
+    dedupeKey: { type: String, required: true, unique: true, index: true },
+    slug: { type: String, required: true, unique: true, index: true },
+    title: { type: String, required: true },
+    jobtitle: { type: String },
+    category: { type: String, index: true },      // "Government Exam" | "Defence Exam" | "High Court Recruitment" etc.
+    sectionName: { type: String },
+    sectionCanonicalUrl: { type: String },
+    language: { type: String, default: "en" },
+    tags: [{ type: String }],
+    status: { type: String },                     // "Result Out" | "Form Open" | etc.
+
+    // ── Recruitment Identity ────────────────────────────────────────────────
+    advertisement_number: { type: String },       // snake_case variant
+    advertisementNumber: { type: String },         // camelCase variant (HC posts)
+    conducting_authority: { type: String },        // snake_case variant
+    conductingAuthority: { type: String },         // camelCase variant (HC posts)
+
+    // ── Dates ───────────────────────────────────────────────────────────────
+    applyLastDate: { type: Date },
+
+    // ── SEO ─────────────────────────────────────────────────────────────────
+    meta: {
+      description: { type: String },
+      keywords: [{ type: String }],
+    },
+
+    // ── Content Blocks ──────────────────────────────────────────────────────
+
+    introduction: {
+      heading: { type: String },
+      content: { type: String },
+    },
+
+    about_exam: {                                  // AFCAT, defence posts
+      heading: { type: String },
+      content: { type: String },
+    },
+
+    about_recruitment: {                           // HC / job posts
+      heading: { type: String },
+      content: { type: String },
+    },
+
+    important_dates: {
+      heading: { type: String },
+      intro: { type: String },
+      dates: [DateEventSchema],
+      pro_tip: { type: String },
+    },
+
+    application_fee: {
+      heading: { type: String },
+      intro: { type: String },
+      fees: [FeeEntrySchema],
+      payment_modes: [{ type: String }],
+      note: { type: String },
+      future_note: { type: String },
+      human_note: { type: String },
+    },
+
+    age_limit: {
+      heading: { type: String },
+      minimum_age: { type: Number, default: null },
+      maximum_age: { type: Number, default: null },
+      calculated_as_on: { type: String },
+      content: { type: String },                  // UPTET – narrative text
+      category_wise: [AgeCategorySchema],         // AFCAT – branch-wise
+      relaxation_note: { type: String },
+      human_note: { type: String },
+    },
+
+    eligibility_criteria: {
+      heading: { type: String },
+      intro: { type: String },
+      // exam with papers (UPTET)
+      papers: [EligibilityPostSchema],
+      // job posts / defence branches
+      posts: [EligibilityPostSchema],
+      branches: [EligibilityPostSchema],          // AFCAT branch-wise eligibility
+      important_note: { type: String },
+    },
+
+    vacancy_details: {
+      heading: { type: String },
+      total_posts: { type: Number },
+      intro: { type: String },
+      vacancies: [VacancyEntrySchema],
+      category_wise: [VacancyEntrySchema],
+      human_note: { type: String },
+    },
+
+    selection_process: {
+      heading: { type: String },
+      intro: { type: String },
+      stages: [SelectionStageSchema],
+      note: { type: String },
+    },
+
+    how_to_apply: {
+      heading: { type: String },
+      intro: { type: String },
+      steps: [StepSchema],
+      documents_required: [{ type: String }],
+      advice_hindi: { type: String },
+      important_reminder: { type: String },
+    },
+
+    how_to_check_result: {                         // result-type posts (AFCAT)
+      heading: { type: String },
+      intro: { type: String },
+      steps: [StepSchema],
+      important_reminder: { type: String },
+    },
+
+    // ── Optional Rich Blocks ────────────────────────────────────────────────
+
+    official_links: {
+      heading: { type: String },
+      // flat format (exam posts like UPTET)
+      official_website: { type: String },
+      apply_online: { type: String },
+      apply_online_portal: { type: String },
+      advertisement_number: { type: String },
+      // array format (AFCAT / HC)
+      links: [OfficialLinkEntrySchema],
+    },
+
+    salary: { type: Schema.Types.Mixed, default: null },
+    pay_scale: { type: Schema.Types.Mixed, default: null },
+    exam_pattern: { type: Schema.Types.Mixed, default: null },
+    admit_card: { type: Schema.Types.Mixed, default: null },
+    result_dates: { type: Schema.Types.Mixed, default: null },
+    notification_details: { type: Schema.Types.Mixed, default: null },
+
+    faq: {
+      heading: { type: String },
+      intro: { type: String },
+      questions: [FAQSchema],
+    },
+
+    preparation_tips: {
+      heading: { type: String },
+      intro: { type: String },
+      tips: [PreparationTipSchema],
+    },
+
+    conclusion: {
+      heading: { type: String },
+      content: { type: String },
+      cta: { type: String },
+    },
+
+    disclaimer: { type: String },
+
+    // ── AI Monitoring ───────────────────────────────────────────────────────
+    aiMonitoring: {
+      version: { type: Number, default: 1 },
+      trackedFieldPaths: [{ type: String }],
+      trackedFieldHashes: { type: Map, of: String },
+      trackedSnapshot: { type: Schema.Types.Mixed },
+      currentHash: { type: String },
+      officialSourceUrls: [{ type: String }],
+      lastHashRefreshAt: { type: Date },
+      lastCheckedAt: { type: Date },
+      lastDetectionStatus: { type: String },      // "change_detected" | "no_change"
+      lastSummary: { type: String },
+      lastConfidence: { type: String },           // "high" | "medium" | "low"
+      lastSources: [AIMonitoringSourceSchema],
+      lastPatchedAt: { type: Date },
+      lastMailSentAt: { type: Date },
+      lastMailStatus: { type: String },           // "sent" | "failed" | "skipped"
+      lastError: { type: String, default: "" },
+    },
+  },
+  {
+    timestamps: true,         // auto-manages createdAt & updatedAt
+    collection: "jobposts",
+    versionKey: "__v",
+  }
+);
+
+// ─── Indexes ──────────────────────────────────────────────────────────────────
+JobPostSchema.index({ applyLastDate: 1 });
+JobPostSchema.index({ category: 1, applyLastDate: -1 });
+JobPostSchema.index({ sectionCanonicalUrl: 1 });
+JobPostSchema.index({ tags: 1 });
+JobPostSchema.index({ "aiMonitoring.lastDetectionStatus": 1 });
+
+module.exports = mongoose.model("JobPost", JobPostSchema);

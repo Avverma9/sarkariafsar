@@ -10,9 +10,14 @@
     "ai:jobs:cron": "node ai/ai.js --cron",
     "ai:jobs:repair": "node ai/ai.js --repair-only",
     "ai:jobs:validate": "node ai/ai.js --validate",
+    "schema:heal": "node schema-heal.mjs",
+    "jobs:pipeline": "node job-pipeline.mjs",
+    "jobs:pipeline:cron": "node job-pipeline.mjs --cron",
+    "official:sync": "node official-sync.mjs",
     "notify:jobs": "node job-notification/notification.mjs",
     "notify:jobs:cron": "node job-notification/notification.mjs --cron",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --test tests/job-family.test.mjs tests/official-source-sync.test.mjs tests/source-post-ai.test.mjs tests/job-status.test.mjs",
+    "test:job-sync": "node --test tests/job-sync.integration.test.mjs"
   },
   "keywords": [],
   "author": "",

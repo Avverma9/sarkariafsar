@@ -2,8 +2,7 @@ import mongoose from "mongoose";
 import JobDetails from "../models/jobdetails.model.mjs";
 import Blog from "../models/blogs.model.mjs";
 import { GovScheme } from "../models/govscheme.model.mjs";
-import { attachJobAiMonitoring } from "../ai/ai.js";
-import { normalizeJobInput } from "../utils/job-normalize.mjs";
+import { prepareNormalizedPayload, syncJobPosts, syncSingleJobPost } from "../utils/job-sync.mjs";
 
 let ensuredIndexesPromise = null;
 
@@ -28,9 +27,6 @@ const toObject = (value) => {
 
 const escapeRegExp = (value = "") =>
   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-const prepareJobPayload = (value = {}) =>
-  attachJobAiMonitoring(normalizeJobInput(value));
 
 const getRequestPayload = (req) => {
   const body = req?.body;
@@ -60,6 +56,8 @@ const toResponse = (doc) => {
 
 const toReminderResponse = (doc) => ({
   id: String(doc?._id || ""),
+  postType: String(doc?.postType || "job"),
+  lifecycleStage: String(doc?.lifecycleStage || ""),
   status: String(doc?.status || ""),
   slug: String(doc?.slug || ""),
   title: String(doc?.jobtitle || doc?.title || ""),
@@ -165,48 +163,35 @@ export const addJob = async (req, res, next) => {
     const body = getRequestPayload(req);
 
     if (Array.isArray(body)) {
-      const operations = body.map((item) => {
-        const payload = prepareJobPayload(item);
-        return {
-          updateOne: {
-            filter: { dedupeKey: payload.dedupeKey },
-            update: { $set: payload },
-            upsert: true,
-          },
-        };
-      });
-
-      if (operations.length === 0) {
+      if (body.length === 0) {
         throw new Error("payload is required");
       }
-
-      const result = await JobDetails.bulkWrite(operations, { ordered: false });
+      const result = await syncJobPosts(body);
+      const counts = result.reduce(
+        (accumulator, entry) => {
+          accumulator[entry.action] = (accumulator[entry.action] || 0) + 1;
+          return accumulator;
+        },
+        {}
+      );
 
       return res.status(201).json({
         success: true,
         message: "Jobs synced successfully",
-        created: Number(result.upsertedCount || 0),
-        updated: Number(result.modifiedCount || 0),
-        matched: Number(result.matchedCount || 0),
+        created: Number(counts.created || 0),
+        updated: Number(counts.updated || 0),
+        cloned: Number(counts.cloned || 0),
+        ignoredExpired: Number(counts.ignored_expired || 0),
       });
     }
 
-    const payload = prepareJobPayload(body);
-    const job = await JobDetails.findOneAndUpdate(
-      { dedupeKey: payload.dedupeKey },
-      { $set: payload },
-      {
-        new: true,
-        upsert: true,
-        runValidators: true,
-        setDefaultsOnInsert: true,
-      }
-    );
+    const result = await syncSingleJobPost(body);
 
     return res.status(201).json({
       success: true,
-      message: "Job saved successfully",
-      job: toResponse(job),
+      message: `Job ${result.action} successfully`,
+      action: result.action,
+      job: toResponse(result.job),
     });
   } catch (error) {
     return next(error);
@@ -256,13 +241,14 @@ export const getJob = async (req, res, next) => {
         { jobtitle: new RegExp(escapeRegExp(search), "i") },
         { title: new RegExp(escapeRegExp(search), "i") },
         { slug: new RegExp(escapeRegExp(search), "i") },
+        { recruitmentKey: new RegExp(escapeRegExp(search), "i") },
       ];
     }
     if (active === "true") {
-      query.applyLastDate = { $gte: new Date() };
+      query.isActive = true;
     }
     if (active === "false") {
-      query.applyLastDate = { $lt: new Date() };
+      query.isActive = false;
     }
 
     const [total, jobs] = await Promise.all([
@@ -331,6 +317,7 @@ export const searchPosts = async (req, res, next) => {
           { title: pattern },
           { slug: pattern },
           { sectionName: pattern },
+          { recruitmentKey: pattern },
         ],
       })
         .sort({ updatedAt: -1, createdAt: -1 })
@@ -403,7 +390,7 @@ export const updateJob = async (req, res, next) => {
     delete mergedPayload.createdAt;
     delete mergedPayload.updatedAt;
 
-    const payload = prepareJobPayload(mergedPayload);
+    const payload = await prepareNormalizedPayload(mergedPayload);
     Object.assign(existing, payload);
     await existing.save();
 
