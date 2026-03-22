@@ -40,6 +40,10 @@ const jobDetailsSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    aiMonitoring: {
+      type: mongoose.Schema.Types.Mixed,
+      default: undefined,
+    },
   },
   {
     strict: false,

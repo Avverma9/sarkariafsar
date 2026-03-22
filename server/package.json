@@ -6,6 +6,10 @@
   "scripts": {
     "start": "node start.mjs",
     "dev": "nodemon start.mjs",
+    "ai:jobs": "node ai/ai.js",
+    "ai:jobs:cron": "node ai/ai.js --cron",
+    "ai:jobs:repair": "node ai/ai.js --repair-only",
+    "ai:jobs:validate": "node ai/ai.js --validate",
     "notify:jobs": "node job-notification/notification.mjs",
     "notify:jobs:cron": "node job-notification/notification.mjs --cron",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -15,6 +19,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@google/genai": "^1.46.0",
     "axios": "^1.13.5",
     "cheerio": "^1.2.0",
     "compression": "^1.8.1",

@@ -5,6 +5,7 @@ import compression from "compression";
 import router from "./routes/index.mjs";
 import connectDatabase from "./db/config.mjs";
 import { startStandaloneJobNotificationCron } from "./job-notification/notification.mjs";
+import { startJobAiMonitorCron } from "./ai/ai.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ const startServer = async () => {
   });
 
   startStandaloneJobNotificationCron();
+  startJobAiMonitorCron();
 };
 
 startServer().catch((error) => {
