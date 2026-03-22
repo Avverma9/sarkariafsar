@@ -560,15 +560,32 @@ const runGeminiAudit = async (job = {}) => {
   };
 };
 
-const buildAllowedPatchKeys = (job = {}) =>
-  new Set([...(job?.aiMonitoring?.trackedFieldPaths || resolveTrackedFieldPaths(job)), "applyLastDate"]);
+const GENERATION_ALLOWED_FIELDS = new Set([
+  "status", "conductingAuthority", "advertisementNumber",
+  "introduction", "important_dates", "vacancy_details",
+  "application_fee", "age_limit", "eligibility_criteria",
+  "selection_process", "how_to_apply", "exam_pattern",
+  "official_links", "faq", "meta", "tags",
+  "conclusion", "disclaimer", "applyLastDate",
+]);
 
-const sanitizeAiPatch = (job = {}, patch = {}) => {
+const buildAllowedPatchKeys = (job = {}, isGeneration = false) => {
+  const tracked = new Set([
+    ...(job?.aiMonitoring?.trackedFieldPaths || resolveTrackedFieldPaths(job)),
+    "applyLastDate",
+  ]);
+  if (isGeneration) {
+    for (const key of GENERATION_ALLOWED_FIELDS) tracked.add(key);
+  }
+  return tracked;
+};
+
+const sanitizeAiPatch = (job = {}, patch = {}, isGeneration = false) => {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     return {};
   }
 
-  const allowed = buildAllowedPatchKeys(job);
+  const allowed = buildAllowedPatchKeys(job, isGeneration);
   const sanitized = {};
 
   for (const [key, value] of Object.entries(patch)) {
@@ -708,11 +725,188 @@ const toPersistableJobDocument = (jobLike = {}) => {
   return job;
 };
 
+const isNewEmptyDocument = (job = {}) => {
+  const monitoring = job?.aiMonitoring || {};
+  const snapshot = monitoring.trackedSnapshot || {};
+  const trackedFields = monitoring.trackedFieldPaths || [];
+  if (trackedFields.length === 0) return false;
+
+  const nullCount = trackedFields.filter(
+    (key) => snapshot[key] === null || snapshot[key] === undefined
+  ).length;
+
+  return nullCount / trackedFields.length >= 0.7; // 70%+ fields null = empty doc
+};
+
+const POST_TYPE_SCHEMA_HINTS = {
+  admission: `
+SKIP these fields (set null): application_fee, age_limit, exam_pattern, salary, pay_scale
+FOCUS on: important_dates (counselling schedule), vacancy_details (seats/courses/institutes),
+eligibility_criteria (exam cutoff/percentile), selection_process (rounds/allocation),
+how_to_apply (reporting steps), official_links (real PDF links)`,
+
+  admit_card: `
+SKIP these fields (set null): application_fee, vacancy_details, selection_process, exam_pattern, salary
+FOCUS on: important_dates (exam date, admit card release), how_to_apply (download steps),
+eligibility_criteria (who gets admit card), official_links (download link, login portal)`,
+
+  result: `
+SKIP these fields (set null): application_fee, how_to_apply, selection_process
+FOCUS on: important_dates (result date, interview dates), vacancy_details (selected count, cutoff),
+exam_pattern (paper-wise cutoff if available), official_links (result PDF, merit list links)`,
+
+  answer_key: `
+SKIP these fields (set null): application_fee, age_limit, vacancy_details, salary
+FOCUS on: important_dates (key release, objection window), how_to_apply (objection steps),
+official_links (key PDF, objection portal)`,
+
+  corrigendum: `
+SKIP these fields (set null): exam_pattern, salary, age_limit
+FOCUS on: important_dates (revised dates), notification_details (what changed), official_links`,
+};
+
+const buildFullGenerationPrompt = ({ job = {}, sourceUrls = [] } = {}) => {
+  const title = job?.jobtitle || job?.title || "";
+  const sourceUrl = job?.sourceUrl || sourceUrls[0] || "";
+  const domain = job?.sourceDomain || "";
+  const sectionName = job?.sectionName || "";
+  const postType = job?.postType || "job";
+  const schemaHint = POST_TYPE_SCHEMA_HINTS[postType] || "";
+
+  return `
+You are a senior content writer for sarkariresult.com.cm — an Indian government job portal.
+
+Generate a COMPLETE, SEO-optimized, detailed post in the EXACT JSON schema below.
+Use Google Search + URL context to fetch REAL data from official sources.
+
+SEARCH CONTEXT:
+Title: ${title}
+Source URL: ${sourceUrl}
+Source Domain: ${domain}
+Section: ${sectionName}
+Post Type: ${postType}
+${schemaHint ? `\nPOST TYPE INSTRUCTIONS:\n${schemaHint}\n` : ""}
+REQUIRED SCHEMA (return JSON only, no markdown):
+{
+  "status": "current status with emoji (e.g. Open Round Result Declared ✅ | Reporting 25-30 Aug 2025)",
+  "conductingAuthority": "full authority name (e.g. All India Institute of Medical Sciences, New Delhi)",
+  "advertisementNumber": "official notice/advertisement number",
+  "introduction": {
+    "heading": "SEO heading with year and key info",
+    "content": "300-400 word detailed intro — include real dates, post counts, key facts. Mix English/Hindi where natural"
+  },
+  "important_dates": {
+    "heading": "Important Dates",
+    "dates": [ { "event": "event name", "date": "DD Month YYYY" } ],
+    "pro_tip": "1 actionable tip for candidates"
+  },
+  "vacancy_details": {
+    "heading": "Vacancy / Seat Details",
+    "total_posts": null,
+    "posts": [ { "post_name": "...", "vacancies": 0, "pay_scale": "..." } ]
+  },
+  "application_fee": {
+    "heading": "Application Fee",
+    "fees": [ { "category": "General/OBC/SC/ST/EWS", "amount": 0, "currency": "INR" } ],
+    "payment_mode": "Online / Net Banking / UPI / Debit Card",
+    "human_note": "fee context in plain language"
+  },
+  "age_limit": {
+    "heading": "Age Limit",
+    "minimum_age": 18,
+    "maximum_age": 35,
+    "age_rule": "as on DD Month YYYY",
+    "relaxation": [ { "category": "SC/ST/OBC/PwBD", "relaxation": "X years" } ],
+    "human_note": "plain language age explanation"
+  },
+  "eligibility_criteria": {
+    "heading": "Eligibility Criteria",
+    "criteria": [ { "point": "...", "detail": "..." } ]
+  },
+  "selection_process": {
+    "heading": "Selection Process",
+    "stages": [ { "step": 1, "name": "...", "description": "..." } ],
+    "note": "important note about selection"
+  },
+  "how_to_apply": {
+    "heading": "How to Apply / Steps",
+    "intro": "one line intro",
+    "documents_required": ["document 1"],
+    "steps": [ { "step": 1, "action": "..." } ],
+    "important_reminder": "critical warning for candidates"
+  },
+  "exam_pattern": {
+    "heading": "Exam Pattern",
+    "subjects": [ { "subject": "...", "questions": 0, "marks": 0 } ],
+    "marking_scheme": { "correct_answer": "+X marks", "wrong_answer": "-X marks" },
+    "note": "..."
+  },
+  "official_links": {
+    "heading": "Official Website & Links",
+    "official_website": "https://...",
+    "links": [
+      { "label": "descriptive label", "url": "https://...", "status": "Active ✅" }
+    ]
+  },
+  "faq": {
+    "heading": "Frequently Asked Questions",
+    "questions": [ { "question": "...", "answer": "..." } ]
+  },
+  "meta": {
+    "description": "SEO meta description under 155 chars",
+    "keywords": ["keyword1", "keyword2"]
+  },
+  "tags": ["tag1", "tag2"],
+  "conclusion": {
+    "heading": "Final Words",
+    "content": "150-200 word motivating conclusion",
+    "cta": "clear call to action"
+  },
+  "disclaimer": "standard disclaimer mentioning official website"
+}
+
+RULES:
+- Use REAL dates, REAL URLs, REAL counts from official sources only
+- Set null for sections that are genuinely not applicable for this post type
+- official_links must have REAL working URLs — include direct PDF links when available
+- FAQ must have 7-10 Q&As candidates actually ask about this specific post
+- Return ONLY valid JSON — no markdown fences, no extra text outside JSON
+`.trim();
+};
+
+const generateFullJobContent = async (job = {}) => {
+  const client = getAiClient();
+  const sourceUrls = extractOfficialSourceUrls(job);
+  const tools =
+    sourceUrls.length > 0
+      ? [{ urlContext: {} }, { googleSearch: {} }]
+      : [{ googleSearch: {} }];
+
+  const response = await client.models.generateContent({
+    model: DEFAULT_JOB_AI_MODEL,
+    contents: buildFullGenerationPrompt({ job, sourceUrls }),
+    config: {
+      temperature: 0.2,
+      tools,
+    },
+  });
+
+  const rawText = String(response?.text || "").trim();
+
+  // ✅ No local filter — sanitizeAiPatch(isGeneration=true) handles it
+  return {
+    sourceUrls,
+    rawText,
+    patch: parseModelJson(rawText),
+  };
+};
+
 export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
   const baselineJob = await prepareBaselineJobForMonitoring(doc);
   const baselineMonitoring = baselineJob.aiMonitoring;
   const now = new Date();
 
+  // ─── SKIP if already checked today (unless forced) ───────────────────
   if (!force && wasCheckedToday(baselineMonitoring.lastCheckedAt)) {
     return {
       id: String(doc?._id || ""),
@@ -723,11 +917,110 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
     };
   }
 
+  // ─── BRANCH: Empty doc → Full Content Generation ──────────────────────
+  if (isNewEmptyDocument(baselineJob)) {
+    let generationResult;
+
+    try {
+      generationResult = await generateFullJobContent(baselineJob);
+    } catch (error) {
+      await saveMonitoringMetadata(doc, baselineMonitoring, {
+        lastCheckedAt: now,
+        lastDetectionStatus: "error",
+        lastError: truncate(error?.message || error, 500),
+      });
+
+      return {
+        id: String(doc?._id || ""),
+        status: "error",
+        jobTitle: baselineJob.jobtitle || baselineJob.title || "",
+        changedFields: [],
+        mailed: false,
+        error: error?.message || String(error),
+      };
+    }
+
+    // ✅ Bug 1 Fix: isGeneration=true
+    const safePatch = sanitizeAiPatch(baselineJob, generationResult.patch, true);
+
+    if (Object.keys(safePatch).length === 0) {
+      await saveMonitoringMetadata(doc, baselineMonitoring, {
+        lastCheckedAt: now,
+        lastDetectionStatus: "needs_review",
+        lastSummary: "Full generation ran but produced no valid patch fields.",
+        lastConfidence: "low",
+        lastSources: generationResult.sourceUrls.map((url) => ({
+          url,
+          title: "",
+          reason: "official source",
+        })),
+        lastError: "",
+      });
+
+      return {
+        id: String(doc?._id || ""),
+        status: "needs_review",
+        jobTitle: baselineJob.jobtitle || baselineJob.title || "",
+        changedFields: [],
+        mailed: false,
+      };
+    }
+
+    const patchedJob = preparePatchedJob(baselineJob, safePatch);
+    const sources = generationResult.sourceUrls.map((url) => ({
+      url,
+      title: "",
+      reason: "official source used for full generation",
+    }));
+
+    const mailResult = await sendJobUpdateNotification({
+      jobTitle: baselineJob.jobtitle || baselineJob.title || "",
+      jobUrl: buildNotificationUrl(baselineJob),
+      matchedBy: "gemini-ai-full-generation",
+      changedFields: Object.keys(safePatch),
+      changes: Object.keys(safePatch).map((field) => ({
+        path: field,
+        beforePreview: "(empty)",
+        afterPreview: formatPreview(safePatch[field]),
+      })).slice(0, MAX_EMAIL_CHANGES),
+      omittedChangeCount: Math.max(0, Object.keys(safePatch).length - MAX_EMAIL_CHANGES),
+    });
+
+    doc.set(patchedJob);
+    doc.aiMonitoring = {
+      ...patchedJob.aiMonitoring,
+      lastCheckedAt: now,
+      lastDetectionStatus: "change_detected",
+      lastSummary: "Full content generated from official sources via Gemini.",
+      lastConfidence: "high",
+      lastSources: sources,
+      lastPatchedAt: now,
+      lastMailSentAt: mailResult?.sent ? now : patchedJob.aiMonitoring.lastMailSentAt || null,
+      lastMailStatus: mailResult?.sent ? "sent" : String(mailResult?.reason || "skipped"),
+      lastError: "",
+    };
+    await doc.save();
+
+    return {
+      id: String(doc?._id || ""),
+      status: "updated",
+      jobTitle: baselineJob.jobtitle || baselineJob.title || "",
+      changedFields: Object.keys(safePatch),
+      mailed: Boolean(mailResult?.sent),
+    };
+  }
+
+  // ─── BRANCH: Existing doc → Standard Monitoring ───────────────────────
   const audit = await runGeminiAudit(baselineJob);
   const aiResult = audit.parsed;
-  const sources = aiResult.sources.length > 0
-    ? aiResult.sources
-    : audit.sourceUrls.map((url) => ({ url, title: "", reason: "provided official source" }));
+  const sources =
+    aiResult.sources.length > 0
+      ? aiResult.sources
+      : audit.sourceUrls.map((url) => ({
+          url,
+          title: "",
+          reason: "provided official source",
+        }));
 
   if (
     aiResult.status !== "change_detected" ||
@@ -792,7 +1085,8 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
       lastCheckedAt: now,
       lastDetectionStatus: "no_change",
       lastSummary:
-        aiResult.summary || "Gemini returned a patch candidate but it did not change tracked values.",
+        aiResult.summary ||
+        "Gemini returned a patch candidate but it did not change tracked values.",
       lastConfidence: aiResult.confidence,
       lastSources: sources,
       lastError: "",
@@ -808,7 +1102,9 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
   }
 
   const changedFields = toUniqueArray(
-    changes.map((change) => getTopLevelFieldFromPath(change.path)).filter(Boolean)
+    changes
+      .map((change) => getTopLevelFieldFromPath(change.path))
+      .filter(Boolean)
   );
   const mailChanges = changes.slice(0, MAX_EMAIL_CHANGES);
   const omittedChangeCount = Math.max(0, changes.length - mailChanges.length);
@@ -844,6 +1140,7 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
     mailed: Boolean(mailResult?.sent),
   };
 };
+
 
 export const validateJobAiMonitoring = async ({ limit = 0 } = {}) => {
   const safeLimit = Number.isFinite(Number(limit)) ? Math.max(0, Number(limit)) : 0;
