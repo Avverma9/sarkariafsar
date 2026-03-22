@@ -738,40 +738,12 @@ const isNewEmptyDocument = (job = {}) => {
   return nullCount / trackedFields.length >= 0.7; // 70%+ fields null = empty doc
 };
 
-const POST_TYPE_SCHEMA_HINTS = {
-  admission: `
-SKIP these fields (set null): application_fee, age_limit, exam_pattern, salary, pay_scale
-FOCUS on: important_dates (counselling schedule), vacancy_details (seats/courses/institutes),
-eligibility_criteria (exam cutoff/percentile), selection_process (rounds/allocation),
-how_to_apply (reporting steps), official_links (real PDF links)`,
-
-  admit_card: `
-SKIP these fields (set null): application_fee, vacancy_details, selection_process, exam_pattern, salary
-FOCUS on: important_dates (exam date, admit card release), how_to_apply (download steps),
-eligibility_criteria (who gets admit card), official_links (download link, login portal)`,
-
-  result: `
-SKIP these fields (set null): application_fee, how_to_apply, selection_process
-FOCUS on: important_dates (result date, interview dates), vacancy_details (selected count, cutoff),
-exam_pattern (paper-wise cutoff if available), official_links (result PDF, merit list links)`,
-
-  answer_key: `
-SKIP these fields (set null): application_fee, age_limit, vacancy_details, salary
-FOCUS on: important_dates (key release, objection window), how_to_apply (objection steps),
-official_links (key PDF, objection portal)`,
-
-  corrigendum: `
-SKIP these fields (set null): exam_pattern, salary, age_limit
-FOCUS on: important_dates (revised dates), notification_details (what changed), official_links`,
-};
-
 const buildFullGenerationPrompt = ({ job = {}, sourceUrls = [] } = {}) => {
   const title = job?.jobtitle || job?.title || "";
   const sourceUrl = job?.sourceUrl || sourceUrls[0] || "";
   const domain = job?.sourceDomain || "";
   const sectionName = job?.sectionName || "";
-  const postType = job?.postType || "job";
-  const schemaHint = POST_TYPE_SCHEMA_HINTS[postType] || "";
+  const postType = job?.postType || "";
 
   return `
 You are a senior content writer for sarkariresult.com.cm — an Indian government job portal.
@@ -785,80 +757,84 @@ Source URL: ${sourceUrl}
 Source Domain: ${domain}
 Section: ${sectionName}
 Post Type: ${postType}
-${schemaHint ? `\nPOST TYPE INSTRUCTIONS:\n${schemaHint}\n` : ""}
+
 REQUIRED SCHEMA (return JSON only, no markdown):
 {
-  "status": "current status with emoji (e.g. Open Round Result Declared ✅ | Reporting 25-30 Aug 2025)",
-  "conductingAuthority": "full authority name (e.g. All India Institute of Medical Sciences, New Delhi)",
-  "advertisementNumber": "official notice/advertisement number",
+  "status": "current status with emoji",
+  "conductingAuthority": "full authority name",
+  "advertisementNumber": "official notice number",
   "introduction": {
     "heading": "SEO heading with year and key info",
-    "content": "300-400 word detailed intro — include real dates, post counts, key facts. Mix English/Hindi where natural"
+    "content": "300-400 word detailed intro in English/Hindi mix — include dates, posts count, key facts"
   },
   "important_dates": {
-    "heading": "Important Dates",
-    "dates": [ { "event": "event name", "date": "DD Month YYYY" } ],
-    "pro_tip": "1 actionable tip for candidates"
+    "heading": "...",
+    "dates": [
+      { "event": "event name", "date": "DD Month YYYY" }
+    ],
+    "pro_tip": "actionable tip for candidates"
   },
   "vacancy_details": {
-    "heading": "Vacancy / Seat Details",
-    "total_posts": null,
-    "posts": [ { "post_name": "...", "vacancies": 0, "pay_scale": "..." } ]
+    "heading": "...",
+    "total_posts": number or null,
+    "posts": [ { "post_name": "...", "vacancies": number, "pay_scale": "..." } ]
   },
   "application_fee": {
-    "heading": "Application Fee",
-    "fees": [ { "category": "General/OBC/SC/ST/EWS", "amount": 0, "currency": "INR" } ],
-    "payment_mode": "Online / Net Banking / UPI / Debit Card",
+    "heading": "...",
+    "fees": [ { "category": "General/OBC/SC/ST/EWS", "amount": number, "currency": "INR" } ],
+    "payment_mode": "...",
     "human_note": "fee context in plain language"
   },
   "age_limit": {
-    "heading": "Age Limit",
-    "minimum_age": 18,
-    "maximum_age": 35,
+    "heading": "...",
+    "minimum_age": number,
+    "maximum_age": number,
     "age_rule": "as on DD Month YYYY",
     "relaxation": [ { "category": "SC/ST/OBC/PwBD", "relaxation": "X years" } ],
-    "human_note": "plain language age explanation"
+    "human_note": "plain language explanation"
   },
   "eligibility_criteria": {
-    "heading": "Eligibility Criteria",
+    "heading": "...",
     "criteria": [ { "point": "...", "detail": "..." } ]
   },
   "selection_process": {
-    "heading": "Selection Process",
+    "heading": "...",
     "stages": [ { "step": 1, "name": "...", "description": "..." } ],
     "note": "important note about selection"
   },
   "how_to_apply": {
-    "heading": "How to Apply / Steps",
+    "heading": "...",
     "intro": "one line intro",
-    "documents_required": ["document 1"],
+    "documents_required": ["document 1", "document 2"],
     "steps": [ { "step": 1, "action": "..." } ],
     "important_reminder": "critical warning for candidates"
   },
   "exam_pattern": {
-    "heading": "Exam Pattern",
-    "subjects": [ { "subject": "...", "questions": 0, "marks": 0 } ],
-    "marking_scheme": { "correct_answer": "+X marks", "wrong_answer": "-X marks" },
+    "heading": "...",
+    "subjects": [ { "subject": "...", "questions": number, "marks": number } ],
+    "marking_scheme": { "correct_answer": "...", "wrong_answer": "..." },
     "note": "..."
   },
   "official_links": {
-    "heading": "Official Website & Links",
+    "heading": "...",
     "official_website": "https://...",
     "links": [
-      { "label": "descriptive label", "url": "https://...", "status": "Active ✅" }
+      { "label": "Apply Online / Download PDF / Official Notice", "url": "https://...", "status": "Active ✅ / Archive" }
     ]
   },
   "faq": {
-    "heading": "Frequently Asked Questions",
-    "questions": [ { "question": "...", "answer": "..." } ]
+    "heading": "...",
+    "questions": [
+      { "question": "...", "answer": "..." }
+    ]
   },
   "meta": {
-    "description": "SEO meta description under 155 chars",
-    "keywords": ["keyword1", "keyword2"]
+    "description": "150 char SEO meta description",
+    "keywords": ["keyword 1", "keyword 2", "...8-10 keywords total"]
   },
-  "tags": ["tag1", "tag2"],
+  "tags": ["tag1", "tag2", "...7-10 tags"],
   "conclusion": {
-    "heading": "Final Words",
+    "heading": "...",
     "content": "150-200 word motivating conclusion",
     "cta": "clear call to action"
   },
@@ -866,11 +842,12 @@ REQUIRED SCHEMA (return JSON only, no markdown):
 }
 
 RULES:
-- Use REAL dates, REAL URLs, REAL counts from official sources only
-- Set null for sections that are genuinely not applicable for this post type
-- official_links must have REAL working URLs — include direct PDF links when available
-- FAQ must have 7-10 Q&As candidates actually ask about this specific post
-- Return ONLY valid JSON — no markdown fences, no extra text outside JSON
+- Use REAL dates, REAL URLs, REAL seat counts from official sources
+- Mix English + Hindi where it helps readability (not forced)
+- Include ALL relevant sections — skip only if truly not applicable (use null for that field)
+- official_links must have REAL working URLs — not placeholder links, also direct links and direct pdf links if available 
+- FAQ must have 7-10 real, useful Q&As that candidates actually ask
+- Return ONLY valid JSON — no markdown fences, no extra text
 `.trim();
 };
 
@@ -892,12 +869,29 @@ const generateFullJobContent = async (job = {}) => {
   });
 
   const rawText = String(response?.text || "").trim();
+  const parsed = parseModelJson(rawText);
 
-  // ✅ No local filter — sanitizeAiPatch(isGeneration=true) handles it
+  // Only keep keys allowed by trackedFieldPaths + extra content fields
+  const CONTENT_FIELDS = new Set([
+    "status", "conductingAuthority", "advertisementNumber",
+    "introduction", "important_dates", "vacancy_details",
+    "application_fee", "age_limit", "eligibility_criteria",
+    "selection_process", "how_to_apply", "exam_pattern",
+    "official_links", "faq", "meta", "tags", "conclusion",
+    "disclaimer", "applyLastDate",
+  ]);
+
+  const sanitized = {};
+  for (const [key, value] of Object.entries(parsed || {})) {
+    if (CONTENT_FIELDS.has(key) && value !== undefined && value !== null) {
+      sanitized[key] = value;
+    }
+  }
+
   return {
     sourceUrls,
     rawText,
-    patch: parseModelJson(rawText),
+    patch: sanitized,
   };
 };
 
@@ -940,8 +934,7 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
       };
     }
 
-    // ✅ Bug 1 Fix: isGeneration=true
-    const safePatch = sanitizeAiPatch(baselineJob, generationResult.patch, true);
+    const safePatch = sanitizeAiPatch(baselineJob, generationResult.patch);
 
     if (Object.keys(safePatch).length === 0) {
       await saveMonitoringMetadata(doc, baselineMonitoring, {
