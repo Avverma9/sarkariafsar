@@ -124,7 +124,7 @@ test("syncSingleJobPost creates, patches, clones lifecycle posts, and ignores tr
   assert.ok(createResult.job);
   assert.equal(createResult.job.sectionCanonicalUrl, "latest-gov-jobs");
   assert.equal(createResult.job.postType, "job");
-  assert.match(createResult.job.status, /Online application window is currently open/i);
+  assert.match(createResult.job.status, /currently open on the official portal/i);
 
   const updateResult = await syncSingleJobPost({
     title: baseTitle,
@@ -198,7 +198,7 @@ test("syncSingleJobPost creates, patches, clones lifecycle posts, and ignores tr
   assert.equal(resultStageResult.action, "cloned");
   assert.equal(resultStageResult.job.postType, "result");
   assert.equal(resultStageResult.job.sectionCanonicalUrl, "results");
-  assert.match(resultStageResult.job.status, /Result has been declared/i);
+  assert.match(resultStageResult.job.status, /result has been published on the official portal/i);
 
   const docs = await JobDetails.find({
     $or: [

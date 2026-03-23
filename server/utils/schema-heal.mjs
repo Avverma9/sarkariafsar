@@ -75,6 +75,7 @@ const mergeHealedDocument = (base = {}, patch = {}) => {
     postType: next.postType || base.postType || "job",
     applyLastDate: next.applyLastDate || base.applyLastDate || null,
     currentStatus: patch.status || base.status || "",
+    title: next.title || next.jobtitle || base.title || base.jobtitle || "",
   });
 
   return next;
@@ -142,6 +143,7 @@ export const healSingleJobDocument = async (
     postType: healedDoc?.postType || "job",
     applyLastDate: healedDoc?.applyLastDate || null,
     currentStatus: healedDoc?.status || "",
+    title: healedDoc?.title || healedDoc?.jobtitle || "",
   });
 
   const rich = isSchemaRichJob(healedDoc, {

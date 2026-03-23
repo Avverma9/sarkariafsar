@@ -2,6 +2,7 @@ import axios from "axios";
 import https from "node:https";
 import { constants as cryptoConstants } from "node:crypto";
 import * as cheerio from "cheerio";
+import { sendNewPostsNotification } from "../job-notification/notification.mjs";
 import { officialLinks } from "./officialLinks.mjs";
 import { inferPostType } from "./job-family.mjs";
 import { extractAdvertisementNumber, parseLooseDate } from "./job-normalize.mjs";
@@ -25,6 +26,111 @@ const POST_TEXT_IGNORE_PATTERNS = [
   /sitemap/i,
   /login/i,
 ];
+
+const NON_POST_TITLE_PATTERNS = [
+  /download\s+hindi\s+fonts?/i,
+  /\bhindi\s+fonts?\b/i,
+  /\bfont\s+download\b/i,
+  /\bdemo\s+files?\b/i,
+  /^\s*explore\s+now\s*$/i,
+  /^\s*through\s+open\s+advertisement\s*$/i,
+  /^\s*https?:\/\//i,
+  /^\s*(eoi|expression of interest)\b/i,
+  /\bnotice inviting tender\b/i,
+  /\btender\b/i,
+  /\bquotation\b/i,
+  /\brfp\b/i,
+  /\bauction\b/i,
+  /\bprocurement\b/i,
+  /\bvendor\b/i,
+  /\bgstn manual invoice form\b/i,
+  /\be-?pariksha\b/i,
+  /\bexamination management services\b/i,
+  /\bdoctrine\b/i,
+  /\bcompendium\b/i,
+  /\bappendix\b/i,
+  /\bpension(?:ary)?\b/i,
+  /\bbenefits?\b/i,
+  /\bhandbook\b/i,
+  /\bguidelines?\b/i,
+  /\brest\s+houses?\b/i,
+  /\bdisclosure\b/i,
+  /\bhr initiatives?\b/i,
+  /\boutreach event\b/i,
+  /\bmessages?\b/i,
+  /\bhonorary commi?s+ion\b/i,
+  /\bmultinational exercise\b/i,
+  /\bdesert flag\b/i,
+  /^notifications$/i,
+  /^circulars withdrawn$/i,
+  /\bbasel\b/i,
+  /\bliquidity standards?\b/i,
+  /\bresolution framework\b/i,
+  /\bbanking regulation act\b/i,
+  /\boffline retail payments\b/i,
+  /\bonline dispute resolution\b/i,
+  /\bpayment frauds?\b/i,
+  /\bexport credit\b/i,
+  /\bcurrent accounts?\b/i,
+  /\bloans against gold\b/i,
+  /\bmsme\b.*\brestructuring/i,
+  /\bfinancial parameters\b/i,
+  /\bpayroll\b.*\blocker concession\b/i,
+  /\bcivil non scheduled\b/i,
+  /\bissue of noc for constructions?\b/i,
+  /^view more notices$/i,
+  /^notice board$/i,
+  /^notice and announcement$/i,
+  /^recruitment notice$/i,
+  /^cts notice$/i,
+  /^history\/records$/i,
+  /^latest notifications$/i,
+  /^syllabus$/i,
+  /^admit card$/i,
+  /^rejected omr sheets$/i,
+  /^notification\/order$/i,
+  /^examination fee notice$/i,
+  /^examination general notice$/i,
+  /\bconvocation\b/i,
+  /\bdress code\b/i,
+  /\bparking arrangements?\b/i,
+  /\bsemester fees?\b/i,
+  /\bweeding out\b/i,
+  /\bindian knowledge systems\b/i,
+  /\bplacement coordinators?\b/i,
+  /\bnodal officer\b/i,
+  /\binterest subvention\b/i,
+  /\bcovid-?19\b.*\bregulatory package\b/i,
+  /\blarge exposures framework\b/i,
+  /\bimport of goods and services\b/i,
+  /\bvoluntary retention route\b/i,
+  /\brisk management and inter-bank dealings\b/i,
+  /\bdeclaration of dividends by banks\b/i,
+  /\brupee drawing arrangement\b/i,
+  /\bannual closing of government accounts\b/i,
+  /\blegal entity identifier\b/i,
+  /\bsubmission of regulatory returns\b/i,
+  /\bprime minister.?s national relief fund\b/i,
+  /\bmutual fund holders?\b/i,
+  /\bdemat account\b/i,
+  /\blocked?er holders?\b/i,
+  /\blocked?er hirers?\b/i,
+  /\bre-?kyc\b/i,
+  /\bkyc updation\b/i,
+  /\bcollection agenc(?:y|ies)\b/i,
+  /\bbrokers?[’']?\s+empanelment\b/i,
+  /\bconcurrent auditors?\b/i,
+  /\btds on interest\b/i,
+  /\bomni bonds?\b/i,
+];
+
+const NON_POST_FILE_PATTERN =
+  /\.(?:rar|zip|7z|tar|gz|bz2|xz|exe|msi|apk|ttf|otf|woff2?|eot)(?:$|\?)/i;
+
+const NON_POST_PATH_PATTERNS = [/\/resources\/pdf\/utilities\//i];
+
+const RECRUITMENT_LIKE_TITLE_PATTERN =
+  /\b(recruit(?:ment)?|vacanc(?:y|ies)|admit|result|answer key|exam(?:ination)?|interview|selection|document verification|\bdv\b|skill test|typing test|merit|cut[- ]?off|application|apply|registration|admission|seat allotment|seat allocation|candidate(?:s)?|shortlisted|junior resident|faculty|nursing|paramedical|constable|assistant|officer|engineer|medical|centre change|center change|exam city|exam district|exam venue|stage[- ]?ii|stage[- ]?iii)\b/i;
 
 const EXACT_GENERIC_LINK_TEXTS = new Set([
   "Notifications/Advertisements",
@@ -89,6 +195,60 @@ const sanitizeCandidateTitle = (value = "") =>
     .replace(/^\d+\.\s*/, "")
     .trim();
 
+const isNonPostUtilityCandidate = ({ text = "", href = "" } = {}) => {
+  const title = sanitizeCandidateTitle(text);
+  const normalizedHref = toText(href);
+  const label = `${title} ${normalizedHref}`;
+
+  if (
+    /^\s*click\s+here\b/i.test(title) &&
+    !/\b(admit\s*card|result|answer\s*key|notification|recruitment|exam(?:ination)?|advt|advertisement|apply(?:\s+online)?)\b/i.test(
+      title
+    )
+  ) {
+    return true;
+  }
+
+  if (NON_POST_FILE_PATTERN.test(normalizedHref)) {
+    return true;
+  }
+
+  if (NON_POST_PATH_PATTERNS.some((pattern) => pattern.test(normalizedHref))) {
+    return true;
+  }
+
+  if (/^\d{1,2}\s+[A-Za-z]{3,9}\s+\d{4}(?:\s+\d{1,2}:\d{2}\s?(?:AM|PM)?)?$/i.test(title)) {
+    return true;
+  }
+
+  return (
+    NON_POST_TITLE_PATTERNS.some((pattern) => pattern.test(title) || pattern.test(label)) ||
+    isDomainSpecificNonPost(title, normalizedHref)
+  );
+};
+
+const getNonPostCandidateReason = (candidate = {}) => {
+  const title = toText(candidate?.title || candidate?.jobtitle || "");
+  const urls = [
+    candidate?.sourceUrl,
+    candidate?.direct_links?.apply_link,
+    candidate?.direct_links?.notification_pdf,
+    candidate?.direct_links?.admit_card_link,
+    candidate?.direct_links?.result_link,
+    candidate?.official_links?.official_website,
+  ]
+    .map((value) => toText(value))
+    .filter(Boolean);
+
+  for (const href of urls.length > 0 ? urls : [""]) {
+    if (isNonPostUtilityCandidate({ text: title, href })) {
+      return "non_post_utility_or_tender";
+    }
+  }
+
+  return "";
+};
+
 const normalizeUrl = (value = "", baseUrl = "") => {
   const candidate = toText(value);
   if (!candidate) return "";
@@ -109,6 +269,23 @@ const normalizeHostname = (value = "") => {
   } catch {
     return "";
   }
+};
+
+const isDomainSpecificNonPost = (title = "", href = "") => {
+  const hostname = normalizeHostname(href);
+  const normalizedTitle = sanitizeCandidateTitle(title);
+
+  if (!hostname || !normalizedTitle) return false;
+
+  if (/^www\./i.test(hostname) ? hostname.replace(/^www\./i, "") === "rbi.org.in" : hostname === "rbi.org.in") {
+    return !RECRUITMENT_LIKE_TITLE_PATTERN.test(normalizedTitle);
+  }
+
+  if (/^www\./i.test(hostname) ? hostname.replace(/^www\./i, "") === "idbibank.in" : hostname === "idbibank.in") {
+    return !RECRUITMENT_LIKE_TITLE_PATTERN.test(normalizedTitle);
+  }
+
+  return false;
 };
 
 const resolveSourceProfile = (sourceUrl = "") => {
@@ -304,6 +481,12 @@ const mergeSchemaDrivenCandidate = (candidate = {}, generatedPost = {}) => {
       postType: toText(candidate.postType || generatedPost.postType || "job"),
       applyLastDate: candidate.applyLastDate || generatedPost.applyLastDate,
       currentStatus: candidate.status || generatedPost.status,
+      title:
+        generatedPost.title ||
+        generatedPost.jobtitle ||
+        candidate.title ||
+        candidate.jobtitle ||
+        "",
     }),
     postType: toText(candidate.postType || generatedPost.postType || "job"),
     sourceUrl: normalizeUrl(candidate.sourceUrl || generatedPost.sourceUrl || ""),
@@ -352,12 +535,39 @@ const buildIgnoredIncompleteResult = ({
   reason: toText(reason || "schema_incomplete"),
 });
 
+const buildIgnoredPreflightResult = ({
+  candidate = {},
+  action = "ignored_non_post",
+  reason = "",
+  dryRun = false,
+} = {}) => ({
+  action,
+  job: candidate,
+  familyCount: 0,
+  dryRun,
+  persisted: false,
+  reason: toText(reason || action),
+});
+
 const prepareCandidatesForSync = async (candidates = [], { dryRun = false } = {}) => {
   const readyCandidates = [];
   const preflightResults = [];
   const aiEnabled = isSourcePostAiConfigured();
 
   for (const candidate of candidates) {
+    const nonPostReason = getNonPostCandidateReason(candidate);
+    if (nonPostReason) {
+      preflightResults.push(
+        buildIgnoredPreflightResult({
+          candidate,
+          action: "ignored_non_post",
+          reason: nonPostReason,
+          dryRun,
+        })
+      );
+      continue;
+    }
+
     const preview = await syncSingleJobPost(candidate, { dryRun: true });
 
     if (preview.action === "ignored_expired" || preview.action === "ignored_closed") {
@@ -366,6 +576,11 @@ const prepareCandidatesForSync = async (candidates = [], { dryRun = false } = {}
         dryRun,
         persisted: false,
       });
+      continue;
+    }
+
+    if (preview.action === "new_detected") {
+      readyCandidates.push(preview?.job || candidate);
       continue;
     }
 
@@ -505,6 +720,7 @@ const scoreAnchor = ({ text = "", href = "" } = {}) => {
   const label = `${text} ${href}`.toLowerCase();
   if (!text || text.length < 8) return 0;
   if (POST_TEXT_IGNORE_PATTERNS.some((pattern) => pattern.test(text))) return 0;
+  if (isNonPostUtilityCandidate({ text, href })) return 0;
 
   let score = 0;
   if (
@@ -583,6 +799,7 @@ const buildCandidateFromAnchor = ({
   const normalizedHref = normalizeUrl(href, baseUrl || sourceUrl);
   const officialBase = normalizeUrl(officialWebsite || sourceUrl) || sourceUrl;
   if (!title || !normalizedHref) return null;
+  if (isNonPostUtilityCandidate({ text: title, href: normalizedHref })) return null;
 
   const postType = inferPostType({ title, sourceUrl: normalizedHref });
   const extractedDate = extractDateFromText(title);
@@ -595,6 +812,7 @@ const buildCandidateFromAnchor = ({
     status: buildHumanStatus({
       postType,
       applyLastDate: postType === "job" ? extractedDate || undefined : undefined,
+      title,
     }),
     official_links: buildOfficialLinks({
       baseUrl: officialBase,
@@ -1006,6 +1224,7 @@ const buildRrbDirectoryEntries = async (sourceUrl = "") => {
       postType: inferPostType({ title: entry.title, sourceUrl: entry.sourceUrl }),
       status: buildHumanStatus({
         postType: inferPostType({ title: entry.title, sourceUrl: entry.sourceUrl }),
+        title: entry.title,
       }),
       official_links: {
         heading: "Official Website & Links",
@@ -1238,6 +1457,7 @@ const extractSscCandidates = async ({
       postType: "job",
       status: buildHumanStatus({
         postType: "job",
+        title,
       }),
       conducting_authority: SSC_AUTHORITY,
       conductingAuthority: SSC_AUTHORITY,
@@ -1360,6 +1580,9 @@ const summarizeOfficialSyncResults = (results = []) =>
       created: 0,
       updated: 0,
       cloned: 0,
+      new_detected: 0,
+      notified_new: 0,
+      ignored_non_post: 0,
       ignored_closed: 0,
       ignored_expired: 0,
       ignored_incomplete: 0,
@@ -1378,7 +1601,32 @@ const syncOfficialSource = async (
     dryRun,
   });
   const syncResults = await syncJobPosts(readyCandidates, { dryRun });
-  const results = [...preflightResults, ...syncResults];
+  const newDetections = syncResults.filter((result) => result?.action === "new_detected");
+
+  let newDetectionNotification = { sent: false, reason: "no_new_posts" };
+  if (!dryRun && newDetections.length > 0) {
+    newDetectionNotification = await sendNewPostsNotification({
+      sectionName: sourceUrl,
+      newPosts: newDetections.map((result) => ({
+        title: result?.job?.title || result?.job?.jobtitle || "Untitled post",
+        jobUrl: result?.job?.sourceUrl || result?.job?.official_links?.official_website || sourceUrl,
+        sourceSites: [sourceUrl],
+      })),
+    });
+  }
+
+  const normalizedSyncResults = syncResults.map((result) => {
+    if (result?.action !== "new_detected") return result;
+    return {
+      ...result,
+      action:
+        !dryRun && newDetectionNotification?.sent
+          ? "notified_new"
+          : "new_detected",
+      notification: newDetectionNotification,
+    };
+  });
+  const results = [...preflightResults, ...normalizedSyncResults];
 
   return {
     sourceUrl,
@@ -1433,6 +1681,8 @@ export {
   extractDateFromText,
   extractPortalSpecificCandidates,
   fetchSourceHtml,
+  getNonPostCandidateReason,
+  isNonPostUtilityCandidate,
   normalizeHostname,
   normalizeUrl,
   resolveSourceProfile,
@@ -1452,6 +1702,8 @@ export default {
   extractDateFromText,
   extractPortalSpecificCandidates,
   fetchSourceHtml,
+  getNonPostCandidateReason,
+  isNonPostUtilityCandidate,
   normalizeHostname,
   normalizeUrl,
   resolveSourceProfile,

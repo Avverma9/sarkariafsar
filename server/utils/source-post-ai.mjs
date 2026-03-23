@@ -7,6 +7,35 @@ const DEFAULT_SOURCE_POST_AI_MODEL =
 
 const JSON_FENCE_PATTERN = /^```(?:json)?\s*|\s*```$/gi;
 const MAX_TAGS = 8;
+const GENERIC_NOTICE_FILLER_PATTERNS = [
+  /\bofficial official notice\b/i,
+  /official source links/i,
+  /review the latest notice carefully/i,
+  /before acting on this update/i,
+  /official update details and source links/i,
+  /linked official notice carefully/i,
+  /latest instructions, dates, and document requirements/i,
+  /prepared from official source links available/i,
+  /verify all dates, eligibility conditions, documents, and instructions directly on the official website/i,
+  /use the official notice and links below as the primary source/i,
+  /the official source has published an official/i,
+  /is currently listed as an official .* record/i,
+  /remains the main official reference for verification/i,
+  /read the linked official document carefully because notices? and corrigenda/i,
+  /treat the official notice and linked source document as the primary reference/i,
+  /latest verified update and next-step reference/i,
+  /official notice details and source links/i,
+];
+
+const GENERIC_PORTAL_FILLER_PATTERNS = [
+  ...GENERIC_NOTICE_FILLER_PATTERNS,
+  /official recruitment update/i,
+  /official job update/i,
+  /important dates, official links, and application guidance/i,
+  /download guidance, official links, and latest update details/i,
+  /result-check guidance, source links, and next-step guidance/i,
+  /includes .*source links, and next-step guidance/i,
+];
 
 const DEFAULT_CATEGORY_BY_TYPE = {
   job: "Government Job",
@@ -200,10 +229,51 @@ const normalizeUrl = (value = "", baseUrl = "") => {
 };
 
 const toUniqueArray = (value = []) => [...new Set(value.filter(Boolean))];
+const capitalizeFirst = (value = "") => {
+  const normalized = toText(value);
+  return normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : "";
+};
 
 const hasMeaningfulString = (value = "", minLength = 20) => toText(value).length >= minLength;
 
 const hasEntries = (value) => Array.isArray(value) && value.length > 0;
+
+const stripTitleFromNarrative = (text = "", title = "") => {
+  const normalizedText = toText(text).toLowerCase();
+  const normalizedTitle = toText(title).toLowerCase();
+  if (!normalizedTitle) return normalizedText;
+  return normalizedText.replaceAll(normalizedTitle, " ").replace(/\s+/g, " ").trim();
+};
+
+const isGenericNoticeNarrative = (value = "", title = "") => {
+  const stripped = stripTitleFromNarrative(value, title);
+  if (!stripped) return true;
+
+  return GENERIC_NOTICE_FILLER_PATTERNS.some((pattern) => pattern.test(stripped));
+};
+
+const hasConcreteNoticeSignals = (value = "") => {
+  const normalized = toText(value).replace(/https?:\/\/\S+/gi, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return false;
+
+  return (
+    /\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/.test(normalized) ||
+    /\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[,]?\s+\d{4}\b/i.test(
+      normalized
+    ) ||
+    /\b(?:advt|advertisement|cen|employment notice|roll(?:\s*no)?|cut[- ]?off|merit|zone allotment|document verification|vacanc(?:y|ies)|interview|personal assessment|stage[- ]?ii|stage[- ]?iii|centre|center|revised dates?|rescheduled|skill test|typing test|preference form|recruitment examination|free travel authority pass|constable|head constable|combined higher secondary|candidate list|considered as ur|category certificate|final registration|incomplete application|refund|bank account|exam city|exam district|admit card)\b/i.test(
+      normalized
+    )
+  );
+};
+
+const hasSpecificNarrativeText = (value = "", title = "", minLength = 40) => {
+  const normalized = toText(value);
+  if (normalized.length < minLength) return false;
+  const stripped = stripTitleFromNarrative(normalized, title);
+  if (!stripped) return false;
+  return !GENERIC_PORTAL_FILLER_PATTERNS.some((pattern) => pattern.test(stripped));
+};
 
 const formatDateForDisplay = (value) => {
   if (!value) return "";
@@ -219,6 +289,175 @@ const formatDateForDisplay = (value) => {
     year: "numeric",
     timeZone: "Asia/Kolkata",
   });
+};
+
+const removeTrailingStageTerms = (value = "", postType = "job") => {
+  const title = toText(value);
+  if (!title) return "";
+
+  const suffixByType = {
+    result: /\s+(result|results|score\s*card|merit\s*list)$/i,
+    admit_card: /\s+(admit\s*card|hall\s*ticket|call\s*letter)$/i,
+    answer_key: /\s+(answer\s*key|response\s*sheet)$/i,
+    admission: /\s+(admission|counselling|counseling)$/i,
+    corrigendum: /\s+(corrigendum|notice)$/i,
+    notice: /\s+(notice|update)$/i,
+  };
+
+  const pattern = suffixByType[postType];
+  return pattern ? title.replace(pattern, "").trim() || title : title;
+};
+
+const toPortalHost = (value = "") => {
+  const normalized = normalizeUrl(value);
+  if (!normalized) return "";
+
+  try {
+    return new URL(normalized).hostname.replace(/^www\./i, "");
+  } catch {
+    return "";
+  }
+};
+
+const AUTHORITY_BY_HOST = new Map([
+  ["upsc.gov.in", "Union Public Service Commission (UPSC)"],
+  ["upsconline.nic.in", "Union Public Service Commission (UPSC)"],
+  ["ssc.gov.in", "Staff Selection Commission (SSC)"],
+  ["ssc.nic.in", "Staff Selection Commission (SSC)"],
+  ["aiimsexams.ac.in", "All India Institute of Medical Sciences (AIIMS)"],
+  ["oldwebsite.aiimsexams.ac.in", "All India Institute of Medical Sciences (AIIMS)"],
+  ["docs.aiimsexams.ac.in", "All India Institute of Medical Sciences (AIIMS)"],
+  ["rrbcdg.gov.in", "Railway Recruitment Board, Chandigarh"],
+  ["csbc.bihar.gov.in", "Central Selection Board of Constable (CSBC), Bihar"],
+  ["bpssc.bihar.gov.in", "Bihar Police Subordinate Services Commission (BPSSC)"],
+  ["hpsc.gov.in", "Haryana Public Service Commission (HPSC)"],
+  ["tshc.gov.in", "High Court for the State of Telangana"],
+  ["secl-cil.in", "South Eastern Coalfields Limited (SECL)"],
+  ["upsssc.gov.in", "Uttar Pradesh Subordinate Services Selection Commission (UPSSSC)"],
+  ["esb.mp.gov.in", "Madhya Pradesh Employees Selection Board (MPESB)"],
+  ["shs.bihar.gov.in", "State Health Society Bihar"],
+  ["uppsc.up.nic.in", "Uttar Pradesh Public Service Commission (UPPSC)"],
+  ["kgmu.org", "King George's Medical University (KGMU)"],
+  ["allahabadhighcourt.in", "High Court of Judicature at Allahabad"],
+  ["cuh.ac.in", "Central University of Haryana (CUH)"],
+  ["bsf.gov.in", "Border Security Force (BSF)"],
+]);
+
+const inferAuthorityFromUrls = (...values) => {
+  for (const value of values) {
+    const host = toPortalHost(value);
+    if (!host) continue;
+    if (AUTHORITY_BY_HOST.has(host)) {
+      return AUTHORITY_BY_HOST.get(host);
+    }
+    if (host === "d3t79nicn48uzj.cloudfront.net" && /\/bsf\//i.test(String(value || ""))) {
+      return "Border Security Force (BSF)";
+    }
+  }
+  return "";
+};
+
+const buildIdentitySnippet = ({ authority = "", advertisementNumber = "" } = {}) =>
+  [authority ? `issued by ${authority}` : "", advertisementNumber ? `under ${advertisementNumber}` : ""]
+    .filter(Boolean)
+    .join(" ");
+
+const buildFaqBlock = ({
+  title = "",
+  postType = "job",
+  authority = "",
+  advertisementNumber = "",
+  officialWebsite = "",
+  actionUrl = "",
+  applyLastDate,
+} = {}) => {
+  const updateLabel = postType.replace(/_/g, " ");
+  const destination = actionUrl || officialWebsite;
+  const questions = [
+    {
+      question: `What is the current update about for ${title}?`,
+      answer: toText(
+        [
+          `${title} is currently available as an official ${updateLabel} update.`,
+          authority ? `${authority} is the issuing authority for this record.` : "",
+          advertisementNumber ? `The reference attached to this update is ${advertisementNumber}.` : "",
+        ]
+          .filter(Boolean)
+          .join(" ")
+      ),
+    },
+    {
+      question: "Where should candidates check the official link?",
+      answer: destination
+        ? `Candidates should use the official source link ${destination} and cross-check details on ${officialWebsite || destination}.`
+        : "Candidates should rely only on the official website or source notice linked with this update.",
+    },
+    {
+      question: "What should users verify before taking the next step?",
+      answer:
+        postType === "job"
+          ? "Check eligibility, important dates, portal instructions, and required documents on the official source before submitting the form."
+          : postType === "admit_card"
+            ? "Verify the exam date, shift timing, reporting instructions, and candidate details before downloading or printing the admit card."
+            : postType === "result"
+              ? "Verify login details, result status, and any further document or counselling instructions published on the official source."
+              : "Read the linked official document carefully and note any revised instructions, links, dates, or candidate-facing directions.",
+    },
+  ];
+
+  if (applyLastDate && postType === "job") {
+    questions.push({
+      question: "What is the current application deadline in this record?",
+      answer: `The current stored last date is ${formatDateForDisplay(applyLastDate)}. Candidates should still verify the live portal for any extension or corrigendum.`,
+    });
+  }
+
+  return stripEmptyDeep({
+    heading: "Frequently Asked Questions",
+    intro: "These quick answers are based on the currently available official source links and structured data.",
+    questions,
+  });
+};
+
+const buildAboutBlock = ({
+  title = "",
+  postType = "job",
+  authority = "",
+  officialWebsite = "",
+} = {}) => {
+  if (postType !== "job") return {};
+
+  const content = toText(
+    [
+      authority
+        ? `${authority} is the official authority currently linked with ${title}.`
+        : `${title} is currently represented as an official recruitment or examination entry on the source portal.`,
+      officialWebsite
+        ? `The primary portal associated with this post is ${officialWebsite}.`
+        : "",
+      /exam|examination|test|paper|services/i.test(title)
+        ? "Candidates should treat this as an examination-focused update and review the official notice for schedule, eligibility, and application instructions."
+        : "Applicants should review the linked notification, portal instructions, and any related recruitment guidance before proceeding.",
+    ]
+      .filter(Boolean)
+      .join(" ")
+  );
+
+  if (/exam|examination|test|paper|services/i.test(title)) {
+    return {
+      about_exam: {
+        heading: `About ${title}`,
+        content,
+      },
+    };
+  }
+
+  return {
+    about_recruitment: {
+      heading: `About ${title}`,
+      content,
+    },
+  };
 };
 
 const normalizeDateEntries = (value = []) =>
@@ -364,33 +603,126 @@ const buildTagList = ({ title = "", authority = "", advertisementNumber = "", po
     ].filter(Boolean)
   ).slice(0, MAX_TAGS);
 
+const buildNoticeSummaryFromTitle = ({
+  title = "",
+  advertisementNumber = "",
+} = {}) => {
+  const normalizedTitle = toText(title);
+  if (!normalizedTitle) return "";
+
+  if (/enhancement .*vacanc|vacanc.*enhancement/i.test(normalizedTitle)) {
+    return `the update revises the notified vacancy position${advertisementNumber ? ` under ${advertisementNumber}` : ""}, so candidates should compare the revised seat breakup with the earlier notice`;
+  }
+
+  if (/postponed|re-?scheduled|rescheduled|schedule(?:d)? to be held/i.test(normalizedTitle)) {
+    return "the update changes the earlier examination schedule and therefore affects the latest date, shift, timing, or candidate instructions";
+  }
+
+  if (/schedule of interview|personal assessment|stage[- ]?ii|stage[- ]?iii/i.test(normalizedTitle)) {
+    return "the update carries a stage-wise interview or assessment schedule for shortlisted candidates";
+  }
+
+  if (/document verification|\bdv\b/i.test(normalizedTitle)) {
+    return "the update concerns document verification, including the latest schedule, venue, or certificate requirements";
+  }
+
+  if (/zone allotment|medical examination|medical test/i.test(normalizedTitle)) {
+    return "the update concerns zone allotment or medical-examination instructions for the next recruitment stage";
+  }
+
+  if (/result|cut[- ]?off|merit|score/i.test(normalizedTitle)) {
+    return "the update is tied to a published result, merit position, or cut-off related instruction";
+  }
+
+  if (/refund.*exam[- ]?fees?|bank account/i.test(normalizedTitle)) {
+    return "the update explains the exam-fee refund process or the bank-account revalidation step for eligible candidates";
+  }
+
+  if (/admit card|exam district|exam city|venue|centre|center/i.test(normalizedTitle)) {
+    return "the update affects exam logistics such as admit card access, exam city, venue, or reporting instructions";
+  }
+
+  if (/option-cum-preference form|preference form/i.test(normalizedTitle)) {
+    return "the update is about preference-form submission, option entry, and final locking instructions";
+  }
+
+  if (/incomplete application form|final registration/i.test(normalizedTitle)) {
+    return "the update is meant for candidates who still need to complete the pending application or final-registration steps within the notified window";
+  }
+
+  if (/list of candidates|considered as ur/i.test(normalizedTitle)) {
+    return "the update publishes a candidate list or category-status decision that directly affects the next stage for the listed applicants";
+  }
+
+  if (/change of examination centre|change in examination centre|correction in address|centre change|center change/i.test(normalizedTitle)) {
+    return "the update changes the examination centre or address details for affected candidates";
+  }
+
+  if (/change the examination date|revised dates? of written|revised dates?/i.test(normalizedTitle)) {
+    return "the update revises one or more examination dates and replaces the earlier timetable";
+  }
+
+  if (/skill test|typing test/i.test(normalizedTitle)) {
+    return "the update concerns the skill-test or typing-test stage and its reporting instructions";
+  }
+
+  if (/recruitment examination/i.test(normalizedTitle)) {
+    return "the update provides the latest examination-stage instructions for the linked recruitment";
+  }
+
+  return "";
+};
+
 const buildMetaDescription = ({
   title = "",
   postType = "job",
   authority = "",
   advertisementNumber = "",
   applyLastDate,
+  officialWebsite = "",
+  actionUrl = "",
 } = {}) => {
-  const typeLabels = {
-    job: "important dates, official links, and application guidance",
-    admit_card: "download guidance, official links, and latest update details",
-    result: "result-check steps, official links, and latest update details",
-    answer_key: "official links and latest answer key update details",
-    admission: "important dates, official links, and admission guidance",
-    corrigendum: "official update details and source links",
-    notice: "official notice details and source links",
+  const destination = actionUrl || officialWebsite;
+  const noticeSummary =
+    postType === "notice" || postType === "corrigendum" || postType === "answer_key"
+      ? buildNoticeSummaryFromTitle({ title, advertisementNumber })
+      : "";
+
+  const typeSummary = {
+    job: applyLastDate
+      ? `Candidates can review the current application route and the recorded deadline of ${formatDateForDisplay(
+          applyLastDate
+        )} before applying.`
+      : "Candidates can review the application route, source notice, and current portal instructions before applying.",
+    admit_card:
+      "Candidates can open the official admit card route, confirm login instructions, and verify reporting details from the authority source.",
+    result:
+      "Candidates can open the official result route, confirm their credentials carefully, and note any further stage instructions published by the authority.",
+    answer_key:
+      "Candidates can review the official answer key notice and any published objection window or response instructions on the authority source.",
+    admission:
+      "Applicants can review the official admission route, linked notice, and current instructions before completing the next step.",
+    corrigendum:
+      noticeSummary
+        ? `${capitalizeFirst(noticeSummary)}.`
+        : "Readers should compare this revised notice with the earlier record because corrigenda often change dates, venues, links, or candidate instructions.",
+    notice:
+      noticeSummary
+        ? `${capitalizeFirst(noticeSummary)}.`
+        : "Readers should use the official notice and linked source page as the primary reference for the latest candidate-facing instructions.",
   };
 
   const segments = [
-    toText(title),
-    authority ? `by ${authority}` : "",
-    advertisementNumber ? `(${advertisementNumber})` : "",
-    `with ${typeLabels[postType] || typeLabels.job}.`,
+    authority
+      ? `${toText(title)} update from ${authority}.`
+      : `${toText(title)} official update.`,
+    advertisementNumber ? `Reference: ${advertisementNumber}.` : "",
+    applyLastDate && postType === "job"
+      ? `Current recorded last date: ${formatDateForDisplay(applyLastDate)}.`
+      : "",
+    destination ? `Official source: ${destination}.` : "",
+    typeSummary[postType] || typeSummary.job,
   ].filter(Boolean);
-
-  if (applyLastDate && postType === "job") {
-    segments.splice(segments.length - 1, 0, `Last date: ${formatDateForDisplay(applyLastDate)}.`);
-  }
 
   return toText(segments.join(" "));
 };
@@ -401,61 +733,93 @@ const buildIntroductionBlock = ({
   authority = "",
   advertisementNumber = "",
   applyLastDate,
+  officialWebsite = "",
+  actionUrl = "",
 } = {}) => {
-  const typePhrases = {
-    job: "recruitment update",
-    admit_card: "admit card update",
-    result: "result update",
-    answer_key: "answer key update",
-    admission: "admission update",
-    corrigendum: "official corrigendum",
-    notice: "official notice",
-  };
+  const destination = actionUrl || officialWebsite;
+  const identity = buildIdentitySnippet({ authority, advertisementNumber });
+  const noticeSummary =
+    postType === "notice" || postType === "corrigendum" || postType === "answer_key"
+      ? buildNoticeSummaryFromTitle({ title, advertisementNumber })
+      : "";
 
-  const details = [
-    `${title} is an official ${typePhrases[postType] || typePhrases.job}`,
-    authority ? `published by ${authority}` : "",
-    advertisementNumber ? `under Advertisement No. ${advertisementNumber}` : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const opening =
+    postType === "job"
+      ? `${authority || "The authority"} currently lists ${title} as an active recruitment or examination record.`
+      : postType === "admit_card"
+        ? `${authority || "The authority"} has issued the latest admit-card update for ${title}.`
+        : postType === "result"
+          ? `${authority || "The authority"} has published the latest result update for ${title}.`
+          : postType === "admission"
+            ? `${authority || "The authority"} has published the latest admission update for ${title}.`
+            : noticeSummary
+              ? `${title} appears in the latest official record from ${authority || "the authority"}, and ${noticeSummary}.`
+              : `${title} appears in the latest official ${postType.replace(/_/g, " ")} record from ${authority || "the authority"}.`;
 
-  const tail =
+  const identityLine = identity ? `This source record is currently linked ${identity}.` : "";
+  const sourceLine = destination
+    ? officialWebsite && destination !== officialWebsite
+      ? `The main authority site for this update is ${officialWebsite}, while the direct source currently points to ${destination}.`
+      : `The direct official source for this update currently points to ${destination}.`
+    : officialWebsite
+      ? `Candidates should use ${officialWebsite} as the main official source for this update.`
+      : "";
+
+  const actionLine =
     postType === "job"
       ? applyLastDate
-        ? `Candidates should review the official notification, confirm eligibility, and complete the application process before ${formatDateForDisplay(
+        ? `Before submitting any form, candidates should review the linked notification, confirm eligibility and document requirements, and complete the process before ${formatDateForDisplay(
             applyLastDate
           )}.`
-        : "Candidates should review the official notice, confirm key dates, and use the official application links before taking the next step."
+        : "Before taking the next step, candidates should review the notification, confirm eligibility and schedule details, and use only the official portal or document linked with this record."
       : postType === "result"
-        ? "Applicants should use the official result link, verify their credentials carefully, and keep the source notice for record."
-        : postType === "admit_card"
-          ? "Candidates should download the admit card only from the official source and verify exam-day instructions before appearing."
-          : postType === "admission"
-            ? "Applicants should review the official admission notice, key dates, and portal instructions before completing the next step."
-            : "Users should rely on the official source links below and review the latest notice carefully before acting on this update.";
+            ? "Applicants should use the official result source, verify their credentials carefully, and preserve the published result or notice for later stages."
+            : postType === "admit_card"
+              ? "Candidates should open only the official admit card link, verify reporting instructions carefully, and keep a saved or printed copy ready for exam use."
+              : postType === "admission"
+                ? "Applicants should review the admission instructions, note the important dates, and complete the next step only through the official portal."
+                : noticeSummary
+                  ? "Affected candidates should open the linked source document, confirm whether the update applies to their stage or category, and follow only the latest instruction published there."
+                  : "Affected candidates should open the linked source document, note the updated instruction carefully, and follow only the latest version published by the authority.";
 
   return {
     heading:
       postType === "job"
         ? `About ${title}`
         : `${title} Latest Update`,
-    content: toText(`${details}. ${tail}`),
+    content: toText([opening, identityLine, sourceLine, actionLine].filter(Boolean).join(" ")),
   };
+};
+
+const buildNoticeSpecificDetail = ({
+  title = "",
+  postType = "notice",
+  advertisementNumber = "",
+} = {}) => {
+  const summary = buildNoticeSummaryFromTitle({
+    title,
+    advertisementNumber,
+  });
+  if (!summary) return "";
+
+  return `${
+    postType === "corrigendum" ? "The corrigendum" : "The notice"
+  } confirms that ${summary}.`;
 };
 
 const buildHowToApplyBlock = ({ postType = "job", title = "", officialWebsite = "", actionUrl = "" } = {}) => {
   const portal = actionUrl || officialWebsite;
   const typeLabel =
     postType === "admission" ? "admission" : postType === "admit_card" ? "admit card" : "application";
+  const baseTitle = removeTrailingStageTerms(title, postType);
 
   return stripEmptyDeep({
     heading:
       postType === "admission"
-        ? `How to Complete ${title} Admission Process`
+        ? `How to Complete ${baseTitle || title} Admission Process`
         : postType === "admit_card"
-          ? `How to Download ${title} Admit Card`
-          : `How to Apply for ${title}`,
+          ? `How to Download ${baseTitle || title} Admit Card`
+          : `How to Apply for ${baseTitle || title}`,
     intro:
       postType === "admit_card"
         ? "Use the official links below to open the admit card page and verify the latest instructions before downloading."
@@ -499,7 +863,7 @@ const buildHowToApplyBlock = ({ postType = "job", title = "", officialWebsite = 
 
 const buildHowToCheckResultBlock = ({ title = "", officialWebsite = "", resultUrl = "" } = {}) =>
   stripEmptyDeep({
-    heading: `How to Check ${title} Result`,
+    heading: `How to Check ${removeTrailingStageTerms(title, "result") || title} Result`,
     intro: "Use the official result link below and verify the latest instructions before checking your status.",
     steps: [
       {
@@ -543,9 +907,10 @@ const buildStageSpecificBlocks = ({
   }
 
   if (postType === "admit_card") {
+    const baseTitle = removeTrailingStageTerms(title, "admit_card");
     return {
       admit_card: {
-        heading: `${title} Admit Card`,
+        heading: `${baseTitle || title} Admit Card`,
         content:
           "Candidates should use the official admit card link to download the document and verify exam-day instructions carefully.",
       },
@@ -584,20 +949,31 @@ const buildStageSpecificBlocks = ({
 };
 
 const buildConclusionBlock = ({ title = "", postType = "job" } = {}) => {
+  const noticeSummary =
+    postType === "notice" || postType === "corrigendum" || postType === "answer_key"
+      ? buildNoticeSummaryFromTitle({ title })
+      : "";
   const messages = {
-    job: "Review the official notification, keep your documents ready, and complete the process through the official portal before the deadline.",
-    admit_card: "Download the admit card from the official source and verify all instructions before exam day.",
-    result: "Check the result only on the official portal and preserve the published record for future stages.",
-    answer_key: "Review the official answer key notice carefully and follow the published objection process, if any.",
-    admission: "Complete the next admission step only through the official portal and keep a copy of every submitted document.",
-    corrigendum: "Read the revised notice carefully because it may change dates, links, or instructions issued earlier.",
-    notice: "Use the official notice and links below as the primary source before taking any action.",
+    job: "Use the official notification and portal as the final authority, complete the process carefully, and keep copies of every submitted document or acknowledgement.",
+    admit_card: "Download the admit card only from the official source, verify all printed details, and follow the reporting instructions exactly as issued.",
+    result: "Check the result only through the official source, note any further stage instructions, and preserve the published record for future reference.",
+    answer_key: "Read the official answer key notice carefully and follow the published objection or response process, if one has been announced.",
+    admission: "Use the official admission portal and document links for every next step, and keep records of each submission or payment acknowledgement.",
+    corrigendum: noticeSummary
+      ? `${capitalizeFirst(noticeSummary)}. Candidates should compare the revised instruction with the earlier notice before acting on it.`
+      : "Read the revised notice side by side with the earlier notification because corrigenda may update dates, links, categories, or instructions.",
+    notice: noticeSummary
+      ? `${capitalizeFirst(noticeSummary)}. Candidates should rely only on the linked official document for the latest instruction.`
+      : "Treat the official notice and linked source document as the primary reference before making any decision based on this update.",
   };
 
   return {
     heading: "Final Thoughts",
     content: `${title}: ${messages[postType] || messages.job}`,
-    cta: "Use the official links below for the latest verified update.",
+    cta:
+      postType === "job"
+        ? "Open the official portal, verify the latest details, and proceed only after checking the current instructions."
+        : "Use the official source links below for the latest verified update and next-step reference.",
   };
 };
 
@@ -606,19 +982,41 @@ const buildNotificationDetailsBlock = ({
   postType = "job",
   authority = "",
   officialWebsite = "",
-} = {}) => ({
-  heading: "Notification Details",
-  content: toText(
-    [
-      `${title} is available as an official ${postType.replace(/_/g, " ")} update`,
-      authority ? `issued by ${authority}` : "",
-      officialWebsite ? `through the official portal ${officialWebsite}` : "",
-      "Candidates should review the linked official notice carefully for the latest instructions, dates, and document requirements.",
-    ]
-      .filter(Boolean)
-      .join(" ")
-  ),
-});
+  advertisementNumber = "",
+  actionUrl = "",
+  applyLastDate,
+} = {}) =>
+  ({
+    heading: "Notification Details",
+    content: toText(
+      [
+        buildNoticeSpecificDetail({
+          title,
+          postType,
+          advertisementNumber,
+        }),
+        postType === "notice" || postType === "corrigendum" || postType === "answer_key"
+          ? ""
+          : `${title} is currently listed as an official ${postType.replace(/_/g, " ")} record.`,
+        authority ? `Issuing authority: ${authority}.` : "",
+        advertisementNumber ? `Reference: ${advertisementNumber}.` : "",
+        officialWebsite ? `Primary official portal: ${officialWebsite}.` : "",
+        actionUrl && actionUrl !== officialWebsite ? `Direct source path: ${actionUrl}.` : "",
+        applyLastDate && postType === "job"
+          ? `Current stored last date: ${formatDateForDisplay(applyLastDate)}.`
+          : "",
+        postType === "job"
+          ? "Candidates should compare this record with the linked official notification before relying on dates, eligibility, or submission instructions."
+          : postType === "result"
+            ? "Candidates should verify the published result or merit document on the official source and follow only the next-step instructions issued there."
+            : postType === "admit_card"
+              ? "Candidates should verify reporting instructions, venue details, and printed particulars directly from the official admit card source."
+              : "Readers should verify the revised instruction directly from the linked official document before relying on the update.",
+      ]
+        .filter(Boolean)
+        .join(" ")
+    ),
+  });
 
 const stripEmptyDeep = (value) => {
   if (Array.isArray(value)) {
@@ -736,6 +1134,8 @@ Quality rules:
 - For admit card posts include important_dates or admit_card, plus official_links and introduction.
 - For result posts include important_dates or result_dates, plus official_links and introduction.
 - For admission posts include important_dates plus how_to_apply or eligibility_criteria.
+- For notice, corrigendum, and answer_key posts include authority or advertisement number whenever available, plus at least one specific factual block such as important_dates, faq, how_to_apply, or notification_details summarizing the actual update.
+- If the source only provides a bare title and a PDF URL without extractable facts, return insufficient_data instead of writing generic filler.
 
 Allowed top-level keys:
 ${[...ALLOWED_TOP_LEVEL_KEYS].join(", ")}
@@ -767,9 +1167,10 @@ Expected response JSON:
 };
 
 const countMeaningfulFields = (job = {}) => {
+  const title = toText(job?.title || job?.jobtitle || "");
   let score = 0;
-  if (hasMeaningfulString(job?.meta?.description, 40)) score += 1;
-  if (hasMeaningfulString(job?.introduction?.content, 80)) score += 1;
+  if (hasSpecificNarrativeText(job?.meta?.description, title, 40)) score += 1;
+  if (hasSpecificNarrativeText(job?.introduction?.content, title, 80)) score += 1;
   if (
     hasMeaningfulString(job?.official_links?.official_website, 12) ||
     hasEntries(job?.official_links?.links)
@@ -779,9 +1180,17 @@ const countMeaningfulFields = (job = {}) => {
   if (hasMeaningfulString(job?.disclaimer, 40)) score += 1;
   if (hasEntries(job?.tags)) score += 1;
   if (hasEntries(job?.important_dates?.dates) || job?.applyLastDate) score += 1;
-  if (hasMeaningfulString(job?.notification_details?.content, 40)) score += 1;
+  if (hasSpecificNarrativeText(job?.notification_details?.content, title, 40)) score += 1;
   if (hasEntries(job?.selection_process?.stages)) score += 1;
   if (hasEntries(job?.how_to_apply?.steps)) score += 1;
+  if (hasEntries(job?.how_to_check_result?.steps)) score += 1;
+  if (hasEntries(job?.faq?.questions)) score += 1;
+  if (
+    hasSpecificNarrativeText(job?.about_exam?.content, title, 60) ||
+    hasSpecificNarrativeText(job?.about_recruitment?.content, title, 60)
+  ) {
+    score += 1;
+  }
   if (
     hasEntries(job?.eligibility_criteria?.posts) ||
     hasEntries(job?.eligibility_criteria?.papers) ||
@@ -792,62 +1201,114 @@ const countMeaningfulFields = (job = {}) => {
   if (
     hasEntries(job?.vacancy_details?.vacancies) ||
     hasEntries(job?.vacancy_details?.category_wise) ||
-    Number.isFinite(Number(job?.vacancy_details?.total_posts))
+      Number.isFinite(Number(job?.vacancy_details?.total_posts))
   ) {
     score += 1;
   }
-  if (hasMeaningfulString(job?.conclusion?.content, 40)) score += 1;
+  if (hasSpecificNarrativeText(job?.conclusion?.content, title, 40)) score += 1;
   return score;
 };
 
 export const isSchemaRichJob = (job = {}, { postType = "" } = {}) => {
   const type = toText(postType || job?.postType || "job").toLowerCase() || "job";
+  const title = toText(job?.title || job?.jobtitle || "");
+  const score = countMeaningfulFields(job);
 
   const common =
-    hasMeaningfulString(job?.title || job?.jobtitle, 8) &&
-    hasMeaningfulString(job?.meta?.description, 40) &&
-    hasMeaningfulString(job?.introduction?.content, 60) &&
+    hasMeaningfulString(title, 8) &&
+    hasSpecificNarrativeText(job?.meta?.description, title, 40) &&
+    hasSpecificNarrativeText(job?.introduction?.content, title, 60) &&
     (
       hasMeaningfulString(job?.official_links?.official_website, 12) ||
       hasEntries(job?.official_links?.links)
     ) &&
     hasMeaningfulString(job?.disclaimer, 30);
 
+  if (type === "notice" || type === "corrigendum" || type === "answer_key") {
+    const noticeCommon =
+      hasMeaningfulString(title, 8) &&
+      (
+        hasMeaningfulString(job?.official_links?.official_website, 12) ||
+        hasEntries(job?.official_links?.links)
+      ) &&
+      hasMeaningfulString(job?.disclaimer, 30);
+
+    if (!noticeCommon) return false;
+
+    const authorityOrAdNumber =
+      hasMeaningfulString(
+        job?.conducting_authority || job?.conductingAuthority || "",
+        5
+      ) ||
+      hasMeaningfulString(
+        job?.advertisement_number || job?.advertisementNumber || "",
+        3
+      );
+
+    const hasSpecificNarrative =
+      (hasMeaningfulString(job?.introduction?.content, 80) &&
+        !isGenericNoticeNarrative(job?.introduction?.content, title)) ||
+      (hasMeaningfulString(job?.notification_details?.content, 60) &&
+        !isGenericNoticeNarrative(job?.notification_details?.content, title));
+
+    const hasSpecificStructuredContent = hasEntries(job?.important_dates?.dates);
+    const hasConcreteSignals =
+      authorityOrAdNumber ||
+      hasConcreteNoticeSignals(job?.notification_details?.content) ||
+      hasConcreteNoticeSignals(job?.introduction?.content) ||
+      hasConcreteNoticeSignals(title);
+    const hasSourceBackedNarrative = hasSpecificNarrative && hasConcreteSignals;
+
+    return Boolean(
+      score >= 5 &&
+      (authorityOrAdNumber || hasSpecificStructuredContent) &&
+      (
+        hasSpecificNarrative ||
+        hasSpecificStructuredContent ||
+        hasSourceBackedNarrative
+      )
+    );
+  }
+
   if (!common) return false;
 
   if (type === "result") {
-    return (
-      hasEntries(job?.important_dates?.dates) ||
-      job?.result_dates ||
-      hasEntries(job?.how_to_check_result?.steps)
+    return Boolean(
+      score >= 6 &&
+      (
+        hasEntries(job?.important_dates?.dates) ||
+        job?.result_dates ||
+        hasEntries(job?.how_to_check_result?.steps) ||
+        hasSpecificNarrativeText(job?.notification_details?.content, title, 50)
+      )
     );
   }
 
   if (type === "admit_card") {
-    return (
-      hasEntries(job?.important_dates?.dates) ||
-      job?.admit_card ||
-      hasEntries(job?.how_to_apply?.steps)
+    return Boolean(
+      score >= 6 &&
+      (
+        hasEntries(job?.important_dates?.dates) ||
+        job?.admit_card ||
+        hasEntries(job?.how_to_apply?.steps) ||
+        hasSpecificNarrativeText(job?.notification_details?.content, title, 50)
+      )
     );
   }
 
   if (type === "admission") {
-    return (
+    return Boolean(
+      score >= 6 &&
       (hasEntries(job?.important_dates?.dates) ||
         hasMeaningfulString(job?.notification_details?.content, 40)) &&
       (hasEntries(job?.how_to_apply?.steps) ||
-        hasMeaningfulString(job?.eligibility_criteria?.intro, 30))
+        hasMeaningfulString(job?.eligibility_criteria?.intro, 30) ||
+        hasEntries(job?.faq?.questions))
     );
   }
 
-  if (type === "notice" || type === "corrigendum" || type === "answer_key") {
-    return countMeaningfulFields(job) >= 5;
-  }
-
-  return (
-    (hasEntries(job?.important_dates?.dates) ||
-      job?.applyLastDate ||
-      hasMeaningfulString(job?.notification_details?.content, 40)) &&
+  return Boolean(
+    score >= 6 &&
     (
       hasEntries(job?.how_to_apply?.steps) ||
       hasEntries(job?.selection_process?.stages) ||
@@ -858,7 +1319,12 @@ export const isSchemaRichJob = (job = {}, { postType = "" } = {}) => {
       hasEntries(job?.vacancy_details?.category_wise) ||
       Number.isFinite(Number(job?.vacancy_details?.total_posts))
     ) &&
-    countMeaningfulFields(job) >= 6
+    (
+      hasEntries(job?.important_dates?.dates) ||
+      job?.applyLastDate ||
+      hasSpecificNarrativeText(job?.notification_details?.content, title, 50) ||
+      hasEntries(job?.faq?.questions)
+    )
   );
 };
 
@@ -875,6 +1341,14 @@ const normalizeGeneratedPost = (value = {}, { candidate = {}, previewJob = {} } 
       postType: candidate?.postType || previewJob?.postType,
       applyLastDate: cleaned.applyLastDate || previewJob?.applyLastDate || candidate?.applyLastDate,
       currentStatus: cleaned.status || previewJob.status || candidate.status || "",
+      title:
+        cleaned.title ||
+        cleaned.jobtitle ||
+        candidate.title ||
+        candidate.jobtitle ||
+        previewJob.title ||
+        previewJob.jobtitle ||
+        "",
     }),
     category: toText(cleaned.category || previewJob.category || candidate.category || ""),
     language: toText(cleaned.language || previewJob.language || candidate.language || "en"),
@@ -909,16 +1383,33 @@ export const buildSchemaFallbackPost = ({
       previewJob?.conducting_authority ||
       previewJob?.conductingAuthority ||
       candidate?.conducting_authority ||
-      candidate?.conductingAuthority
+      candidate?.conductingAuthority ||
+      inferAuthorityFromUrls(
+        candidate?.sourceUrl,
+        previewJob?.sourceUrl,
+        candidate?.official_links?.official_website,
+        previewJob?.official_links?.official_website,
+        candidate?.direct_links?.notification_pdf,
+        candidate?.direct_links?.apply_link,
+        candidate?.direct_links?.admit_card_link,
+        candidate?.direct_links?.result_link
+      )
   );
   const applyLastDate = seedPost?.applyLastDate || previewJob?.applyLastDate || candidate?.applyLastDate;
   const officialLinks = buildOfficialLinksBlock(candidate, previewJob, advertisementNumber);
   const officialWebsite = normalizeUrl(officialLinks?.official_website || candidate?.sourceUrl || previewJob?.sourceUrl);
   const actionUrl =
     normalizeUrl(candidate?.direct_links?.apply_link || previewJob?.direct_links?.apply_link) ||
+    normalizeUrl(
+      candidate?.direct_links?.notification_pdf || previewJob?.direct_links?.notification_pdf
+    ) ||
     normalizeUrl(candidate?.direct_links?.admission_link || previewJob?.direct_links?.admission_link) ||
     normalizeUrl(candidate?.direct_links?.admit_card_link || previewJob?.direct_links?.admit_card_link) ||
     normalizeUrl(candidate?.direct_links?.result_link || previewJob?.direct_links?.result_link) ||
+    normalizeUrl(candidate?.direct_links?.answer_key_link || previewJob?.direct_links?.answer_key_link) ||
+    normalizeUrl(
+      candidate?.direct_links?.corrigendum_link || previewJob?.direct_links?.corrigendum_link
+    ) ||
     normalizeUrl(candidate?.sourceUrl || previewJob?.sourceUrl);
 
   const factualBlocks = stripEmptyDeep(
@@ -931,12 +1422,19 @@ export const buildSchemaFallbackPost = ({
   const seededMeta = stripEmptyDeep(factualBlocks.meta);
   const seededIntroduction = stripEmptyDeep(factualBlocks.introduction);
   const seededConclusion = stripEmptyDeep(factualBlocks.conclusion);
+  const seededNotificationDetails = stripEmptyDeep(factualBlocks.notification_details);
   const seededDisclaimer = toText(factualBlocks.disclaimer || "");
   const stageSpecificBlocks = buildStageSpecificBlocks({
     postType,
     title,
     officialWebsite,
     actionUrl,
+  });
+  const aboutBlocks = buildAboutBlock({
+    title,
+    postType,
+    authority,
+    officialWebsite,
   });
 
   const next = stripEmptyDeep({
@@ -962,6 +1460,7 @@ export const buildSchemaFallbackPost = ({
         postType,
         applyLastDate,
         currentStatus: seedPost?.status || previewJob?.status || candidate?.status,
+        title,
       }),
     advertisement_number: advertisementNumber || undefined,
     advertisementNumber: advertisementNumber || undefined,
@@ -969,7 +1468,7 @@ export const buildSchemaFallbackPost = ({
     conductingAuthority: authority || undefined,
     applyLastDate: applyLastDate || undefined,
     meta:
-      (hasMeaningfulString(seededMeta?.description, 40) ? seededMeta : undefined) ||
+      (hasSpecificNarrativeText(seededMeta?.description, title, 40) ? seededMeta : undefined) ||
       stripEmptyDeep({
         description: buildMetaDescription({
           title,
@@ -977,6 +1476,8 @@ export const buildSchemaFallbackPost = ({
           authority,
           advertisementNumber,
           applyLastDate,
+          officialWebsite,
+          actionUrl,
         }),
         keywords: buildTagList({
           title,
@@ -986,27 +1487,41 @@ export const buildSchemaFallbackPost = ({
         }),
       }),
     introduction:
-      (hasMeaningfulString(seededIntroduction?.content, 60) ? seededIntroduction : undefined) ||
+      (hasSpecificNarrativeText(seededIntroduction?.content, title, 60)
+        ? seededIntroduction
+        : undefined) ||
       buildIntroductionBlock({
         title,
         postType,
         authority,
         advertisementNumber,
         applyLastDate,
+        officialWebsite,
+        actionUrl,
       }),
     important_dates:
       factualBlocks.important_dates || collectImportantDates(candidate, previewJob, postType),
     official_links: officialLinks,
     notification_details:
-      factualBlocks.notification_details ||
+      ((hasSpecificNarrativeText(seededNotificationDetails?.content, title, 50) ||
+        Object.keys(seededNotificationDetails || {}).some(
+          (key) => key !== "heading" && key !== "content"
+        ))
+        ? seededNotificationDetails
+        : undefined) ||
       buildNotificationDetailsBlock({
         title,
         postType,
         authority,
         officialWebsite,
+        advertisementNumber,
+        actionUrl,
+        applyLastDate,
       }),
     conclusion:
-      (hasMeaningfulString(seededConclusion?.content, 40) ? seededConclusion : undefined) ||
+      (hasSpecificNarrativeText(seededConclusion?.content, title, 40)
+        ? seededConclusion
+        : undefined) ||
       buildConclusionBlock({
         title,
         postType,
@@ -1022,6 +1537,18 @@ export const buildSchemaFallbackPost = ({
         ? factualBlocks.how_to_check_result
         : undefined) || stageSpecificBlocks.how_to_check_result,
     admit_card: factualBlocks.admit_card || stageSpecificBlocks.admit_card,
+    faq:
+      (hasEntries(factualBlocks?.faq?.questions) ? factualBlocks.faq : undefined) ||
+      buildFaqBlock({
+        title,
+        postType,
+        authority,
+        advertisementNumber,
+        officialWebsite,
+        actionUrl,
+        applyLastDate,
+      }),
+    ...aboutBlocks,
   }) || {};
 
   return normalizeGeneratedPost(next, {

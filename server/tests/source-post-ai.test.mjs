@@ -87,6 +87,8 @@ test("buildSchemaFallbackPost upgrades a minimal job candidate into a schema-ric
   assert.equal(isSchemaRichJob(fallback, { postType: "job" }), true);
   assert.equal(fallback.how_to_apply.steps.length >= 3, true);
   assert.equal(fallback.official_links.official_website, "https://upsc.gov.in/");
+  assert.equal(fallback.faq.questions.length >= 3, true);
+  assert.equal(Boolean(fallback.about_exam || fallback.about_recruitment), true);
 });
 
 test("buildSchemaFallbackPost upgrades a minimal result candidate into a schema-rich result post", () => {
@@ -109,4 +111,54 @@ test("buildSchemaFallbackPost upgrades a minimal result candidate into a schema-
   assert.equal(isSchemaRichJob(fallback, { postType: "result" }), true);
   assert.equal(fallback.how_to_check_result.steps.length >= 3, true);
   assert.equal(Boolean(fallback.disclaimer), true);
+});
+
+test("buildSchemaFallbackPost can enrich a specific PDF notice when authority is inferable", () => {
+  const fallback = buildSchemaFallbackPost({
+    candidate: {
+      title: "Notice on refund of Exam-Fees & re-updation of Bank Account details",
+      jobtitle: "Notice on refund of Exam-Fees & re-updation of Bank Account details",
+      postType: "notice",
+      status: "Notice",
+      official_links: {
+        official_website: "https://www.rrbcdg.gov.in/",
+      },
+      direct_links: {
+        notification_pdf:
+          "https://www.rrbcdg.gov.in/uploads/2019/RRC01-LVL1/RRC012019-Refund.pdf",
+      },
+    },
+  });
+
+  assert.equal(isSchemaRichJob(fallback, { postType: "notice" }), true);
+  assert.match(fallback.notification_details.content, /refund process|bank-account revalidation/i);
+  assert.match(fallback.conducting_authority, /Railway Recruitment Board/i);
+});
+
+test("buildSchemaFallbackPost upgrades specific notice candidates into richer narrative", () => {
+  const fallback = buildSchemaFallbackPost({
+    candidate: {
+      title:
+        "List of candidates considered as UR due to invalid category certificate uploaded for Junior Resident July 2025 Session",
+      jobtitle:
+        "List of candidates considered as UR due to invalid category certificate uploaded for Junior Resident July 2025 Session",
+      postType: "notice",
+      currentStatus: "An official notice has been published for this post.",
+      official_links: {
+        official_website: "https://aiimsexams.ac.in/",
+      },
+      direct_links: {
+        notification_pdf:
+          "https://docs.aiimsexams.ac.in/sites/Notice%20reg%20considered%20as%20UR-JR-JL2025.pdf",
+      },
+      important_dates: {
+        dates: [{ event: "Notice Release Date", date: "16 July 2025" }],
+      },
+    },
+  });
+
+  assert.equal(isSchemaRichJob(fallback, { postType: "notice" }), true);
+  assert.match(fallback.introduction.content, /candidate list or category-status decision/i);
+  assert.match(fallback.notification_details.content, /candidate list or category-status decision/i);
+  assert.match(fallback.status, /category or shortlist update/i);
 });

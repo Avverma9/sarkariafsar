@@ -1,17 +1,33 @@
-import "../utils/loadEnv.mjs";
+
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import cron from "node-cron";
 import pLimit from "p-limit";
 import { GoogleGenAI } from "@google/genai";
+import connectDatabase, {
+  disconnectDatabase,
+  mongoose,
+} from "../db/config.mjs";
 import JobDetails from "../models/jobdetails.model.mjs";
-import connectDatabase, { disconnectDatabase, mongoose } from "../db/config.mjs";
-import { normalizeJobInput } from "../utils/job-normalize.mjs";
 import {
   sendJobUpdateNotification,
   sendSystemEventNotification,
 } from "../job-notification/notification.mjs";
+
+const ENV_LOAD_FLAG = "__SARKARIAFSAR_ENV_LOADED__";
+
+if (!globalThis[ENV_LOAD_FLAG]) {
+  try {
+    if (typeof process.loadEnvFile === "function") {
+      process.loadEnvFile(resolve(process.cwd(), ".env"));
+    }
+  } catch (error) {
+    console.warn(`[env] Unable to load .env: ${error?.message || error}`);
+  }
+
+  globalThis[ENV_LOAD_FLAG] = true;
+}
 
 const DEFAULT_JOB_AI_MODEL = process.env.JOB_AI_MODEL || "gemini-2.5-flash";
 const DEFAULT_AI_MONITOR_CONCURRENCY = Number.parseInt(
@@ -96,6 +112,294 @@ function toBoolean(value, fallback = false) {
   if (["0", "false", "no", "off"].includes(normalized)) return false;
   return fallback;
 }
+
+const toObject = (value) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value;
+};
+
+const toSlug = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const toComparableText = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const normalizeStageKey = (value = "") =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+const hasOwn = (value, key) =>
+  Boolean(value) && Object.prototype.hasOwnProperty.call(value, key);
+
+const extractAdvertisementNumber = (source = {}) => {
+  const direct = String(
+    source?.advertisement_number || source?.advertisementNumber || ""
+  ).trim();
+  if (direct) return direct;
+
+  const fromOfficialLinks = String(
+    source?.official_links?.advertisement_number ||
+      source?.officialLinks?.advertisement_number ||
+      ""
+  ).trim();
+  if (fromOfficialLinks) return fromOfficialLinks;
+
+  const candidates = [
+    String(source?.jobtitle || "").trim(),
+    String(source?.title || "").trim(),
+  ].filter(Boolean);
+
+  for (const text of candidates) {
+    const match =
+      text.match(
+        /(?:advt\.?|advertisement)\s*no\.?\s*[:\-]?\s*([a-z0-9./-]+)/i
+      ) ||
+      text.match(/\b(CEN(?:[-\s]+RPF|[-\s]+RRC)?[-\s]*\d{1,3}\/\d{4})\b/i) ||
+      text.match(/\b(\d{1,4}\/[a-z0-9-]{2,}\/\d{4})\b/i);
+
+    if (match?.[1]) {
+      return String(match[1]).trim();
+    }
+  }
+
+  return "";
+};
+
+const toDate = (value, fieldName, { required = false } = {}) => {
+  if (value === undefined || value === null || value === "") {
+    if (required) {
+      throw new Error(`${fieldName} is required`);
+    }
+    return undefined;
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error(`${fieldName} is invalid`);
+  }
+
+  return parsed;
+};
+
+const normalizeDateString = (value = "") =>
+  String(value || "")
+    .replace(/\([^)]*\)/g, " ")
+    .replace(/\bpassed\b/gi, " ")
+    .replace(/\btba\b/gi, " ")
+    .replace(/\bnot announced yet\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const buildLocalDate = ({ year, month, day, hours = 0, minutes = 0 }) => {
+  const parsed = new Date(year, month - 1, day, hours, minutes);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
+const parseLooseDate = (value) => {
+  const normalized = normalizeDateString(value);
+  if (!normalized) return null;
+
+  const dayFirstMatch = normalized.match(
+    /\b(\d{1,2})[/-](\d{1,2})[/-](\d{2,4})(?:\s*[-,]?\s*(\d{1,2})(?::(\d{2}))?\s*(am|pm)?)?\b/i
+  );
+
+  if (dayFirstMatch) {
+    let [, day, month, year, hours = "0", minutes = "0", meridiem = ""] =
+      dayFirstMatch;
+    let resolvedYear = Number(year);
+    if (resolvedYear < 100) resolvedYear += resolvedYear >= 70 ? 1900 : 2000;
+
+    let resolvedHours = Number(hours);
+    const resolvedMinutes = Number(minutes);
+    const normalizedMeridiem = String(meridiem || "").toLowerCase();
+    if (normalizedMeridiem === "pm" && resolvedHours < 12) resolvedHours += 12;
+    if (normalizedMeridiem === "am" && resolvedHours === 12) resolvedHours = 0;
+
+    const parsedDayFirst = buildLocalDate({
+      year: resolvedYear,
+      month: Number(month),
+      day: Number(day),
+      hours: resolvedHours,
+      minutes: resolvedMinutes,
+    });
+    if (parsedDayFirst) return parsedDayFirst;
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+const collectApplyDateCandidates = (value, candidates = []) => {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (item && typeof item === "object") {
+        const event = String(item.event || item.label || item.name || "").trim();
+        const rawDate = item.date ?? item.last_date ?? item.applyLastDate;
+
+        if (
+          rawDate &&
+          /last date to apply|last date.*apply|application.*last date|apply online.*last date|last date for fee payment/i.test(
+            event
+          )
+        ) {
+          candidates.push(rawDate);
+        }
+      }
+
+      collectApplyDateCandidates(item, candidates);
+    }
+
+    return candidates;
+  }
+
+  if (!value || typeof value !== "object") {
+    return candidates;
+  }
+
+  for (const [key, entry] of Object.entries(value)) {
+    if (
+      entry !== undefined &&
+      entry !== null &&
+      /^(last_date|date|applyLastDate)$/i.test(String(key))
+    ) {
+      candidates.push(entry);
+    }
+
+    collectApplyDateCandidates(entry, candidates);
+  }
+
+  return candidates;
+};
+
+const extractApplyLastDate = (
+  source = {},
+  { preserveExplicitNullApplyLastDate = false } = {}
+) => {
+  if (hasOwn(source, "applyLastDate")) {
+    if (
+      preserveExplicitNullApplyLastDate &&
+      (source.applyLastDate === null || source.applyLastDate === "")
+    ) {
+      return null;
+    }
+
+    if (source.applyLastDate) {
+      return source.applyLastDate;
+    }
+  }
+
+  if (source.applyLastDate) {
+    return source.applyLastDate;
+  }
+
+  const candidates = collectApplyDateCandidates(source?.important_dates, []);
+  collectApplyDateCandidates(source?.vacancy_details, candidates);
+
+  const parsedDates = candidates
+    .map((item) => parseLooseDate(item))
+    .filter(Boolean)
+    .sort((left, right) => right.getTime() - left.getTime());
+
+  return parsedDates[0] || undefined;
+};
+
+const normalizeJobInput = (
+  value = {},
+  { preserveExplicitNullApplyLastDate = false } = {}
+) => {
+  const root = toObject(value);
+  const source = { ...(root.post ? toObject(root.post) : root) };
+  const postType = normalizeStageKey(source.postType || "job") || "job";
+  const title = String(source.title || source.jobtitle || "").trim();
+  const sectionCanonicalUrl = String(source.sectionCanonicalUrl || "").trim();
+  const sectionName = String(source.sectionName || "").trim();
+  const jobtitle = String(source.jobtitle || source.title || "").trim();
+  const slugBase =
+    source.slug ||
+    toSlug(
+      postType === "job" ? jobtitle || title : `${jobtitle || title}-${postType}`
+    );
+  const slug = String(slugBase || "").trim();
+  const advertisementNumber = extractAdvertisementNumber(source);
+  const conductingAuthority = String(
+    source.conducting_authority || source.conductingAuthority || ""
+  ).trim();
+  const postDate = toDate(source.postDate, "postDate");
+  const resolvedApplyLastDate = extractApplyLastDate(source, {
+    preserveExplicitNullApplyLastDate,
+  });
+  const hasExplicitNullApplyLastDate = resolvedApplyLastDate === null;
+  const applyLastDate = hasExplicitNullApplyLastDate
+    ? null
+    : toDate(resolvedApplyLastDate, "applyLastDate");
+  const dedupeBase =
+    postType === "job"
+      ? advertisementNumber || `${sectionCanonicalUrl}:${toComparableText(jobtitle)}`
+      : `${advertisementNumber || sectionCanonicalUrl}:${toComparableText(jobtitle)}:${postType}`;
+  const dedupeKey = toSlug(dedupeBase);
+
+  if (!slug) {
+    throw new Error("slug is required");
+  }
+  if (!dedupeKey) {
+    throw new Error("dedupeKey could not be generated");
+  }
+  if (!sectionCanonicalUrl) {
+    throw new Error("sectionCanonicalUrl is required");
+  }
+  if (!sectionName) {
+    throw new Error("sectionName is required");
+  }
+  if (!jobtitle) {
+    throw new Error("jobtitle or title is required");
+  }
+
+  source.dedupeKey = dedupeKey;
+  source.slug = slug;
+  source.sectionCanonicalUrl = sectionCanonicalUrl;
+  source.sectionName = sectionName;
+  source.jobtitle = jobtitle;
+  source.title = title || jobtitle;
+  source.postType = postType;
+  if (advertisementNumber) {
+    source.advertisement_number = advertisementNumber;
+    source.advertisementNumber = String(
+      source.advertisementNumber || advertisementNumber
+    ).trim();
+  }
+  if (conductingAuthority) {
+    source.conducting_authority = conductingAuthority;
+    source.conductingAuthority = conductingAuthority;
+  }
+  if (hasExplicitNullApplyLastDate) {
+    source.applyLastDate = null;
+  } else if (applyLastDate) {
+    source.applyLastDate = applyLastDate;
+  } else {
+    delete source.applyLastDate;
+  }
+
+  if (postDate) {
+    source.postDate = postDate;
+  } else {
+    delete source.postDate;
+  }
+
+  return source;
+};
 
 const toPlainObject = (value) => {
   if (!value) return {};
@@ -416,6 +720,7 @@ You validate government job-post updates against authoritative public sources.
 
 Rules:
 - Treat the CURRENT DB SNAPSHOT as the baseline truth.
+- Never create a new job, switch the job family, or change identity fields like slug, dedupeKey, postType, recruitmentKey, title, advertisement number, or authority.
 - Primary workflow: search daily using the job title, advertisement number, authority name, and vacancy/details context.
 - Use Google Search to confirm official notices, revised dates, active apply links, vacancy changes, or corrigendum-style updates.
 - Use the provided URLs with URL context only as optional helper context when they exist.
@@ -560,37 +865,96 @@ const runGeminiAudit = async (job = {}) => {
   };
 };
 
-const GENERATION_ALLOWED_FIELDS = new Set([
-  "status", "conductingAuthority", "advertisementNumber",
-  "introduction", "important_dates", "vacancy_details",
-  "application_fee", "age_limit", "eligibility_criteria",
-  "selection_process", "how_to_apply", "exam_pattern",
-  "official_links", "faq", "meta", "tags",
-  "conclusion", "disclaimer", "applyLastDate",
+const IMMUTABLE_JOB_IDENTITY_FIELDS = new Set([
+  "_id",
+  "__v",
+  "dedupeKey",
+  "slug",
+  "sectionCanonicalUrl",
+  "sectionName",
+  "jobtitle",
+  "title",
+  "recruitmentKey",
+  "postType",
+  "lifecycleStage",
+  "derivedFromPostId",
+  "advertisement_number",
+  "advertisementNumber",
+  "conducting_authority",
+  "conductingAuthority",
+  "sourceDomain",
+  "sourceUrl",
+  "postDate",
+  "isActive",
+  "statusReason",
+  "createdAt",
+  "updatedAt",
+  "aiMonitoring",
 ]);
 
-const buildAllowedPatchKeys = (job = {}, isGeneration = false) => {
+const buildAllowedPatchKeys = (job = {}) => {
   const tracked = new Set([
     ...(job?.aiMonitoring?.trackedFieldPaths || resolveTrackedFieldPaths(job)),
     "applyLastDate",
   ]);
-  if (isGeneration) {
-    for (const key of GENERATION_ALLOWED_FIELDS) tracked.add(key);
-  }
   return tracked;
 };
 
-const sanitizeAiPatch = (job = {}, patch = {}, isGeneration = false) => {
+/**
+ * Convert a camelCase or PascalCase key to a snake_case variant. For example,
+ * "eligibilityCriteria" becomes "eligibility_criteria". Keys that already
+ * contain underscores are returned as–is. This helper is used to normalise
+ * incoming patch keys so that different casing styles (e.g. API responses) can
+ * map onto our canonical schema field names. An empty or non‑string value
+ * returns an empty string.
+ *
+ * @param {string} key Raw key name supplied by the AI patch
+ * @returns {string} Canonicalised field name
+ */
+const canonicalizeKey = (key) => {
+  const str = String(key || "");
+  // Preserve the special Mongo/Date field applyLastDate which intentionally
+  // uses camelCase in the schema. All other camelCase keys are converted to
+  // snake_case so that variations like advertisementNumber and
+  // advertisement_number resolve to the same underlying field.
+  if (str === "applyLastDate") {
+    return str;
+  }
+  // If the string already contains an underscore, assume it is already
+  // canonical and return as‑is (converted to lower case for strict
+  // comparison). Otherwise insert underscores before capital letters and
+  // lower case the whole string.
+  if (str.includes("_")) {
+    return str.toLowerCase();
+  }
+  return str
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/([A-Z])([A-Z][a-z])/g, "$1_$2")
+    .toLowerCase();
+};
+
+const sanitizeAiPatch = (job = {}, patch = {}) => {
   if (!patch || typeof patch !== "object" || Array.isArray(patch)) {
     return {};
   }
 
-  const allowed = buildAllowedPatchKeys(job, isGeneration);
+  // Build the allowed set of canonical keys from the job context. Each key is
+  // canonicalised to snake_case (with applyLastDate preserved). This allows
+  // incoming patch keys to be written in either snake_case or camelCase while
+  // still being recognised as valid. Note that the actual persisted key name
+  // will be the canonical variant returned by canonicalizeKey below.
+  const rawAllowed = buildAllowedPatchKeys(job);
+  const allowedCanonical = new Set(
+    Array.from(rawAllowed, (k) => canonicalizeKey(k))
+  );
   const sanitized = {};
 
-  for (const [key, value] of Object.entries(patch)) {
-    if (!allowed.has(key) || value === undefined) continue;
-    sanitized[key] = cloneValue(value);
+  for (const [rawKey, value] of Object.entries(patch)) {
+    if (value === undefined) continue;
+    const canonicalKey = canonicalizeKey(rawKey);
+    if (!allowedCanonical.has(canonicalKey)) continue;
+    if (IMMUTABLE_JOB_IDENTITY_FIELDS.has(canonicalKey)) continue;
+    sanitized[canonicalKey] = cloneValue(value);
   }
 
   return sanitized;
@@ -703,11 +1067,31 @@ const saveMonitoringMetadata = async (doc, monitoring, updates = {}) => {
   await doc.save();
 };
 
+const preserveImmutableJobIdentity = (baselineJob = {}, nextJob = {}) => {
+  const preserved = {
+    ...nextJob,
+  };
+
+  for (const field of IMMUTABLE_JOB_IDENTITY_FIELDS) {
+    if (field === "_id" || field === "__v" || field === "createdAt" || field === "updatedAt") {
+      continue;
+    }
+
+    if (hasOwn(baselineJob, field)) {
+      preserved[field] = cloneValue(baselineJob[field]);
+    } else {
+      delete preserved[field];
+    }
+  }
+
+  return preserved;
+};
+
 const preparePatchedJob = (job = {}, patch = {}) => {
-  const merged = {
+  const merged = preserveImmutableJobIdentity(job, {
     ...toPlainObject(job),
     ...patch,
-  };
+  });
 
   delete merged._id;
   delete merged.__v;
@@ -723,176 +1107,6 @@ const toPersistableJobDocument = (jobLike = {}) => {
   delete job._id;
   delete job.__v;
   return job;
-};
-
-const isNewEmptyDocument = (job = {}) => {
-  const monitoring = job?.aiMonitoring || {};
-  const snapshot = monitoring.trackedSnapshot || {};
-  const trackedFields = monitoring.trackedFieldPaths || [];
-  if (trackedFields.length === 0) return false;
-
-  const nullCount = trackedFields.filter(
-    (key) => snapshot[key] === null || snapshot[key] === undefined
-  ).length;
-
-  return nullCount / trackedFields.length >= 0.7; // 70%+ fields null = empty doc
-};
-
-const buildFullGenerationPrompt = ({ job = {}, sourceUrls = [] } = {}) => {
-  const title = job?.jobtitle || job?.title || "";
-  const sourceUrl = job?.sourceUrl || sourceUrls[0] || "";
-  const domain = job?.sourceDomain || "";
-  const sectionName = job?.sectionName || "";
-  const postType = job?.postType || "";
-
-  return `
-You are a senior content writer for sarkariresult.com.cm — an Indian government job portal.
-
-Generate a COMPLETE, SEO-optimized, detailed post in the EXACT JSON schema below.
-Use Google Search + URL context to fetch REAL data from official sources.
-
-SEARCH CONTEXT:
-Title: ${title}
-Source URL: ${sourceUrl}
-Source Domain: ${domain}
-Section: ${sectionName}
-Post Type: ${postType}
-
-REQUIRED SCHEMA (return JSON only, no markdown):
-{
-  "status": "current status with emoji",
-  "conductingAuthority": "full authority name",
-  "advertisementNumber": "official notice number",
-  "introduction": {
-    "heading": "SEO heading with year and key info",
-    "content": "300-400 word detailed intro in English/Hindi mix — include dates, posts count, key facts"
-  },
-  "important_dates": {
-    "heading": "...",
-    "dates": [
-      { "event": "event name", "date": "DD Month YYYY" }
-    ],
-    "pro_tip": "actionable tip for candidates"
-  },
-  "vacancy_details": {
-    "heading": "...",
-    "total_posts": number or null,
-    "posts": [ { "post_name": "...", "vacancies": number, "pay_scale": "..." } ]
-  },
-  "application_fee": {
-    "heading": "...",
-    "fees": [ { "category": "General/OBC/SC/ST/EWS", "amount": number, "currency": "INR" } ],
-    "payment_mode": "...",
-    "human_note": "fee context in plain language"
-  },
-  "age_limit": {
-    "heading": "...",
-    "minimum_age": number,
-    "maximum_age": number,
-    "age_rule": "as on DD Month YYYY",
-    "relaxation": [ { "category": "SC/ST/OBC/PwBD", "relaxation": "X years" } ],
-    "human_note": "plain language explanation"
-  },
-  "eligibility_criteria": {
-    "heading": "...",
-    "criteria": [ { "point": "...", "detail": "..." } ]
-  },
-  "selection_process": {
-    "heading": "...",
-    "stages": [ { "step": 1, "name": "...", "description": "..." } ],
-    "note": "important note about selection"
-  },
-  "how_to_apply": {
-    "heading": "...",
-    "intro": "one line intro",
-    "documents_required": ["document 1", "document 2"],
-    "steps": [ { "step": 1, "action": "..." } ],
-    "important_reminder": "critical warning for candidates"
-  },
-  "exam_pattern": {
-    "heading": "...",
-    "subjects": [ { "subject": "...", "questions": number, "marks": number } ],
-    "marking_scheme": { "correct_answer": "...", "wrong_answer": "..." },
-    "note": "..."
-  },
-  "official_links": {
-    "heading": "...",
-    "official_website": "https://...",
-    "links": [
-      { "label": "Apply Online / Download PDF / Official Notice", "url": "https://...", "status": "Active ✅ / Archive" }
-    ]
-  },
-  "faq": {
-    "heading": "...",
-    "questions": [
-      { "question": "...", "answer": "..." }
-    ]
-  },
-  "meta": {
-    "description": "150 char SEO meta description",
-    "keywords": ["keyword 1", "keyword 2", "...8-10 keywords total"]
-  },
-  "tags": ["tag1", "tag2", "...7-10 tags"],
-  "conclusion": {
-    "heading": "...",
-    "content": "150-200 word motivating conclusion",
-    "cta": "clear call to action"
-  },
-  "disclaimer": "standard disclaimer mentioning official website"
-}
-
-RULES:
-- Use REAL dates, REAL URLs, REAL seat counts from official sources
-- Mix English + Hindi where it helps readability (not forced)
-- Include ALL relevant sections — skip only if truly not applicable (use null for that field)
-- official_links must have REAL working URLs — not placeholder links, also direct links and direct pdf links if available 
-- FAQ must have 7-10 real, useful Q&As that candidates actually ask
-- Return ONLY valid JSON — no markdown fences, no extra text
-`.trim();
-};
-
-const generateFullJobContent = async (job = {}) => {
-  const client = getAiClient();
-  const sourceUrls = extractOfficialSourceUrls(job);
-  const tools =
-    sourceUrls.length > 0
-      ? [{ urlContext: {} }, { googleSearch: {} }]
-      : [{ googleSearch: {} }];
-
-  const response = await client.models.generateContent({
-    model: DEFAULT_JOB_AI_MODEL,
-    contents: buildFullGenerationPrompt({ job, sourceUrls }),
-    config: {
-      temperature: 0.2,
-      tools,
-    },
-  });
-
-  const rawText = String(response?.text || "").trim();
-  const parsed = parseModelJson(rawText);
-
-  // Only keep keys allowed by trackedFieldPaths + extra content fields
-  const CONTENT_FIELDS = new Set([
-    "status", "conductingAuthority", "advertisementNumber",
-    "introduction", "important_dates", "vacancy_details",
-    "application_fee", "age_limit", "eligibility_criteria",
-    "selection_process", "how_to_apply", "exam_pattern",
-    "official_links", "faq", "meta", "tags", "conclusion",
-    "disclaimer", "applyLastDate",
-  ]);
-
-  const sanitized = {};
-  for (const [key, value] of Object.entries(parsed || {})) {
-    if (CONTENT_FIELDS.has(key) && value !== undefined && value !== null) {
-      sanitized[key] = value;
-    }
-  }
-
-  return {
-    sourceUrls,
-    rawText,
-    patch: sanitized,
-  };
 };
 
 export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
@@ -911,97 +1125,7 @@ export const monitorSingleJobWithAi = async (doc, { force = false } = {}) => {
     };
   }
 
-  // ─── BRANCH: Empty doc → Full Content Generation ──────────────────────
-  if (isNewEmptyDocument(baselineJob)) {
-    let generationResult;
-
-    try {
-      generationResult = await generateFullJobContent(baselineJob);
-    } catch (error) {
-      await saveMonitoringMetadata(doc, baselineMonitoring, {
-        lastCheckedAt: now,
-        lastDetectionStatus: "error",
-        lastError: truncate(error?.message || error, 500),
-      });
-
-      return {
-        id: String(doc?._id || ""),
-        status: "error",
-        jobTitle: baselineJob.jobtitle || baselineJob.title || "",
-        changedFields: [],
-        mailed: false,
-        error: error?.message || String(error),
-      };
-    }
-
-    const safePatch = sanitizeAiPatch(baselineJob, generationResult.patch);
-
-    if (Object.keys(safePatch).length === 0) {
-      await saveMonitoringMetadata(doc, baselineMonitoring, {
-        lastCheckedAt: now,
-        lastDetectionStatus: "needs_review",
-        lastSummary: "Full generation ran but produced no valid patch fields.",
-        lastConfidence: "low",
-        lastSources: generationResult.sourceUrls.map((url) => ({
-          url,
-          title: "",
-          reason: "official source",
-        })),
-        lastError: "",
-      });
-
-      return {
-        id: String(doc?._id || ""),
-        status: "needs_review",
-        jobTitle: baselineJob.jobtitle || baselineJob.title || "",
-        changedFields: [],
-        mailed: false,
-      };
-    }
-
-    const patchedJob = preparePatchedJob(baselineJob, safePatch);
-    const sources = generationResult.sourceUrls.map((url) => ({
-      url,
-      title: "",
-      reason: "official source used for full generation",
-    }));
-
-    const mailResult = await sendJobUpdateNotification({
-      jobTitle: baselineJob.jobtitle || baselineJob.title || "",
-      jobUrl: buildNotificationUrl(baselineJob),
-      matchedBy: "gemini-ai-full-generation",
-      changedFields: Object.keys(safePatch),
-      changes: Object.keys(safePatch).map((field) => ({
-        path: field,
-        beforePreview: "(empty)",
-        afterPreview: formatPreview(safePatch[field]),
-      })).slice(0, MAX_EMAIL_CHANGES),
-      omittedChangeCount: Math.max(0, Object.keys(safePatch).length - MAX_EMAIL_CHANGES),
-    });
-
-    doc.set(patchedJob);
-    doc.aiMonitoring = {
-      ...patchedJob.aiMonitoring,
-      lastCheckedAt: now,
-      lastDetectionStatus: "change_detected",
-      lastSummary: "Full content generated from official sources via Gemini.",
-      lastConfidence: "high",
-      lastSources: sources,
-      lastPatchedAt: now,
-      lastMailSentAt: mailResult?.sent ? now : patchedJob.aiMonitoring.lastMailSentAt || null,
-      lastMailStatus: mailResult?.sent ? "sent" : String(mailResult?.reason || "skipped"),
-      lastError: "",
-    };
-    await doc.save();
-
-    return {
-      id: String(doc?._id || ""),
-      status: "updated",
-      jobTitle: baselineJob.jobtitle || baselineJob.title || "",
-      changedFields: Object.keys(safePatch),
-      mailed: Boolean(mailResult?.sent),
-    };
-  }
+  // Existing doc update-only monitoring flow
 
   // ─── BRANCH: Existing doc → Standard Monitoring ───────────────────────
   const audit = await runGeminiAudit(baselineJob);

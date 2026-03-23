@@ -10,28 +10,6 @@ import {
   inferPostType,
 } from "./job-family.mjs";
 
-const STAGE_CLONE_EXCLUDED_FIELDS = new Set([
-  "_id",
-  "__v",
-  "dedupeKey",
-  "slug",
-  "aiMonitoring",
-  "createdAt",
-  "updatedAt",
-  "postType",
-  "lifecycleStage",
-  "isActive",
-  "statusReason",
-  "sourceDomain",
-  "sourceUrl",
-  "direct_links",
-  "derivedFromPostId",
-  "sectionName",
-  "sectionCanonicalUrl",
-  "status",
-  "applyLastDate",
-]);
-
 const toObject = (value) => {
   if (!value) return {};
   if (typeof value?.toObject === "function") {
@@ -43,15 +21,28 @@ const toObject = (value) => {
   return {};
 };
 
-const mergeObjects = (base = {}, incoming = {}) => ({
-  ...base,
-  ...incoming,
-});
-
 const normalizeTitle = (value = "") => String(value || "").trim();
+const toHexIdFromBufferLike = (value) => {
+  const raw =
+    value instanceof Uint8Array
+      ? value
+      : Array.isArray(value)
+        ? Uint8Array.from(value)
+        : value?.buffer instanceof Uint8Array
+          ? value.buffer
+          : Array.isArray(value?.buffer)
+            ? Uint8Array.from(value.buffer)
+            : null;
+
+  if (!raw || raw.length !== 12) return null;
+  return Buffer.from(raw).toString("hex");
+};
+
 const toIdString = (value) => {
   if (!value) return null;
   if (typeof value === "string") return value;
+  const fromBufferLike = toHexIdFromBufferLike(value);
+  if (fromBufferLike) return fromBufferLike;
   if (typeof value?.toString === "function") {
     const converted = value.toString();
     return converted && converted !== "[object Object]" ? converted : null;
@@ -114,9 +105,6 @@ const findExistingFamily = async (payload = {}) => {
   return JobDetails.find(query).sort({ createdAt: 1, updatedAt: -1 });
 };
 
-const isDuplicateKeyError = (error) =>
-  Number(error?.code) === 11000 || /duplicate key/i.test(String(error?.message || ""));
-
 const findExistingUniqueMatch = async (payload = {}) => {
   const conditions = [];
 
@@ -162,18 +150,6 @@ const findExactStageMatch = (familyDocs = [], payload = {}) => {
   return sameType.length === 1 ? sameType[0] : null;
 };
 
-const selectCloneBase = (familyDocs = []) => {
-  const exactJob = familyDocs.find((doc) => String(doc?.postType || "job").trim() === "job");
-  return exactJob || familyDocs[0] || null;
-};
-
-const buildBaseClonePayload = (doc) => {
-  const source = toObject(doc);
-  return Object.fromEntries(
-    Object.entries(source).filter(([key]) => !STAGE_CLONE_EXCLUDED_FIELDS.has(key))
-  );
-};
-
 const prepareNormalizedPayload = async (
   rawPayload = {},
   { mode = "automated" } = {}
@@ -212,7 +188,9 @@ const prepareNormalizedPayload = async (
       postType: lifecycleMetadata.postType,
       applyLastDate: rawPayload.applyLastDate,
       currentStatus: rawPayload.status,
+      title: title || jobtitle,
     }),
+    derivedFromPostId: toIdString(rawPayload.derivedFromPostId),
   };
 
   if (!nextPayload.recruitmentKey) {
@@ -226,52 +204,13 @@ const prepareNormalizedPayload = async (
   );
 };
 
-const buildStageClonePayload = async ({ baseDoc = null, incomingPayload = {} } = {}) => {
-  const inherited = baseDoc ? buildBaseClonePayload(baseDoc) : {};
-  const mergedOfficialLinks = mergeObjects(inherited.official_links || {}, incomingPayload.official_links || {});
-  const mergedDirectLinks = mergeObjects(inherited.direct_links || {}, incomingPayload.direct_links || {});
-  const mergedPayload = {
-    ...inherited,
-    ...incomingPayload,
-    official_links: mergedOfficialLinks,
-    direct_links: mergedDirectLinks,
-    derivedFromPostId: toIdString(baseDoc?._id),
-  };
-
-  return prepareNormalizedPayload(mergedPayload);
-};
-
-const updateFamilyLifecycle = async ({ familyDocs = [], nextPostType = "job" } = {}) => {
-  if (nextPostType === "job" || familyDocs.length === 0) return;
-
-  const lifecycleMap = {
-    admit_card: "admit_card_phase",
-    result: "result_phase",
-    answer_key: "answer_key_phase",
-    admission: "admission_phase",
-  };
-
-  const nextStage = lifecycleMap[nextPostType];
-  if (!nextStage) return;
-
-  const baseJobs = familyDocs.filter((doc) => String(doc?.postType || "job") === "job");
-  if (baseJobs.length === 0) return;
-
-  await Promise.all(
-    baseJobs.map((doc) =>
-      JobDetails.updateOne(
-        { _id: doc._id },
-        {
-          $set: {
-            lifecycleStage: "application_closed",
-            isActive: false,
-            statusReason: `Recruitment lifecycle moved to ${nextStage}.`,
-          },
-        }
-      )
-    )
-  );
-};
+const buildNewDetectionResult = ({ job = {}, familyCount = 0, dryRun = false } = {}) => ({
+  action: "new_detected",
+  job,
+  familyCount,
+  dryRun,
+  persisted: false,
+});
 
 const syncSingleJobPost = async (rawPayload = {}, { dryRun = false } = {}) => {
   if (!rawPayload || typeof rawPayload !== "object" || Array.isArray(rawPayload)) {
@@ -320,33 +259,11 @@ const syncSingleJobPost = async (rawPayload = {}, { dryRun = false } = {}) => {
   }
 
   if (familyDocs.length > 0 && normalizedIncoming.postType !== "job") {
-    const baseDoc = selectCloneBase(familyDocs);
-    const payload = await buildStageClonePayload({
-      baseDoc,
-      incomingPayload: normalizedIncoming,
-    });
-
-    if (dryRun) {
-      return {
-        action: "cloned",
-        job: payload,
-        familyCount: familyDocs.length + 1,
-        dryRun: true,
-        persisted: false,
-      };
-    }
-
-    const doc = await JobDetails.create(payload);
-    await updateFamilyLifecycle({
-      familyDocs,
-      nextPostType: payload.postType,
-    });
-
-    return {
-      action: "cloned",
-      job: doc,
+    return buildNewDetectionResult({
+      job: normalizedIncoming,
       familyCount: familyDocs.length + 1,
-    };
+      dryRun,
+    });
   }
 
   const ignoredJobAction = getIgnoredJobAction(normalizedIncoming);
@@ -360,54 +277,39 @@ const syncSingleJobPost = async (rawPayload = {}, { dryRun = false } = {}) => {
     };
   }
 
-  if (dryRun) {
-    return {
-      action: "created",
-      job: normalizedIncoming,
-      familyCount: familyDocs.length + 1,
-      dryRun: true,
-      persisted: false,
-    };
-  }
-
-  let doc;
-  try {
-    doc = await JobDetails.create(normalizedIncoming);
-  } catch (error) {
-    if (!isDuplicateKeyError(error)) throw error;
-
+  if (!dryRun) {
     const existing = await findExistingUniqueMatch(normalizedIncoming);
-    if (!existing) throw error;
+    if (existing) {
+      const merged = {
+        ...toObject(existing),
+        ...normalizedIncoming,
+        aiMonitoring: undefined,
+      };
+      delete merged._id;
+      delete merged.createdAt;
+      delete merged.updatedAt;
 
-    const merged = {
-      ...toObject(existing),
-      ...normalizedIncoming,
-      aiMonitoring: undefined,
-    };
-    delete merged._id;
-    delete merged.createdAt;
-    delete merged.updatedAt;
+      const payload = await prepareNormalizedPayload(merged);
+      const doc = await JobDetails.findOneAndUpdate(
+        { _id: existing._id },
+        { $set: payload },
+        { new: true, runValidators: true }
+      );
 
-    const payload = await prepareNormalizedPayload(merged);
-    doc = await JobDetails.findOneAndUpdate(
-      { _id: existing._id },
-      { $set: payload },
-      { new: true, runValidators: true }
-    );
-
-    return {
-      action: "updated",
-      job: doc,
-      familyCount: familyDocs.length || 1,
-      duplicateRecovered: true,
-    };
+      return {
+        action: "updated",
+        job: doc,
+        familyCount: familyDocs.length || 1,
+        duplicateRecovered: true,
+      };
+    }
   }
 
-  return {
-    action: "created",
-    job: doc,
+  return buildNewDetectionResult({
+    job: normalizedIncoming,
     familyCount: familyDocs.length + 1,
-  };
+    dryRun,
+  });
 };
 
 const syncJobPosts = async (payloads = [], options = {}) => {
@@ -423,26 +325,20 @@ const syncJobPosts = async (payloads = [], options = {}) => {
 
 export {
   buildFamilyQuery,
-  buildStageClonePayload,
   findExistingFamily,
   findExactStageMatch,
   prepareNormalizedPayload,
-  selectCloneBase,
   syncJobPosts,
   syncSingleJobPost,
-  updateFamilyLifecycle,
 };
 
 export default {
   buildFamilyQuery,
-  buildStageClonePayload,
   findExistingFamily,
   findExactStageMatch,
   prepareNormalizedPayload,
-  selectCloneBase,
   syncJobPosts,
   syncSingleJobPost,
-  updateFamilyLifecycle,
 };
 
 

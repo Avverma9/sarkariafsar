@@ -13,9 +13,10 @@ test("buildHumanStatus expands terse job statuses into human-written text", () =
     postType: "job",
     applyLastDate: "2026-05-01T18:30:00.000Z",
     currentStatus: "Form Open",
+    title: "UPTET 2026",
   });
 
-  assert.match(status, /Online application window is currently open/i);
+  assert.match(status, /Applications for UPTET 2026 are currently open/i);
 });
 
 test("buildHumanStatus preserves already human-written statuses", () => {
@@ -28,4 +29,16 @@ test("buildHumanStatus preserves already human-written statuses", () => {
     status,
     "Result has been published on the official portal for all shortlisted candidates."
   );
+});
+
+test("buildHumanStatus rewrites canned notice statuses into title-aware text", () => {
+  const status = buildHumanStatus({
+    postType: "notice",
+    title:
+      "List of candidates considered as UR due to invalid category certificate uploaded for Junior Resident July 2025 Session",
+    currentStatus: "An official notice has been published for this post.",
+  });
+
+  assert.match(status, /category or shortlist update/i);
+  assert.equal(isGenericStatus("An official notice has been published for this post.", "notice"), true);
 });
