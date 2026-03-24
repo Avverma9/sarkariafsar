@@ -1,11 +1,9 @@
-import "./utils/loadEnv.mjs";
 import express from "express";
 import cors from "cors";
 import compression from "compression";
 import router from "./routes/index.mjs";
 import connectDatabase from "./db/config.mjs";
 import { startStandaloneJobNotificationCron } from "./job-notification/notification.mjs";
-import { startAutomatedJobPipelineCron } from "./job-pipeline.mjs";
 
 const app = express();
 
@@ -49,7 +47,6 @@ const startServer = async () => {
   });
 
   startStandaloneJobNotificationCron();
-  startAutomatedJobPipelineCron();
 };
 
 startServer().catch((error) => {

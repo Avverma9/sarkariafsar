@@ -245,7 +245,8 @@ export const getJob = async (req, res, next) => {
   try {
     const hasIdentifier = Boolean(
       String(getValue(req, "id", "")).trim() ||
-        String(getValue(req, "slug", "")).trim()
+        String(getValue(req, "slug", "")).trim() ||
+        String(getValue(req, "sectionCanonicalUrl", "")).trim()
     );
 
     if (hasIdentifier) {

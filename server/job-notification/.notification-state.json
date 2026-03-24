@@ -1,11 +1,11 @@
 {
   "meta": {
     "version": 2,
-    "updatedAt": "2026-03-22T14:00:38.834Z",
+    "updatedAt": "2026-03-24T03:26:02.147Z",
     "targetsConfigured": 3,
     "targetsSucceeded": 3,
     "targetsFailed": 0,
-    "lastSuccessfulRunAt": "2026-03-22T14:00:38.834Z"
+    "lastSuccessfulRunAt": "2026-03-24T03:26:02.147Z"
   },
   "siteSnapshots": {
     "c07e4c80127d600a78355fda": {
@@ -13,7 +13,7 @@
       "sectionUrls": [
         "https://www.sarkariexam.com/latest-jobs/"
       ],
-      "updatedAt": "2026-03-22T14:00:02.963Z",
+      "updatedAt": "2026-03-24T03:25:48.189Z",
       "totalPosts": 1,
       "posts": [
         {
@@ -29,9 +29,33 @@
       "sectionUrls": [
         "https://www.sarkariresult.com.cm/"
       ],
-      "updatedAt": "2026-03-22T14:00:05.170Z",
+      "updatedAt": "2026-03-24T03:25:48.989Z",
       "totalPosts": 100,
       "posts": [
+        {
+          "title": "Rajasthan Board 10th Result 2026 – Today 1 PM",
+          "jobUrl": "https://sarkariresult.com.cm/rajasthan-board-10th-result-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "f415b6f30e37393ef60c4dbf8e6ec5cc62c7e5f41c957fab257cf6a5abee7a1a"
+        },
+        {
+          "title": "UP Police SI Answer Key 2026 – Out",
+          "jobUrl": "https://sarkariresult.com.cm/up-police-si-2025/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "06a2341ff98d889feabb652a1732123be907db4b5be31e3bfe07e211fd313a44"
+        },
+        {
+          "title": "Bihar Board Class 12th Result 2026 – Declared",
+          "jobUrl": "https://sarkariresult.com.cm/bihar-board-12-result-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "f30f345409b1d3186ed1f7b0ab9c46a45d450e6fa11990e062f41a59cfefa627"
+        },
+        {
+          "title": "Bihar Board Class 10th Result 2026 – Soon",
+          "jobUrl": "https://sarkariresult.com.cm/bihar-board-10th-result-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "1fc553e24f1709718810186a168bded61ebbc547140e4a377778b6bad4c33107"
+        },
         {
           "title": "RRB Technician Gr-I Answer Key 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/railway-rrb-technician-2026/",
@@ -43,18 +67,6 @@
           "jobUrl": "https://sarkariresult.com.cm/dda-various-post-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "f2901d66cae0494bfcd3d586c42321ec02e6b1d2b3f99dfc06a1c824664cdb53"
-        },
-        {
-          "title": "Bihar Board Class 12th Result 2026 – Soon",
-          "jobUrl": "https://sarkariresult.com.cm/bihar-board-12-result-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "652f8dfe7859a8ce6334ff6ef744bd130ca57a89d14e16485775d68b72264943"
-        },
-        {
-          "title": "Bihar Board Class 10th Result 2026 – Soon",
-          "jobUrl": "https://sarkariresult.com.cm/bihar-board-10th-result-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "1fc553e24f1709718810186a168bded61ebbc547140e4a377778b6bad4c33107"
         },
         {
           "title": "RRVUNL Technician Various Post Mains Result 2026 – Out",
@@ -93,12 +105,6 @@
           "dedupeHash": "56303c918b3ac669682b3307cc35f1b9799291d952e80fb86b48c351d7e3c937"
         },
         {
-          "title": "NTA NIFTEE Stage-I Result 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/nta-niftee-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "0e04e20b58210a5c035470ccedf6cda8d731f15161e7014cdc1c8cc515a116b4"
-        },
-        {
           "title": "ECGC PO Final Result 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/ecgc-po-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
@@ -115,12 +121,6 @@
           "jobUrl": "https://sarkariresult.com.cm/iit-jam-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "c9a196807f78171f4989dab7b0739fe8e4049946576ceeefe21bedc4f45a2cd2"
-        },
-        {
-          "title": "SSC CHSL Tier-I Marks / Score Card 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/ssc-chsl-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "372f753d51847319a4d3f7ecb98e9ab84932dd6f92cfd5eb075ee431d836380f"
         },
         {
           "title": "IIT GATE Result 2026",
@@ -183,16 +183,46 @@
           "dedupeHash": "90917c4e9d01aa576929c1d2d01e3a3604f24409222590af790f2b92c4e8b3b5"
         },
         {
-          "title": "NTA JEE Mains Session II Exam City Details 2026",
-          "jobUrl": "https://sarkariresult.com.cm/nta-jee-mains-session-ii-2026/",
+          "title": "KVS NVS Teaching & Non-Teaching Tier-II Admit Card 2026 – Out",
+          "jobUrl": "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "066ef823ed08a99862bc78ae214016bfa3372c83e7af97eeb4d44e487ea72fa2"
+          "dedupeHash": "38c90b99a46338c72b2c5ee541e70c2ee8de5f3f3d082db828fc20c3da3b2579"
+        },
+        {
+          "title": "UP Police SI Confidential, ASI Clerk & ASI Accounts Exam Date 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-police-si-confidential-asi-clerk-accounts-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "1cdba117bd3ee76d36d4444f15f77a58ec1cb7471e88dbf84024baf396b9bc76"
+        },
+        {
+          "title": "UP Police Computer Operator Grade-A Exam Date 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-police-computer-operator-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "d25e3e3ae0662857899982158d4c357138ad84ad2015c324eeaeab78e044dedd"
+        },
+        {
+          "title": "SSC JE Engineer Tier-II Exam City Notice 2026 – Out",
+          "jobUrl": "https://sarkariresult.com.cm/ssc-jr-engineer-2025/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "055d6fe367cd5c3a7a257562d8b426351da5ca6ffc4f6979e5fefb6b99f3cd4b"
+        },
+        {
+          "title": "SSC CHSL Tier-II Exam City Notice 2026 – Out",
+          "jobUrl": "https://sarkariresult.com.cm/ssc-chsl-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "ea3e23633ba09ba0ba0e5930501f2dc969d956aba352dcb3cf3c5e5687b981d9"
         },
         {
           "title": "RRB NTPC Graduate Level CBT-I Admit Card 2026",
           "jobUrl": "https://sarkariresult.com.cm/rrb-ntpc-graduate-level-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "ad77cab8ddf00bdf411bda6cc9ab2bb43ad991e8a3b6ee59a57e3e1e5f4410e5"
+        },
+        {
+          "title": "NTA JEE Mains Session II Exam City Details 2026",
+          "jobUrl": "https://sarkariresult.com.cm/nta-jee-mains-session-ii-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "066ef823ed08a99862bc78ae214016bfa3372c83e7af97eeb4d44e487ea72fa2"
         },
         {
           "title": "UPPSC 2025 Mains Admit Card – Out",
@@ -229,12 +259,6 @@
           "jobUrl": "https://sarkariresult.com.cm/rpsc-assistant-engineer-2025/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "82314cebe0babea0a97e4125bdf4ec269cca52fe73f91467f58ed543ea748da0"
-        },
-        {
-          "title": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "e4ca8355cfc0b4abb04ec51889687c7aada8daa8b193f1727d3bc7526942cef3"
         },
         {
           "title": "Bank of Baroda Office Assistant Mains Admit Card 2026 – Out",
@@ -309,28 +333,10 @@
           "dedupeHash": "931597cc3d07dfc42dc888976d0f9e783ed871d23589ffef75079d1d10a1c556"
         },
         {
-          "title": "UPPSC APO Admit Card 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/uppsc-apo-2025/",
+          "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Last Date Today",
+          "jobUrl": "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "6f48154d424443d01d73e14ccd59aea2a490f65b0e79aea597b1a26884442216"
-        },
-        {
-          "title": "Central Bank Specialist Officer Admit Card 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/central-bank-specialist-officer-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "e094c48c094397b4350c64cb5fd79f67c4396eacf1c93ef5e5132b1037b30f02"
-        },
-        {
-          "title": "LIC AAO/AE Interview Letter 2026",
-          "jobUrl": "https://sarkariresult.com.cm/lic-aao-ae-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "e0653c139154bc82578acdb8eca25ef004ed41662d5e3b306846ea7da6412834"
-        },
-        {
-          "title": "SSC JE Engineer Tier-II Exam Date 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/ssc-jr-engineer-2025/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "f556bbbe6eae38e2cafed4b54ddc56d321fccc4aad37f92d41bac4e76ad8eaea"
+          "dedupeHash": "77ca39489ca73d9428ba110ff1aa441dd5e8b69306daa5319db4c6abbe279383"
         },
         {
           "title": "BSNL Senior Executive Trainee Online Form 2026 – Extended",
@@ -477,10 +483,10 @@
           "dedupeHash": "c60b714223cca0ee2cbb200be5b803de54207bef8e1983aa62b3ac07629e43b3"
         },
         {
-          "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Start",
-          "jobUrl": "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/",
+          "title": "NTA NIFTEE Final Answer Key 2026 – Out",
+          "jobUrl": "https://sarkariresult.com.cm/nta-niftee-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "19fd4f0f98a4464bbbe2141b500a424ad0b44a755e91256430990ae894787a0d"
+          "dedupeHash": "e281a9dc68f75703dc73fe5c4f66c8e71de65176235de36cd8888d93161087ad"
         },
         {
           "title": "SSC Selection Phase 13 Final Answer Key 2026 – Out",
@@ -505,12 +511,6 @@
           "jobUrl": "https://sarkariresult.com.cm/mpesb-iti-training-officer-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "5eaaa455feaf570f2d02a16b96dc18d9be2164a1fac7a612e8d9fe7b541b4ab5"
-        },
-        {
-          "title": "UP Police SI Answer Key 2026 – Soon",
-          "jobUrl": "https://sarkariresult.com.cm/up-police-si-2025/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "8245d86499fa575e61e52f32e54e700c5c2f2f16c392355544c7fbd603d6d63a"
         },
         {
           "title": "RRB Junior Engineer JE Answer Key 2026",
@@ -541,12 +541,6 @@
           "jobUrl": "https://sarkariresult.com.cm/ccras-group-a-b-c-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "0e055db1ddd976b9eeca697263b3d18d06be35c1a82bd087ab5f0ef960bc2653"
-        },
-        {
-          "title": "RRB Section Controller Answer Key 2026",
-          "jobUrl": "https://sarkariresult.com.cm/rrb-section-controller-2026/",
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "dedupeHash": "e8ea04fee6bc5d6967685d5620ace0814bbebab7db7c83c778db4be2d8e78d03"
         },
         {
           "title": "BPSC Exam Calendar 2026",
@@ -631,6 +625,12 @@
           "jobUrl": "https://sarkariresult.com.cm/bihar-dakhil-kharij-registration-online-2026/",
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
           "dedupeHash": "9975a3703c521e88b2c11187cde02e54e832e8fb94bf3c43a713de5a6a60aa32"
+        },
+        {
+          "title": "UP Dakhil Kharij, Registration Online 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-dakhil-kharij-registration-online-2026/",
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "dedupeHash": "2286b02c928960461f1a4db71ffef3df9709b562c08d9f9fcccb5df3841bde7d"
         }
       ]
     },
@@ -639,14 +639,14 @@
       "sectionUrls": [
         "https://rojgarresult.com/"
       ],
-      "updatedAt": "2026-03-22T14:00:06.795Z",
+      "updatedAt": "2026-03-24T03:25:50.466Z",
       "totalPosts": 5,
       "posts": [
         {
-          "title": "UP Police Sub Inspector SI Admit Card 2026",
+          "title": "UP Police Sub Inspector SI Answer Key 2026",
           "jobUrl": "https://rojgarresult.com/up-police-sub-inspector-si-03-2025/",
           "sourceSectionUrl": "https://rojgarresult.com/",
-          "dedupeHash": "d85416e08d20e70ba680c2f2c25579bc76245c84adb9cd78489f358232ec2fd1"
+          "dedupeHash": "39d7bba23aa8240d371368b06a8a83e716b989ed9d98234556dbd4c34ac46427"
         },
         {
           "title": "Indian Airforce AFCAT 01/2026 Result 2026",
@@ -717,7 +717,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.847Z"
+      "updatedAt": "2026-03-24T03:25:52.745Z"
     },
     "ddf42d14c1be0ca75e9a02ebec4edbbfc967ad63fd0b79e2efe3ad72c63e4938": {
       "entityKey": "ddf42d14c1be0ca75e9a02ebec4edbbfc967ad63fd0b79e2efe3ad72c63e4938",
@@ -761,7 +761,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:12.565Z"
+      "updatedAt": "2026-03-24T03:25:52.890Z"
     },
     "5ed0d8b4f9a438f726831fffeb757cecf6668068b85230d6adffc1cb32d99cd2": {
       "entityKey": "5ed0d8b4f9a438f726831fffeb757cecf6668068b85230d6adffc1cb32d99cd2",
@@ -805,7 +805,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:11.164Z"
+      "updatedAt": "2026-03-24T03:25:53.000Z"
     },
     "258adb7e1ab167f067eb09d9ff05bbb4cc29d139dea80483b1a3c48981a590c9": {
       "entityKey": "258adb7e1ab167f067eb09d9ff05bbb4cc29d139dea80483b1a3c48981a590c9",
@@ -815,7 +815,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/bihar-board-10th-result-2026/",
       "pageTitle": "Bihar Board 10th Result 2026 Date Soon on Sarkari Result",
       "metaDescription": "Bihar Board BSEB Class 10th Result 2026 : will release the result for the Bihar Board Class 10th Examination 2026 on the official website.",
-      "contentHash": "b62dd410f9ed48807d28de45035dd54c517140952e988d5c6a467ae6928113dd",
+      "contentHash": "669e4a33d7e923c0e5fa72db56e7c50daa58858d420da406dabcd75a504eb265",
       "headingSnapshot": [
         "Bihar Board Class 10th Examination 2026 : Short Details",
         "Bihar Board Class 10th Result 2026",
@@ -849,25 +849,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.511Z"
+      "updatedAt": "2026-03-24T03:25:51.776Z"
     },
-    "7515521ad56def0bac6880974cf6bb91ed94efee9d9292dd099fe7594d65b8e5": {
-      "entityKey": "7515521ad56def0bac6880974cf6bb91ed94efee9d9292dd099fe7594d65b8e5",
-      "title": "Bihar Board Class 12th Result 2026 – Soon",
-      "comparableTitle": "Bihar Board Class 12th Result 2026",
+    "519a880d0315f8c10cc0ae76b38170da1e22cfe9e60b1588b246460e04954273": {
+      "entityKey": "519a880d0315f8c10cc0ae76b38170da1e22cfe9e60b1588b246460e04954273",
+      "title": "Bihar Board Class 12th Result 2026 – Declared",
+      "comparableTitle": "Bihar Board Class 12th Result 2026 – Declared",
       "jobUrl": "https://sarkariresult.com.cm/bihar-board-12-result-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/bihar-board-12-result-2026/",
-      "pageTitle": "Bihar Board 12th Result 2026 Soon",
-      "metaDescription": "Bihar Board BSEB Class 12th Result 2026 : will release Result for the Bihar Board Class 12th Examination 2026 on the official website.",
-      "contentHash": "6c5eed73843dc617180793c5493cc5bb408ff9aff2c2e94125c88b5532978012",
-      "headingSnapshot": [
-        "Bihar Board BSEB Class 12th Examination 2026 : Short Details",
-        "Bihar Board Class 12th Result 2026",
-        "Bihar Board Class 12th Result 2026 – Soon",
-        "Latest Posts",
-        "Related Posts"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } Bihar Board 12th Result 2026 Soon {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/bihar-board-12-result-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/bihar-board-12-result-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"Bihar Board Class 12th Result 2026 &#8211; Soon\",\"datePublished\":\"2026-03-22T04:3...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -879,7 +873,7 @@
         "https://sarkariresult.com.cm/bihar-board-12-result-2026/"
       ],
       "sourceTitles": [
-        "Bihar Board Class 12th Result 2026 – Soon"
+        "Bihar Board Class 12th Result 2026 – Declared"
       ],
       "sourceRecords": [
         {
@@ -888,12 +882,12 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "Bihar Board Class 12th Result 2026 – Soon",
+          "title": "Bihar Board Class 12th Result 2026 – Declared",
           "jobUrl": "https://sarkariresult.com.cm/bihar-board-12-result-2026/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.211Z"
+      "updatedAt": "2026-03-24T03:25:50.469Z"
     },
     "fc5817cd10ccf26effdf5b9eabb3af4c43dd949eec8f86b8b7f195ef3dcec259": {
       "entityKey": "fc5817cd10ccf26effdf5b9eabb3af4c43dd949eec8f86b8b7f195ef3dcec259",
@@ -937,7 +931,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:13.019Z"
+      "updatedAt": "2026-03-24T03:25:54.602Z"
     },
     "43bc237539c25cc71b231a2f96489edfd5f2904cd32b890d6142ebb76b82d29a": {
       "entityKey": "43bc237539c25cc71b231a2f96489edfd5f2904cd32b890d6142ebb76b82d29a",
@@ -981,7 +975,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.355Z"
+      "updatedAt": "2026-03-24T03:25:52.000Z"
     },
     "881988a5755f5f867c81229eb59a83640b8b61ff2ee45de792b2383f5d822f1f": {
       "entityKey": "881988a5755f5f867c81229eb59a83640b8b61ff2ee45de792b2383f5d822f1f",
@@ -991,7 +985,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/bihar-dakhil-kharij-registration-online-2026/",
       "pageTitle": "Bihar Dakhil Kharij, Registration Online 2026 | Sarkari Result",
       "metaDescription": "Bihar Dakhil Kharij, Registration Online 2026 : बिहार दाखिल खारिज के लिए 2026 में ऐसे करें ऑनलाइन आवेदन",
-      "contentHash": "f3542175a6a87ee47babd81e329c7f73ea152f32610f387262f3dff2233e4d75",
+      "contentHash": "03affad61754c7e4136f6d2fb6d856b98d7d3d5c7235feb21bf4b1ee74c7eb61",
       "headingSnapshot": [
         "Bihar Dakhil Kharij, Registration Online 2026",
         "Bihar Dakhil Kharij, Registration Online 2026 : Short Details",
@@ -1024,7 +1018,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.053Z"
+      "updatedAt": "2026-03-24T03:25:53.183Z"
     },
     "cf4066df309c6ef0e89f076a4ec1601e5e60d7bb0af2cefd4e744a33ea24dbae": {
       "entityKey": "cf4066df309c6ef0e89f076a4ec1601e5e60d7bb0af2cefd4e744a33ea24dbae",
@@ -1034,7 +1028,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/bihar-income-cast-residential-certificate-online-apply-verification-2026/",
       "pageTitle": "Bihar Income, Cast, Residential Certificate Online Apply & Verification 2026",
       "metaDescription": "Bihar Income, Cast, Residential Certificate Online Apply & Verification 2026 : RTPS invites online applications for residential certificate, caste certificate, income certificate, character certificate, NCL and EWS certificate etc.",
-      "contentHash": "6750fd3ac7e307439c6eedf7a6190eb52b5eb80826ce4f6c651ef92f8f4f6106",
+      "contentHash": "facb72ada0bd9882e30e710e4b8eaf1c58d09c85186763713695df2f7774c36f",
       "headingSnapshot": [
         "Bihar Income, Cast, Residential Certificate Online Apply & Verification 2026",
         "Bihar Income, Cast, Residential Certificate Online Apply & Verification 2026 : Short Details",
@@ -1067,7 +1061,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.926Z"
+      "updatedAt": "2026-03-24T03:25:54.689Z"
     },
     "85a384689c80bc91cb2a378da5b04ddcfa901ddea9f5da3acb4489227d4b9136": {
       "entityKey": "85a384689c80bc91cb2a378da5b04ddcfa901ddea9f5da3acb4489227d4b9136",
@@ -1111,7 +1105,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:13.007Z"
+      "updatedAt": "2026-03-24T03:25:53.021Z"
     },
     "3e1a8539d2f6d2c2ce32d4e3a8484c4cd272dd229d5e1d1c9ed2333de4832a70": {
       "entityKey": "3e1a8539d2f6d2c2ce32d4e3a8484c4cd272dd229d5e1d1c9ed2333de4832a70",
@@ -1155,7 +1149,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:17.080Z"
+      "updatedAt": "2026-03-24T03:25:52.942Z"
     },
     "b579f06f9274a32492c6c5be2ababf3d21c69be20c5a09c823dcf586913f639f": {
       "entityKey": "b579f06f9274a32492c6c5be2ababf3d21c69be20c5a09c823dcf586913f639f",
@@ -1199,7 +1193,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.149Z"
+      "updatedAt": "2026-03-24T03:25:54.662Z"
     },
     "2f258b29d3efecf6501d0c6206959f88f9d85867abaae5ea85155b3d6ba9c956": {
       "entityKey": "2f258b29d3efecf6501d0c6206959f88f9d85867abaae5ea85155b3d6ba9c956",
@@ -1243,7 +1237,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.297Z"
+      "updatedAt": "2026-03-24T03:25:53.175Z"
     },
     "95242edcb00f4d1deb19b20983a6771d148b83eea4923af5fac18c7746800b6b": {
       "entityKey": "95242edcb00f4d1deb19b20983a6771d148b83eea4923af5fac18c7746800b6b",
@@ -1286,7 +1280,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.405Z"
+      "updatedAt": "2026-03-24T03:25:53.054Z"
     },
     "0b82278fd30919e53d473a0daed0eae5ae95ecb4bd0ba6d65d2f2350edd43ebe": {
       "entityKey": "0b82278fd30919e53d473a0daed0eae5ae95ecb4bd0ba6d65d2f2350edd43ebe",
@@ -1330,7 +1324,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.187Z"
+      "updatedAt": "2026-03-24T03:25:53.812Z"
     },
     "0643549f8a7750c711d9799f00658be71201b97b442ca02da91673fd5e3b33ec": {
       "entityKey": "0643549f8a7750c711d9799f00658be71201b97b442ca02da91673fd5e3b33ec",
@@ -1374,7 +1368,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:13.028Z"
+      "updatedAt": "2026-03-24T03:25:54.706Z"
     },
     "b3556a09f58ea207d8313dae3851b038833b0822d7e2b3b143f0f63afdc603f8": {
       "entityKey": "b3556a09f58ea207d8313dae3851b038833b0822d7e2b3b143f0f63afdc603f8",
@@ -1417,7 +1411,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:11.268Z"
+      "updatedAt": "2026-03-24T03:25:53.734Z"
     },
     "ab6145a40c2f777c851a95cb6b4def179d3708683d126ae9ea4344ad799a1449": {
       "entityKey": "ab6145a40c2f777c851a95cb6b4def179d3708683d126ae9ea4344ad799a1449",
@@ -1461,7 +1455,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.044Z"
+      "updatedAt": "2026-03-24T03:25:52.634Z"
     },
     "0e0ecfb3e5f2de7e160d9dddd93fdc3221403895d452eb28d5d318195756079f": {
       "entityKey": "0e0ecfb3e5f2de7e160d9dddd93fdc3221403895d452eb28d5d318195756079f",
@@ -1504,7 +1498,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.255Z"
+      "updatedAt": "2026-03-24T03:25:52.974Z"
     },
     "368c798139c4e1db08c6f3a522ceae75f95812bb97b497c4d5a7c0754389dd79": {
       "entityKey": "368c798139c4e1db08c6f3a522ceae75f95812bb97b497c4d5a7c0754389dd79",
@@ -1514,9 +1508,9 @@
       "canonicalUrl": "https://rojgarresult.com/central-bank-of-india-specialists-officers-2026/",
       "pageTitle": "Central Bank of India Specialists Officers SO Online Form 2026 for 275 Post",
       "metaDescription": "Apply Online: Central Bank of India Specialists Officers Online Form 2026 for 275 Post Check Eligibility, Download Notification, Age Limit, How to Apply and More",
-      "contentHash": "3df777f78037aeba37ae4aa6f275774d9a829c6e4657a58d565207fd648121ca",
+      "contentHash": "d929e69eb5a2bec6ae3fcf14750db01d8bf433b1ae460bd2389bdc73213883b4",
       "headingSnapshot": [
-        "90 thoughts on “Central Bank of India Specialists Officers SO Online Form 2026 for 275 Post”",
+        "165 thoughts on “Central Bank of India Specialists Officers SO Online Form 2026 for 275 Post”",
         "Age Limit",
         "Application Fees",
         "Apply Online",
@@ -1555,51 +1549,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.321Z"
-    },
-    "131c5c62d1dd2a6a9114ebd2ff2f7d61eeb4885a1c632ed04f69e398938b9368": {
-      "entityKey": "131c5c62d1dd2a6a9114ebd2ff2f7d61eeb4885a1c632ed04f69e398938b9368",
-      "title": "Central Bank Specialist Officer Admit Card 2026 – Out",
-      "comparableTitle": "Central Bank Specialist Officer Admit Card 2026",
-      "jobUrl": "https://sarkariresult.com.cm/central-bank-specialist-officer-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/central-bank-specialist-officer-2026/",
-      "pageTitle": "Central Bank Specialist Officer Admit Card 2026 Out",
-      "metaDescription": "Central Bank Specialist Officer Admit Card 2026 : has released the admit card on its official website for the Foreign Exchange Officer & Marketing Officer Examination 2026.",
-      "contentHash": "b9676309d7bfda35c04f7aa35b688f203c91ca8db02a0e17def4770e7e4bc8a0",
-      "headingSnapshot": [
-        "Central Bank Specialist Officer Admit Card 2026",
-        "Central Bank Specialist Officer Admit Card 2026 – Out",
-        "Central Bank Specialist Officer Examination 2026 : Short Details",
-        "Latest Posts",
-        "Related Posts"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } Central Bank Specialist Officer Admit Card 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/central-bank-specialist-officer-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/central-bank-specialist-officer-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"Central Bank Specialist Officer Admit Card ...",
-      "detailError": "",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "sourceSectionUrls": [
-        "https://www.sarkariresult.com.cm/"
-      ],
-      "sourceJobUrls": [
-        "https://sarkariresult.com.cm/central-bank-specialist-officer-2026/"
-      ],
-      "sourceTitles": [
-        "Central Bank Specialist Officer Admit Card 2026 – Out"
-      ],
-      "sourceRecords": [
-        {
-          "sectionName": "Sarkari Result",
-          "sectionUrls": [
-            "https://www.sarkariresult.com.cm/"
-          ],
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "Central Bank Specialist Officer Admit Card 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/central-bank-specialist-officer-2026/"
-        }
-      ],
-      "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.012Z"
+      "updatedAt": "2026-03-24T03:25:53.081Z"
     },
     "02cd960f199199d7c35485bac8aced396b68433b15f05311ab048ad6056697c6": {
       "entityKey": "02cd960f199199d7c35485bac8aced396b68433b15f05311ab048ad6056697c6",
@@ -1643,7 +1593,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.765Z"
+      "updatedAt": "2026-03-24T03:25:53.962Z"
     },
     "23f0c32c64962f8daf58f63f71971a79246eeeff12126585ed7bcb2585b97d29": {
       "entityKey": "23f0c32c64962f8daf58f63f71971a79246eeeff12126585ed7bcb2585b97d29",
@@ -1686,7 +1636,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.084Z"
+      "updatedAt": "2026-03-24T03:25:53.949Z"
     },
     "c21ef44c094adf639fe332e9ce8500aed679e35394b06fda0168ffebcf52e765": {
       "entityKey": "c21ef44c094adf639fe332e9ce8500aed679e35394b06fda0168ffebcf52e765",
@@ -1730,7 +1680,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.058Z"
+      "updatedAt": "2026-03-24T03:25:53.250Z"
     },
     "41c0d3edc7d62bf0e80426aad1066113f90057059cd96ca3d8872fb13ed18cd8": {
       "entityKey": "41c0d3edc7d62bf0e80426aad1066113f90057059cd96ca3d8872fb13ed18cd8",
@@ -1774,7 +1724,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.961Z"
+      "updatedAt": "2026-03-24T03:25:53.191Z"
     },
     "a0c6f00e1d14edc9ffd0959fd11a3b2f3b40fb7ab71aaf902dc50a1c35fcfcab": {
       "entityKey": "a0c6f00e1d14edc9ffd0959fd11a3b2f3b40fb7ab71aaf902dc50a1c35fcfcab",
@@ -1818,7 +1768,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.220Z"
+      "updatedAt": "2026-03-24T03:25:51.969Z"
     },
     "8bf8a43e57ed357fee30ee82948639728925e38584ffa7d21ae2ee873dbcc6d4": {
       "entityKey": "8bf8a43e57ed357fee30ee82948639728925e38584ffa7d21ae2ee873dbcc6d4",
@@ -1862,7 +1812,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.385Z"
+      "updatedAt": "2026-03-24T03:25:54.409Z"
     },
     "0b9ff83bfa1c629251e342183222bf35b1a83b957d0b9b6865189ef008f8d62e": {
       "entityKey": "0b9ff83bfa1c629251e342183222bf35b1a83b957d0b9b6865189ef008f8d62e",
@@ -1872,7 +1822,7 @@
       "canonicalUrl": "https://rojgarresult.com/hprca-junior-basic-teacher-2026/",
       "pageTitle": "HPRCA Junior Basic Teacher JBT Teacher Online Form 2026 for 600 Post",
       "metaDescription": "HPRCA Junior Basic Teacher JBT Teacher Online Form 2026 for 600 Post Check Eligibility, Download Notification, Age Limit, How to Apply and More",
-      "contentHash": "354cf64c8664ed39caa610d1c9a82ee8b298c1ce2acefb8452d84e35e6b94f2e",
+      "contentHash": "48fd315b9dce7522755e06295f54c3dc9d053cca79b133c713f980eee5a735bb",
       "headingSnapshot": [
         "Age Limit",
         "Application Fees",
@@ -1913,7 +1863,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.895Z"
+      "updatedAt": "2026-03-24T03:25:54.841Z"
     },
     "75390b5e2264e9d660cf951af42f1d01808598eb8281895d89ce9ef148f1809a": {
       "entityKey": "75390b5e2264e9d660cf951af42f1d01808598eb8281895d89ce9ef148f1809a",
@@ -1957,7 +1907,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.231Z"
+      "updatedAt": "2026-03-24T03:25:52.690Z"
     },
     "4dda3f616e7c60790af7cc8c16ca6d396dded08a17c671ecdf95e4b296bf1a21": {
       "entityKey": "4dda3f616e7c60790af7cc8c16ca6d396dded08a17c671ecdf95e4b296bf1a21",
@@ -2000,7 +1950,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.964Z"
+      "updatedAt": "2026-03-24T03:25:54.085Z"
     },
     "131a9367ff052cf34d7ed8514b5f14ade1cf530208b7eec6e79ec072c311b361": {
       "entityKey": "131a9367ff052cf34d7ed8514b5f14ade1cf530208b7eec6e79ec072c311b361",
@@ -2044,7 +1994,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.530Z"
+      "updatedAt": "2026-03-24T03:25:51.828Z"
     },
     "57c18e8ef9913e1997e8539ee9d6eecd9812afd41bfc24fde2fdb0ed9d2b4f27": {
       "entityKey": "57c18e8ef9913e1997e8539ee9d6eecd9812afd41bfc24fde2fdb0ed9d2b4f27",
@@ -2054,7 +2004,7 @@
       "canonicalUrl": "https://rojgarresult.com/indian-airforce-afcat-01-2026-batch/",
       "pageTitle": "Indian Airforce AFCAT 01/2026 Result 2026",
       "metaDescription": "Download Answer Key for Indian Airforce AFCAT 01/2026 Batch 2026 Check Eligibility, Download Notification, Age Limit, How to Apply and More",
-      "contentHash": "e12e7f0a24e52e1e647d46e4b5409a8221884a93b842b7a1e3aea60cf2fb1f10",
+      "contentHash": "f9292185701ada5fd89ed3ad39b149b72296b529953f48d3cc243e4598e13817",
       "headingSnapshot": [
         "AFCAT 01/2026 Exam : Short Details of Notification",
         "AFCAT Official Website",
@@ -2095,7 +2045,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.713Z"
+      "updatedAt": "2026-03-24T03:25:50.827Z"
     },
     "0add4a6f9738a2b447927227c76a8baddfeda4d382c2efd09e055edbfdae9c59": {
       "entityKey": "0add4a6f9738a2b447927227c76a8baddfeda4d382c2efd09e055edbfdae9c59",
@@ -2139,7 +2089,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:26.787Z"
+      "updatedAt": "2026-03-24T03:25:52.866Z"
     },
     "a8996c062285e6e7ea5464481e176b86b94a21ae9bfacf6174a3a836edc7cb23": {
       "entityKey": "a8996c062285e6e7ea5464481e176b86b94a21ae9bfacf6174a3a836edc7cb23",
@@ -2183,7 +2133,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.058Z"
+      "updatedAt": "2026-03-24T03:25:52.915Z"
     },
     "62c9b20ef2f920010afabb87092b68844b28c7c8d8da61f7ceabe414880c6aa4": {
       "entityKey": "62c9b20ef2f920010afabb87092b68844b28c7c8d8da61f7ceabe414880c6aa4",
@@ -2227,7 +2177,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:11.236Z"
+      "updatedAt": "2026-03-24T03:25:54.681Z"
     },
     "a3e6b154e19d632eca7ebd5735b08c3cd863dd8c56c766fc760a6fbae660f103": {
       "entityKey": "a3e6b154e19d632eca7ebd5735b08c3cd863dd8c56c766fc760a6fbae660f103",
@@ -2270,7 +2220,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.002Z"
+      "updatedAt": "2026-03-24T03:25:53.905Z"
     },
     "bda2d97134a9f203dee4b9574341f2cb79a5ffbde254eb61966b24755606cb22": {
       "entityKey": "bda2d97134a9f203dee4b9574341f2cb79a5ffbde254eb61966b24755606cb22",
@@ -2313,7 +2263,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.240Z"
+      "updatedAt": "2026-03-24T03:25:52.965Z"
     },
     "27c23fa18f1d1dcb4232ee6c08c57e107cb261a4f2880d8ad107ad6e1b68af95": {
       "entityKey": "27c23fa18f1d1dcb4232ee6c08c57e107cb261a4f2880d8ad107ad6e1b68af95",
@@ -2357,25 +2307,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.658Z"
+      "updatedAt": "2026-03-24T03:25:53.700Z"
     },
-    "400aef49b86f0dbe0ea4d647daf6bfb28a5b88e62304d21f999491820b873853": {
-      "entityKey": "400aef49b86f0dbe0ea4d647daf6bfb28a5b88e62304d21f999491820b873853",
-      "title": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 – Out",
-      "comparableTitle": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026",
+    "f645b47d38b4c2a7a91ffce4b92c549dfb934963f96b42e2bb670b428b0f31e2": {
+      "entityKey": "f645b47d38b4c2a7a91ffce4b92c549dfb934963f96b42e2bb670b428b0f31e2",
+      "title": "KVS NVS Teaching & Non-Teaching Tier-II Admit Card 2026 – Out",
+      "comparableTitle": "KVS NVS Teaching & Non-Teaching Tier-II Admit Card 2026",
       "jobUrl": "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/",
-      "pageTitle": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 Out",
-      "metaDescription": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 : has released the Tier-II Exam City Details on its official website for the KVS NVS Teaching & Non-Teaching Examination 2026.",
-      "contentHash": "e493f3efb2aeec5773f3790fbb65422214d25bfc270136c3e24bc5c9820a47fc",
-      "headingSnapshot": [
-        "KVS NVS Teaching & Non-Teaching Examination 2025 : Short Details",
-        "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026",
-        "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 – Out",
-        "Latest Posts",
-        "Related Posts"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"KVS NVS Teaching &amp; Non-Teach...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -2387,7 +2331,7 @@
         "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/"
       ],
       "sourceTitles": [
-        "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 – Out"
+        "KVS NVS Teaching & Non-Teaching Tier-II Admit Card 2026 – Out"
       ],
       "sourceRecords": [
         {
@@ -2396,55 +2340,12 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "KVS NVS Teaching & Non-Teaching Tier-II Exam City Details 2026 – Out",
+          "title": "KVS NVS Teaching & Non-Teaching Tier-II Admit Card 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/kvs-nvs-teaching-non-teaching-2026/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.647Z"
-    },
-    "7b8140ff42e394c158eed9df2b6dd4817f36a6c3ae56e4b86d8a0ab47373e40e": {
-      "entityKey": "7b8140ff42e394c158eed9df2b6dd4817f36a6c3ae56e4b86d8a0ab47373e40e",
-      "title": "LIC AAO/AE Interview Letter 2026",
-      "comparableTitle": "LIC AAO/AE Interview Letter 2026",
-      "jobUrl": "https://sarkariresult.com.cm/lic-aao-ae-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/lic-aao-ae-2026/",
-      "pageTitle": "LIC AAO / AE Interview Letter 2026 Out",
-      "metaDescription": "LIC AAO / AE Interview Letter 2026 : has released the Interview Letter on its official website for the AAO / AE Examination 2025.",
-      "contentHash": "7cd912e88f1fd2c8a776474976abda2f6a2770f147d17c099a72469fb389810a",
-      "headingSnapshot": [
-        "Latest Posts",
-        "LIC AAO / AE Examination 2025 : Short Details",
-        "LIC AAO/AE Interview Letter 2026",
-        "Related Posts"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } LIC AAO / AE Interview Letter 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/lic-aao-ae-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/lic-aao-ae-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"LIC AAO/AE Interview Letter 2026\",\"datePublished\":\"2026-03-10T05:39:13+00:00\",\"dateModified\":\"2026...",
-      "detailError": "",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "sourceSectionUrls": [
-        "https://www.sarkariresult.com.cm/"
-      ],
-      "sourceJobUrls": [
-        "https://sarkariresult.com.cm/lic-aao-ae-2026/"
-      ],
-      "sourceTitles": [
-        "LIC AAO/AE Interview Letter 2026"
-      ],
-      "sourceRecords": [
-        {
-          "sectionName": "Sarkari Result",
-          "sectionUrls": [
-            "https://www.sarkariresult.com.cm/"
-          ],
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "LIC AAO/AE Interview Letter 2026",
-          "jobUrl": "https://sarkariresult.com.cm/lic-aao-ae-2026/"
-        }
-      ],
-      "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.020Z"
+      "updatedAt": "2026-03-24T03:25:50.483Z"
     },
     "3fd0a86e84233eb30ad1716b49bb05f829c79894b285916b12df6abf7a9c4c85": {
       "entityKey": "3fd0a86e84233eb30ad1716b49bb05f829c79894b285916b12df6abf7a9c4c85",
@@ -2488,7 +2389,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.854Z"
+      "updatedAt": "2026-03-24T03:25:54.741Z"
     },
     "003d03a9374a39c14ce41108318588ffb1e4f7fbfcef7493741dee74b203bad1": {
       "entityKey": "003d03a9374a39c14ce41108318588ffb1e4f7fbfcef7493741dee74b203bad1",
@@ -2532,7 +2433,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.610Z"
+      "updatedAt": "2026-03-24T03:25:53.038Z"
     },
     "705bd0a278e0be5ce2a5c960f4ef699bd5bc6bdbaea44d5e92b6153defcdd059": {
       "entityKey": "705bd0a278e0be5ce2a5c960f4ef699bd5bc6bdbaea44d5e92b6153defcdd059",
@@ -2576,7 +2477,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.741Z"
+      "updatedAt": "2026-03-24T03:25:53.029Z"
     },
     "65dcdb0bd7818ca89f39c92e7a1602203e9609a88288100c4d8d78eb1a0c1817": {
       "entityKey": "65dcdb0bd7818ca89f39c92e7a1602203e9609a88288100c4d8d78eb1a0c1817",
@@ -2620,7 +2521,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.553Z"
+      "updatedAt": "2026-03-24T03:25:54.770Z"
     },
     "49100fe112ec2ac564b13243519353377d2ea4ec7ec6b9a96f1c897e2a41845e": {
       "entityKey": "49100fe112ec2ac564b13243519353377d2ea4ec7ec6b9a96f1c897e2a41845e",
@@ -2665,7 +2566,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.678Z"
+      "updatedAt": "2026-03-24T03:25:54.733Z"
     },
     "6055b2be8493e25956b37be637e25e23571aeb4e63119a62eeca1d6051d03011": {
       "entityKey": "6055b2be8493e25956b37be637e25e23571aeb4e63119a62eeca1d6051d03011",
@@ -2709,7 +2610,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.385Z"
+      "updatedAt": "2026-03-24T03:25:54.620Z"
     },
     "c5a28482759281fd7ec9c028115c5e2ea91bccbf9f1f08b67f93db4dbf5f5b69": {
       "entityKey": "c5a28482759281fd7ec9c028115c5e2ea91bccbf9f1f08b67f93db4dbf5f5b69",
@@ -2753,7 +2654,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.947Z"
+      "updatedAt": "2026-03-24T03:25:54.629Z"
     },
     "61cad39989c1c77a4f7b48528be25789bba197628bc0a973b06cafd00f5fdfb2": {
       "entityKey": "61cad39989c1c77a4f7b48528be25789bba197628bc0a973b06cafd00f5fdfb2",
@@ -2808,7 +2709,7 @@
         }
       ],
       "seenOnSourcesCount": 2,
-      "updatedAt": "2026-03-22T14:00:08.980Z"
+      "updatedAt": "2026-03-24T03:25:53.242Z"
     },
     "ca4b99037ae5016d77703f0493bc7f5dd99c29b6fb4ec2cec40f3f038e6c975f": {
       "entityKey": "ca4b99037ae5016d77703f0493bc7f5dd99c29b6fb4ec2cec40f3f038e6c975f",
@@ -2851,28 +2752,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.796Z"
+      "updatedAt": "2026-03-24T03:25:52.832Z"
     },
-    "30c10e2284050c572e7e634471dc43431588e01392e81aea5c0d8f0360672a1e": {
-      "entityKey": "30c10e2284050c572e7e634471dc43431588e01392e81aea5c0d8f0360672a1e",
-      "title": "NTA NIFTEE Stage-I Result 2026 – Out",
-      "comparableTitle": "NTA NIFTEE Stage-I Result 2026",
+    "e5e3488a13a3bae565ec802954b0cb05e807023b1f47d069f7866ecf584adfa0": {
+      "entityKey": "e5e3488a13a3bae565ec802954b0cb05e807023b1f47d069f7866ecf584adfa0",
+      "title": "NTA NIFTEE Final Answer Key 2026 – Out",
+      "comparableTitle": "NTA NIFTEE Final Answer Key 2026",
       "jobUrl": "https://sarkariresult.com.cm/nta-niftee-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/nta-niftee-2026/",
-      "pageTitle": "NTA NIFTEE Stage-I Result 2026 Out",
-      "metaDescription": "NTA NIFTEE Stage-I Result 2026 : has released Stage-I Result for the National Institute of Fashion Technology Entrance Exam 2026 on the official website.",
-      "contentHash": "5a00cd37ff913f4914f56f4001b76aa0d6e57a60365b02578d4b4b0ef9f8bd84",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Marking Scheme : Each correct answer earns 1 mark, each wrong answer deducts 0.25 marks, and no marks are awarded for unattempted questions.",
-        "NTA NIFTEE Examination 2026 : Short Details",
-        "NTA NIFTEE Stage-I Result 2026",
-        "NTA NIFTEE Stage-I Result 2026 – Out",
-        "PG Programmes : For M.Des, candidates must appear in GAT, CAT, and a Personal Interview. For MFM and M.F.Tech, candidates must appear in GAT and a Personal I...",
-        "Related Posts",
-        "UG Programmes : For B.Des, candidates must appear in GAT, CAT, and Situation Test. The weightage is CAT 50%, GAT 30%, and Situation Test 20%. For B.F.Tech, c..."
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } NTA NIFTEE Stage-I Result 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/nta-niftee-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/nta-niftee-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"NTA NIFTEE Stage-I Result 2026 &#8211; Out\",\"datePublished\":\"2026-03-20T09:00:53+00:00\",\"dateModified\"...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -2884,7 +2776,7 @@
         "https://sarkariresult.com.cm/nta-niftee-2026/"
       ],
       "sourceTitles": [
-        "NTA NIFTEE Stage-I Result 2026 – Out"
+        "NTA NIFTEE Final Answer Key 2026 – Out"
       ],
       "sourceRecords": [
         {
@@ -2893,12 +2785,12 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "NTA NIFTEE Stage-I Result 2026 – Out",
+          "title": "NTA NIFTEE Final Answer Key 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/nta-niftee-2026/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.907Z"
+      "updatedAt": "2026-03-24T03:25:50.518Z"
     },
     "ea069c0207ec03902de05d17f20af8b4e7b49a8d26a3d71f4d544ee77e713339": {
       "entityKey": "ea069c0207ec03902de05d17f20af8b4e7b49a8d26a3d71f4d544ee77e713339",
@@ -2942,7 +2834,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.874Z"
+      "updatedAt": "2026-03-24T03:25:52.927Z"
     },
     "c8edab085a40c7079367f1334689b230d60d62f5453083f75af3fb4cc313b3ef": {
       "entityKey": "c8edab085a40c7079367f1334689b230d60d62f5453083f75af3fb4cc313b3ef",
@@ -2985,7 +2877,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.917Z"
+      "updatedAt": "2026-03-24T03:25:52.991Z"
     },
     "8771c599f9aac28acb4638bef191bdcaabbdfee8807129fd06e98b0a47ed44f2": {
       "entityKey": "8771c599f9aac28acb4638bef191bdcaabbdfee8807129fd06e98b0a47ed44f2",
@@ -3029,7 +2921,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.529Z"
+      "updatedAt": "2026-03-24T03:25:52.844Z"
     },
     "fafd29b5f7d38f67bc63ccc0b68f2961f8e8501883083813cbaf54b12fca85dc": {
       "entityKey": "fafd29b5f7d38f67bc63ccc0b68f2961f8e8501883083813cbaf54b12fca85dc",
@@ -3073,7 +2965,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.929Z"
+      "updatedAt": "2026-03-24T03:25:54.777Z"
     },
     "d5dd4056e3e67f59f914d75093b287d6cea559cfac2400c4070662b31a55100c": {
       "entityKey": "d5dd4056e3e67f59f914d75093b287d6cea559cfac2400c4070662b31a55100c",
@@ -3117,7 +3009,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.112Z"
+      "updatedAt": "2026-03-24T03:25:54.800Z"
     },
     "5a93af5f235c774b6dd7d199ff9a8652b02b57d444fe0eb19e4c9ceff5273168": {
       "entityKey": "5a93af5f235c774b6dd7d199ff9a8652b02b57d444fe0eb19e4c9ceff5273168",
@@ -3161,25 +3053,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.664Z"
+      "updatedAt": "2026-03-24T03:25:51.874Z"
     },
-    "7456768d658b66f4b09f36c8dfb6a41535c1a6a7fddff7e0c80d2826ef2b7df8": {
-      "entityKey": "7456768d658b66f4b09f36c8dfb6a41535c1a6a7fddff7e0c80d2826ef2b7df8",
-      "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Start",
-      "comparableTitle": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts)",
+    "0f390085e66b4ff7590b48e496f6c9be9a50d59d7e3e4d62a7169ba82143d961": {
+      "entityKey": "0f390085e66b4ff7590b48e496f6c9be9a50d59d7e3e4d62a7169ba82143d961",
+      "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Last Date Today",
+      "comparableTitle": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Last Date Today",
       "jobUrl": "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/",
-      "pageTitle": "Railway RRC WR Apprentice Recruitment 2026 | Sarkari Result",
-      "metaDescription": "Railway RRC WR Apprentice Recruitment 2026 : has released a notification on official website for the recruitment of RRC WR Western Railway, Mumbai Apprentice Posts.",
-      "contentHash": "2119f753049cab5a6ffed14f2bc4dc9726ef2a3414efb1ea714a9699d515ceec",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Railway RRC WR Apprentice Examination 2026 : Short Details",
-        "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Start",
-        "Railway RRC WR Apprentice Recruitment 2026",
-        "Related Posts"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } Railway RRC WR Apprentice Recruitment 2026 | Sarkari Result {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"Railway RRC WR Apprentice Online Form 2026 (534...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -3191,7 +3077,7 @@
         "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/"
       ],
       "sourceTitles": [
-        "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Start"
+        "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Last Date Today"
       ],
       "sourceRecords": [
         {
@@ -3200,12 +3086,50 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Start",
+          "title": "Railway RRC WR Apprentice Online Form 2026 (5349 Posts) – Last Date Today",
           "jobUrl": "https://sarkariresult.com.cm/railway-rrc-wr-apprentice-2026/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.717Z"
+      "updatedAt": "2026-03-24T03:25:50.504Z"
+    },
+    "1962a3f95bf4489e238cd89e1b78d6bd5ab872d2c7f91c72ea58ae6909965498": {
+      "entityKey": "1962a3f95bf4489e238cd89e1b78d6bd5ab872d2c7f91c72ea58ae6909965498",
+      "title": "Rajasthan Board 10th Result 2026 – Today 1 PM",
+      "comparableTitle": "Rajasthan Board 10th Result 2026 – Today 1 PM",
+      "jobUrl": "https://sarkariresult.com.cm/rajasthan-board-10th-result-2026/",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
+      "detailError": "",
+      "sourceSites": [
+        "Sarkari Result"
+      ],
+      "sourceSectionUrls": [
+        "https://www.sarkariresult.com.cm/"
+      ],
+      "sourceJobUrls": [
+        "https://sarkariresult.com.cm/rajasthan-board-10th-result-2026/"
+      ],
+      "sourceTitles": [
+        "Rajasthan Board 10th Result 2026 – Today 1 PM"
+      ],
+      "sourceRecords": [
+        {
+          "sectionName": "Sarkari Result",
+          "sectionUrls": [
+            "https://www.sarkariresult.com.cm/"
+          ],
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "title": "Rajasthan Board 10th Result 2026 – Today 1 PM",
+          "jobUrl": "https://sarkariresult.com.cm/rajasthan-board-10th-result-2026/"
+        }
+      ],
+      "seenOnSourcesCount": 1,
+      "updatedAt": "2026-03-24T03:25:50.469Z"
     },
     "cb313bffc84fc3473c59db92231fc3d4d8998a79707ca962e0db11096ca0f9ee": {
       "entityKey": "cb313bffc84fc3473c59db92231fc3d4d8998a79707ca962e0db11096ca0f9ee",
@@ -3250,7 +3174,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.619Z"
+      "updatedAt": "2026-03-24T03:25:53.885Z"
     },
     "1feceede6921427e0de596da2bae3c1f5b1d3df10ce5e43e57e04bcdeb7094d1": {
       "entityKey": "1feceede6921427e0de596da2bae3c1f5b1d3df10ce5e43e57e04bcdeb7094d1",
@@ -3293,7 +3217,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.780Z"
+      "updatedAt": "2026-03-24T03:25:52.983Z"
     },
     "c3d7025b5f6856a2c91676af0a8ca0b7f651f7c5e2789cc8732059b997083262": {
       "entityKey": "c3d7025b5f6856a2c91676af0a8ca0b7f651f7c5e2789cc8732059b997083262",
@@ -3337,7 +3261,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.976Z"
+      "updatedAt": "2026-03-24T03:25:51.958Z"
     },
     "c03c752233fc5e6b92121de72e5aed3f232052be3bb8823a94d88247730bf804": {
       "entityKey": "c03c752233fc5e6b92121de72e5aed3f232052be3bb8823a94d88247730bf804",
@@ -3380,7 +3304,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.760Z"
+      "updatedAt": "2026-03-24T03:25:53.046Z"
     },
     "8b37c06623d763ea2f1d01ebca7f8d60ac477fe495bc1f84b743ddb2c4cb55de": {
       "entityKey": "8b37c06623d763ea2f1d01ebca7f8d60ac477fe495bc1f84b743ddb2c4cb55de",
@@ -3390,7 +3314,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/rrb-ntpc-graduate-level-2026/",
       "pageTitle": "RRB NTPC Graduate Level CBT-I Admit Card 2026 Out",
       "metaDescription": "RRB NTPC Graduate Level CBT-I Admit Card 2026 : has released CBT-I Admit Card on official website for the recruitment of Non-Technical Popular Categories (NTPC) Graduate Level Post.",
-      "contentHash": "7e1f2b1d4e1a5c2ebc0e9769a81a360344153a5127c8e17e65e5ddd4b170ff4f",
+      "contentHash": "e6001069bb957303521be2ac0fdb9ac6fa5918074ec8424ae57b7f22f77cc89f",
       "headingSnapshot": [
         "Latest Posts",
         "Related Posts",
@@ -3423,7 +3347,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.313Z"
+      "updatedAt": "2026-03-24T03:25:54.638Z"
     },
     "79a474aacf5d3ddfee8a341609dd45f5a4b94670e255663591c429e9d4466a22": {
       "entityKey": "79a474aacf5d3ddfee8a341609dd45f5a4b94670e255663591c429e9d4466a22",
@@ -3467,50 +3391,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.439Z"
-    },
-    "fa9ccf4829dc5e7b6c80e2cc6740da5e1760b45d4a2e5d2365bc774d35474916": {
-      "entityKey": "fa9ccf4829dc5e7b6c80e2cc6740da5e1760b45d4a2e5d2365bc774d35474916",
-      "title": "RRB Section Controller Answer Key 2026",
-      "comparableTitle": "RRB Section Controller Answer Key 2026",
-      "jobUrl": "https://sarkariresult.com.cm/rrb-section-controller-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/rrb-section-controller-2026/",
-      "pageTitle": "RRB Section Controller Answer Key 2026 Out",
-      "metaDescription": "RRB Section Controller Answer Key 2026 : RRB has released answer key on official website for the recruitment of Section Controller Post.",
-      "contentHash": "5eb4e912c3cfab21f0f0aced3e8b59c37ba3b266b59d70f46893d6d44b497516",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Related Posts",
-        "RRB Section Controller Answer Key 2026",
-        "RRB Section Controller Examination 2025 : Short Details"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } RRB Section Controller Answer Key 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/rrb-section-controller-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/rrb-section-controller-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"RRB Section Controller Answer Key 2026\",\"datePublished\":\"2026-02-26T11...",
-      "detailError": "",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "sourceSectionUrls": [
-        "https://www.sarkariresult.com.cm/"
-      ],
-      "sourceJobUrls": [
-        "https://sarkariresult.com.cm/rrb-section-controller-2026/"
-      ],
-      "sourceTitles": [
-        "RRB Section Controller Answer Key 2026"
-      ],
-      "sourceRecords": [
-        {
-          "sectionName": "Sarkari Result",
-          "sectionUrls": [
-            "https://www.sarkariresult.com.cm/"
-          ],
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "RRB Section Controller Answer Key 2026",
-          "jobUrl": "https://sarkariresult.com.cm/rrb-section-controller-2026/"
-        }
-      ],
-      "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.102Z"
+      "updatedAt": "2026-03-24T03:25:52.664Z"
     },
     "0ff2552f3c0a2df18f4460f9c3dfcccc91402267bf03a4ef57092711b7414470": {
       "entityKey": "0ff2552f3c0a2df18f4460f9c3dfcccc91402267bf03a4ef57092711b7414470",
@@ -3554,7 +3435,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.318Z"
+      "updatedAt": "2026-03-24T03:25:51.844Z"
     },
     "095022577e3530ee1d57ecf71e48e62f9a2416964251c0ecea128f95ba8042da": {
       "entityKey": "095022577e3530ee1d57ecf71e48e62f9a2416964251c0ecea128f95ba8042da",
@@ -3598,7 +3479,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.926Z"
+      "updatedAt": "2026-03-24T03:25:54.808Z"
     },
     "fcacd8e441be18e0518e94a1e4b1d610c5c848f3f335498dcd375be43500aebf": {
       "entityKey": "fcacd8e441be18e0518e94a1e4b1d610c5c848f3f335498dcd375be43500aebf",
@@ -3642,7 +3523,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.160Z"
+      "updatedAt": "2026-03-24T03:25:53.524Z"
     },
     "f9217d25d804f24b31a88a5cade5cc8c7d6f9ab6ca111e054abee9fef5696419": {
       "entityKey": "f9217d25d804f24b31a88a5cade5cc8c7d6f9ab6ca111e054abee9fef5696419",
@@ -3685,7 +3566,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.820Z"
+      "updatedAt": "2026-03-24T03:25:54.586Z"
     },
     "2f47509b112ef17125e73d9d4ebf1f6e719c4e13d0b6da75a2c372a1dc3c12a0": {
       "entityKey": "2f47509b112ef17125e73d9d4ebf1f6e719c4e13d0b6da75a2c372a1dc3c12a0",
@@ -3728,7 +3609,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.893Z"
+      "updatedAt": "2026-03-24T03:25:54.859Z"
     },
     "b064eeea375e141378af99c4a140dbab2265b07cc6b51459d720e633ca2dd130": {
       "entityKey": "b064eeea375e141378af99c4a140dbab2265b07cc6b51459d720e633ca2dd130",
@@ -3772,7 +3653,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.911Z"
+      "updatedAt": "2026-03-24T03:25:52.876Z"
     },
     "98009b06f5833a11546c7c79fe88b38cdd05ebacf9d33caf08e9d4c60c290ab6": {
       "entityKey": "98009b06f5833a11546c7c79fe88b38cdd05ebacf9d33caf08e9d4c60c290ab6",
@@ -3816,7 +3697,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:38.832Z"
+      "updatedAt": "2026-03-24T03:25:52.651Z"
     },
     "29037b556ee0d9cc00ed36af3e08027dd5ecfb874eed087a4aed2fa92563a2bf": {
       "entityKey": "29037b556ee0d9cc00ed36af3e08027dd5ecfb874eed087a4aed2fa92563a2bf",
@@ -3860,7 +3741,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.617Z"
+      "updatedAt": "2026-03-24T03:25:53.108Z"
     },
     "3d023306478e4cb413da7f5a66c7bda097a683fbe132b2d26cbd22cc7d6ee628": {
       "entityKey": "3d023306478e4cb413da7f5a66c7bda097a683fbe132b2d26cbd22cc7d6ee628",
@@ -3904,25 +3785,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.288Z"
+      "updatedAt": "2026-03-24T03:25:52.702Z"
     },
-    "2f39f38b6860be7bfeb39d27043dd2f81e53c3f4d25a3f64fb66e69b5879d17b": {
-      "entityKey": "2f39f38b6860be7bfeb39d27043dd2f81e53c3f4d25a3f64fb66e69b5879d17b",
-      "title": "SSC CHSL Tier-I Marks / Score Card 2026 – Out",
-      "comparableTitle": "SSC CHSL Tier-I Marks / Score Card 2026",
+    "912f6988fa759b4758635e0118058e4f22967e2041078a4d7acbf9a702e38882": {
+      "entityKey": "912f6988fa759b4758635e0118058e4f22967e2041078a4d7acbf9a702e38882",
+      "title": "SSC CHSL Tier-II Exam City Notice 2026 – Out",
+      "comparableTitle": "SSC CHSL Tier-II Exam City Notice 2026",
       "jobUrl": "https://sarkariresult.com.cm/ssc-chsl-2026/",
-      "canonicalUrl": "https://sarkariresult.com.cm/ssc-chsl-2026/",
-      "pageTitle": "SSC CHSL Tier-I Marks / Score Card 2026 Out",
-      "metaDescription": "SSC CHSL Tier-I Marks / Score Card 2026 : has release the Tier-I Marks / Score Card on its official website for the Recruitment of CHSL 10+2 Examination 2025.",
-      "contentHash": "637dcf535b7a347444f1221a5d18d6dd4b47d2052c26123eb85858c4d2264e41",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Related Posts",
-        "SSC 10+2 CHSL Examination 2025 : Short Details",
-        "SSC CHSL Tier-I Marks / Score Card 2026",
-        "SSC CHSL Tier-I Marks / Score Card 2026 – Out"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } SSC CHSL Tier-I Marks / Score Card 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/ssc-chsl-2026/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/ssc-chsl-2026/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"SSC CHSL Tier-I Marks / Score Card 2026 &#8211; Out\",\"datePublished\":\"2026-03-19T13:35:22+00:00\",...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -3934,7 +3809,7 @@
         "https://sarkariresult.com.cm/ssc-chsl-2026/"
       ],
       "sourceTitles": [
-        "SSC CHSL Tier-I Marks / Score Card 2026 – Out"
+        "SSC CHSL Tier-II Exam City Notice 2026 – Out"
       ],
       "sourceRecords": [
         {
@@ -3943,12 +3818,12 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "SSC CHSL Tier-I Marks / Score Card 2026 – Out",
+          "title": "SSC CHSL Tier-II Exam City Notice 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/ssc-chsl-2026/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.333Z"
+      "updatedAt": "2026-03-24T03:25:50.483Z"
     },
     "950993c6a7bfb473620810af64f2675884b3bea505abdd72b57193fdfaaaa1a8": {
       "entityKey": "950993c6a7bfb473620810af64f2675884b3bea505abdd72b57193fdfaaaa1a8",
@@ -3992,25 +3867,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.641Z"
+      "updatedAt": "2026-03-24T03:25:53.090Z"
     },
-    "71489e52ca4b79b913c9dfb4af222677cd51dc8d3ddc8f783df77dc96ae4934f": {
-      "entityKey": "71489e52ca4b79b913c9dfb4af222677cd51dc8d3ddc8f783df77dc96ae4934f",
-      "title": "SSC JE Engineer Tier-II Exam Date 2026 – Out",
-      "comparableTitle": "SSC JE Engineer Tier-II Exam Date 2026",
+    "1400eb6355376ebd34ba61fcfe52fc933a953777e2359b06f22fc893dd682c6a": {
+      "entityKey": "1400eb6355376ebd34ba61fcfe52fc933a953777e2359b06f22fc893dd682c6a",
+      "title": "SSC JE Engineer Tier-II Exam City Notice 2026 – Out",
+      "comparableTitle": "SSC JE Engineer Tier-II Exam City Notice 2026",
       "jobUrl": "https://sarkariresult.com.cm/ssc-jr-engineer-2025/",
-      "canonicalUrl": "https://sarkariresult.com.cm/ssc-jr-engineer-2025/",
-      "pageTitle": "SSC JE Engineer Tier-II Exam Date 2026 Out",
-      "metaDescription": "SSC JE Engineer Tier-II Exam Date 2026 : has released the Tier-II Exam Date on its official website for the Recruitment of Junior Engineer Examination 2025.",
-      "contentHash": "75d7b23b666b9885fc6b00d03dc6047e0bbdbb6ce7a2ad8cc88770861734fb8a",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Related Posts",
-        "SSC JE Engineer Tier-II Exam Date 2026",
-        "SSC JE Engineer Tier-II Exam Date 2026 – Out",
-        "SSC Junior Engineer JE Examination 2025 : Short Details"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } SSC JE Engineer Tier-II Exam Date 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/ssc-jr-engineer-2025/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/ssc-jr-engineer-2025/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"SSC JE Engineer Tier-II Exam Date 2026 &#8211; Out\",\"datePublished\":\"2026-03-09T09:5...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -4022,7 +3891,7 @@
         "https://sarkariresult.com.cm/ssc-jr-engineer-2025/"
       ],
       "sourceTitles": [
-        "SSC JE Engineer Tier-II Exam Date 2026 – Out"
+        "SSC JE Engineer Tier-II Exam City Notice 2026 – Out"
       ],
       "sourceRecords": [
         {
@@ -4031,12 +3900,12 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "SSC JE Engineer Tier-II Exam Date 2026 – Out",
+          "title": "SSC JE Engineer Tier-II Exam City Notice 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/ssc-jr-engineer-2025/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:12.450Z"
+      "updatedAt": "2026-03-24T03:25:50.483Z"
     },
     "1e2adc6b86b1529917ec3a035efdd0f31446bec5f62dfb69267c8f5aa2fbb8eb": {
       "entityKey": "1e2adc6b86b1529917ec3a035efdd0f31446bec5f62dfb69267c8f5aa2fbb8eb",
@@ -4079,7 +3948,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:12.506Z"
+      "updatedAt": "2026-03-24T03:25:54.750Z"
     },
     "b2973835803e36f46bf55ca7f9b24617d709fd4a9392eaf33eb659a50b166060": {
       "entityKey": "b2973835803e36f46bf55ca7f9b24617d709fd4a9392eaf33eb659a50b166060",
@@ -4123,7 +3992,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.970Z"
+      "updatedAt": "2026-03-24T03:25:53.147Z"
     },
     "82671ff74de1ba6465d3f1be4d3febf23e6377ece524f9d7398871d893454ec2": {
       "entityKey": "82671ff74de1ba6465d3f1be4d3febf23e6377ece524f9d7398871d893454ec2",
@@ -4167,7 +4036,45 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.306Z"
+      "updatedAt": "2026-03-24T03:25:51.945Z"
+    },
+    "c3a66f9b82a5741b7ac04fc432f5f3a5ba782a8b71d6f1ffd4ff6d641b4c7f98": {
+      "entityKey": "c3a66f9b82a5741b7ac04fc432f5f3a5ba782a8b71d6f1ffd4ff6d641b4c7f98",
+      "title": "UP Dakhil Kharij, Registration Online 2026",
+      "comparableTitle": "UP Dakhil Kharij, Registration Online 2026",
+      "jobUrl": "https://sarkariresult.com.cm/up-dakhil-kharij-registration-online-2026/",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
+      "detailError": "",
+      "sourceSites": [
+        "Sarkari Result"
+      ],
+      "sourceSectionUrls": [
+        "https://www.sarkariresult.com.cm/"
+      ],
+      "sourceJobUrls": [
+        "https://sarkariresult.com.cm/up-dakhil-kharij-registration-online-2026/"
+      ],
+      "sourceTitles": [
+        "UP Dakhil Kharij, Registration Online 2026"
+      ],
+      "sourceRecords": [
+        {
+          "sectionName": "Sarkari Result",
+          "sectionUrls": [
+            "https://www.sarkariresult.com.cm/"
+          ],
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "title": "UP Dakhil Kharij, Registration Online 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-dakhil-kharij-registration-online-2026/"
+        }
+      ],
+      "seenOnSourcesCount": 1,
+      "updatedAt": "2026-03-24T03:25:50.531Z"
     },
     "b40f8c64b64acfff1c5ddff2aa110d7932d292784e783a403bb65183d78a616b": {
       "entityKey": "b40f8c64b64acfff1c5ddff2aa110d7932d292784e783a403bb65183d78a616b",
@@ -4210,7 +4117,45 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.988Z"
+      "updatedAt": "2026-03-24T03:25:54.378Z"
+    },
+    "42700a34a3381e48fd648a5d6276144ce6f79a3d225b7130f10d2a4e1b9ba770": {
+      "entityKey": "42700a34a3381e48fd648a5d6276144ce6f79a3d225b7130f10d2a4e1b9ba770",
+      "title": "UP Police Computer Operator Grade-A Exam Date 2026",
+      "comparableTitle": "UP Police Computer Operator Grade-A Exam Date 2026",
+      "jobUrl": "https://sarkariresult.com.cm/up-police-computer-operator-2026/",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
+      "detailError": "",
+      "sourceSites": [
+        "Sarkari Result"
+      ],
+      "sourceSectionUrls": [
+        "https://www.sarkariresult.com.cm/"
+      ],
+      "sourceJobUrls": [
+        "https://sarkariresult.com.cm/up-police-computer-operator-2026/"
+      ],
+      "sourceTitles": [
+        "UP Police Computer Operator Grade-A Exam Date 2026"
+      ],
+      "sourceRecords": [
+        {
+          "sectionName": "Sarkari Result",
+          "sectionUrls": [
+            "https://www.sarkariresult.com.cm/"
+          ],
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "title": "UP Police Computer Operator Grade-A Exam Date 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-police-computer-operator-2026/"
+        }
+      ],
+      "seenOnSourcesCount": 1,
+      "updatedAt": "2026-03-24T03:25:50.483Z"
     },
     "5d489c8fee211e9a3d4c742f819e4015ccc6793b042999b285c4670630c82bc6": {
       "entityKey": "5d489c8fee211e9a3d4c742f819e4015ccc6793b042999b285c4670630c82bc6",
@@ -4253,7 +4198,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.034Z"
+      "updatedAt": "2026-03-24T03:25:54.826Z"
     },
     "7e83611f66cbbe690779aa31473fb9b015965dd74b8bc701ed93f8f57a028e08": {
       "entityKey": "7e83611f66cbbe690779aa31473fb9b015965dd74b8bc701ed93f8f57a028e08",
@@ -4296,7 +4241,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.089Z"
+      "updatedAt": "2026-03-24T03:25:54.594Z"
     },
     "5d02e99793c8a40d15b21c4d42b1cf77bb19aeae6cd66ee0fadf1b7d0dfd6f80": {
       "entityKey": "5d02e99793c8a40d15b21c4d42b1cf77bb19aeae6cd66ee0fadf1b7d0dfd6f80",
@@ -4306,7 +4251,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/up-police-recruitment-calendar-2025-26/",
       "pageTitle": "UP Police Recruitment Calendar 2025-26",
       "metaDescription": "UP Police Recruitment Calendar 2025-26 : has released the recruitment calendar for 2025–26, giving candidates clarity on exam dates, notifications, and vacancies.",
-      "contentHash": "747495961fa83e860a219b53b957487feb6c2198adf010030ba19921255d2af8",
+      "contentHash": "577dd2a982b66992634a9451d17eabf83f82209b99b5e0b0ccbb1c6925f53d74",
       "headingSnapshot": [
         "Latest Posts",
         "Related Posts",
@@ -4340,25 +4285,25 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.841Z"
+      "updatedAt": "2026-03-24T03:25:54.387Z"
     },
     "04d5e7d1849d773580aab57bd227ed7ce6661752e3a36d1c080216f74afdc108": {
       "entityKey": "04d5e7d1849d773580aab57bd227ed7ce6661752e3a36d1c080216f74afdc108",
-      "title": "UP Police SI Answer Key 2026 – Soon",
+      "title": "UP Police SI Answer Key 2026 – Out",
       "comparableTitle": "UP Police SI Answer Key 2026",
       "jobUrl": "https://sarkariresult.com.cm/up-police-si-2025/",
       "canonicalUrl": "https://sarkariresult.com.cm/up-police-si-2025/",
-      "pageTitle": "UP Police SI Answer Key 2026 Released Soon",
-      "metaDescription": "UP Police SI Answer Key 2026 : will release the Answer Key on the official website for the recruitment of Sub Inspector and Platoon Commander posts.",
-      "contentHash": "14570889d3fd59437994541ba6990940ae179337c02c2430082aa78c0748dae2",
+      "pageTitle": "UP Police SI Answer Key 2026 Released",
+      "metaDescription": "UP Police SI Answer Key 2026 : has released the Answer Key on the official website for the recruitment of Sub Inspector and Platoon Commander posts.",
+      "contentHash": "1499fb2510bcf04bb1eed8e2a621e949ac66f84a51d6b9d8890c316d5a115e81",
       "headingSnapshot": [
         "Latest Posts",
         "Related Posts",
         "UP Police SI Answer Key 2026",
-        "UP Police SI Answer Key 2026 – Soon",
+        "UP Police SI Answer Key 2026 – Out",
         "UP Police SI Examination 2025 : Short Details"
       ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } UP Police SI Answer Key 2026 Released Soon {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/up-police-si-2025/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/up-police-si-2025/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"UP Police SI Answer Key 2026 &#8211; Soon\",\"datePublished\":\"2026-03-16T12:07:59+00:00\",\"da...",
+      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } UP Police SI Answer Key 2026 Released {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/up-police-si-2025/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/up-police-si-2025/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"UP Police SI Answer Key 2026 &#8211; Out\",\"datePublished\":\"2026-03-23T16:49:34+00:00\",\"dateModi...",
       "detailError": "",
       "sourceSites": [
         "Sarkari Result"
@@ -4370,7 +4315,7 @@
         "https://sarkariresult.com.cm/up-police-si-2025/"
       ],
       "sourceTitles": [
-        "UP Police SI Answer Key 2026 – Soon"
+        "UP Police SI Answer Key 2026 – Out"
       ],
       "sourceRecords": [
         {
@@ -4379,12 +4324,50 @@
             "https://www.sarkariresult.com.cm/"
           ],
           "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "UP Police SI Answer Key 2026 – Soon",
+          "title": "UP Police SI Answer Key 2026 – Out",
           "jobUrl": "https://sarkariresult.com.cm/up-police-si-2025/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.829Z"
+      "updatedAt": "2026-03-24T03:25:50.816Z"
+    },
+    "510027349950a89aaedab73c3698cebb4261a2e6789e725d6f1449676fff9397": {
+      "entityKey": "510027349950a89aaedab73c3698cebb4261a2e6789e725d6f1449676fff9397",
+      "title": "UP Police SI Confidential, ASI Clerk & ASI Accounts Exam Date 2026",
+      "comparableTitle": "UP Police SI Confidential, ASI Clerk & ASI Accounts Exam Date 2026",
+      "jobUrl": "https://sarkariresult.com.cm/up-police-si-confidential-asi-clerk-accounts-2026/",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
+      "detailError": "",
+      "sourceSites": [
+        "Sarkari Result"
+      ],
+      "sourceSectionUrls": [
+        "https://www.sarkariresult.com.cm/"
+      ],
+      "sourceJobUrls": [
+        "https://sarkariresult.com.cm/up-police-si-confidential-asi-clerk-accounts-2026/"
+      ],
+      "sourceTitles": [
+        "UP Police SI Confidential, ASI Clerk & ASI Accounts Exam Date 2026"
+      ],
+      "sourceRecords": [
+        {
+          "sectionName": "Sarkari Result",
+          "sectionUrls": [
+            "https://www.sarkariresult.com.cm/"
+          ],
+          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
+          "title": "UP Police SI Confidential, ASI Clerk & ASI Accounts Exam Date 2026",
+          "jobUrl": "https://sarkariresult.com.cm/up-police-si-confidential-asi-clerk-accounts-2026/"
+        }
+      ],
+      "seenOnSourcesCount": 1,
+      "updatedAt": "2026-03-24T03:25:50.483Z"
     },
     "89fac116ce8d5490c100b32b2621c8cf5dbdb5956dd5256d74dcd582c9dc8fed": {
       "entityKey": "89fac116ce8d5490c100b32b2621c8cf5dbdb5956dd5256d74dcd582c9dc8fed",
@@ -4394,7 +4377,7 @@
       "canonicalUrl": "https://sarkariresult.com.cm/up-police-si-asi-syllabus-exam-pattern-2025/",
       "pageTitle": "UP Police SI, ASI Syllabus / Exam Pattern 2025",
       "metaDescription": "UP Police SI, ASI Syllabus / Exam Pattern 2025 : UP Police has released syllabus / exam pattern on official website for the recruitment of UP Police SI, ASI positions.",
-      "contentHash": "d348a1dddb6e08cc8af7dde99ee1cd26ac1fdb0e102bc9c0f9dd25b52431fb77",
+      "contentHash": "20b39db3f2b30f41f18ea1c5cbccf3aa14550ac4cb3babdf98c70e8fbd144253",
       "headingSnapshot": [
         "Latest Posts",
         "Related Posts",
@@ -4428,32 +4411,19 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.397Z"
+      "updatedAt": "2026-03-24T03:25:53.207Z"
     },
-    "6554e9c126c63ccc2b35df7c566abdc37b396ac0f8e90b1203c4fe513ecd85b6": {
-      "entityKey": "6554e9c126c63ccc2b35df7c566abdc37b396ac0f8e90b1203c4fe513ecd85b6",
-      "title": "UP Police Sub Inspector SI Admit Card 2026",
-      "comparableTitle": "UP Police Sub Inspector SI Admit Card 2026",
+    "c7c83a00f5f9781065c18d868c5f5351ca7b606e1d1236d6f731b0e52f21b53d": {
+      "entityKey": "c7c83a00f5f9781065c18d868c5f5351ca7b606e1d1236d6f731b0e52f21b53d",
+      "title": "UP Police Sub Inspector SI Answer Key 2026",
+      "comparableTitle": "UP Police Sub Inspector SI Answer Key 2026",
       "jobUrl": "https://rojgarresult.com/up-police-sub-inspector-si-03-2025/",
-      "canonicalUrl": "https://rojgarresult.com/up-police-sub-inspector-si-03-2025/",
-      "pageTitle": "UP Police Sub Inspector SI Admit Card 2026",
-      "metaDescription": "Download Exam Notice for UP Police Sub Inspector SI Exam 2025 Check Eligibility, Download Notification, Age Limit, PET Details, How to Apply and More",
-      "contentHash": "b2d39f9c7926ac4974fafa2281b757029ac7da5be81e0e5cc6a6a62add63b04c",
-      "headingSnapshot": [
-        "Age Limit",
-        "Application Fees",
-        "Apply Online (OTR)",
-        "Check Exam City",
-        "Clarification Notice for Degree / Provisional Certificate",
-        "Click Here",
-        "Connect With Us",
-        "Download Admit Card",
-        "Download Admit Card Notice",
-        "Download Correction Notice",
-        "Download Exam City Notice",
-        "Download Exam Notice"
-      ],
-      "contentPreview": "UP Police Sub Inspector SI Admit Card 2026 {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":[\"Person\",\"Organization\"],\"@id\":\"https://rojgarresult.com/#person\",\"name\":\"Rojgar Result Testing Portal\",\"logo\":{\"@type\":\"ImageObject\",\"@id\":\"https://rojgarresult.com/#logo\",\"url\":\"https://rojgarresult.com/wp-content/uploads/2025/12/cropped-RR-LOGO-HD-Quality-150x150.png\",\"contentUrl\":\"https://rojgarresult.com/wp-content/uploads/2025/12/cropped-RR-LOGO-HD-Quality-150x150.png\",\"caption\":\"Rojgar Result Testing Portal\",\"inLanguage\":\"en-US\"},\"image\":{\"@type\":\"ImageObject\",\"@id\":\"https://rojgarresult.com/#logo\",\"url\":\"https://rojgarresult.com/wp-content/uploads/2025/12/cropped-RR-LOGO-HD-Quality-150x...",
+      "canonicalUrl": "",
+      "pageTitle": "",
+      "metaDescription": "",
+      "contentHash": "",
+      "headingSnapshot": [],
+      "contentPreview": "",
       "detailError": "",
       "sourceSites": [
         "Rojgar Result"
@@ -4465,7 +4435,7 @@
         "https://rojgarresult.com/up-police-sub-inspector-si-03-2025/"
       ],
       "sourceTitles": [
-        "UP Police Sub Inspector SI Admit Card 2026"
+        "UP Police Sub Inspector SI Answer Key 2026"
       ],
       "sourceRecords": [
         {
@@ -4474,12 +4444,12 @@
             "https://rojgarresult.com/"
           ],
           "sourceSectionUrl": "https://rojgarresult.com/",
-          "title": "UP Police Sub Inspector SI Admit Card 2026",
+          "title": "UP Police Sub Inspector SI Answer Key 2026",
           "jobUrl": "https://rojgarresult.com/up-police-sub-inspector-si-03-2025/"
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:06.977Z"
+      "updatedAt": "2026-03-24T03:25:50.531Z"
     },
     "52283fc4dc5c6633f46e9151282fd40ca3cc21f042529a11a10d0a0fa8a685dc": {
       "entityKey": "52283fc4dc5c6633f46e9151282fd40ca3cc21f042529a11a10d0a0fa8a685dc",
@@ -4522,7 +4492,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.063Z"
+      "updatedAt": "2026-03-24T03:25:54.697Z"
     },
     "888b86101b50268bbb0ef898e5cab87d49b1898da0859818d90839805f1731b9": {
       "entityKey": "888b86101b50268bbb0ef898e5cab87d49b1898da0859818d90839805f1731b9",
@@ -4566,51 +4536,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.921Z"
-    },
-    "16b93cdfafea7ccfd4a196290d60b4621dfa17e6e1aa415834cfe2d1b5384edb": {
-      "entityKey": "16b93cdfafea7ccfd4a196290d60b4621dfa17e6e1aa415834cfe2d1b5384edb",
-      "title": "UPPSC APO Admit Card 2026 – Out",
-      "comparableTitle": "UPPSC APO Admit Card 2026",
-      "jobUrl": "https://sarkariresult.com.cm/uppsc-apo-2025/",
-      "canonicalUrl": "https://sarkariresult.com.cm/uppsc-apo-2025/",
-      "pageTitle": "UPPSC APO Admit Card 2026 Out",
-      "metaDescription": "UPPSC APO Admit Card 2026 : has released Exam Date on official website for the recruitment of Assistant Prosecution Officer (APO) Post.",
-      "contentHash": "946b1851406eaf9d56806fb97bb79634a1a6eec37ff1e428050baaaa5da74d12",
-      "headingSnapshot": [
-        "Latest Posts",
-        "Related Posts",
-        "UPPSC APO Admit Card 2026",
-        "UPPSC APO Admit Card 2026 – Out",
-        "UPPSC APO Examination 2025 : Short Details"
-      ],
-      "contentPreview": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-LZ32T0N2XE'); img:is([sizes=\"auto\" i], [sizes^=\"auto,\" i]) { contain-intrinsic-size: 3000px 1500px } UPPSC APO Admit Card 2026 Out {\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Article\",\"@id\":\"https://sarkariresult.com.cm/uppsc-apo-2025/#article\",\"isPartOf\":{\"@id\":\"https://sarkariresult.com.cm/uppsc-apo-2025/\"},\"author\":{\"name\":\"SarkariResult.Com.Cm\",\"@id\":\"https://sarkariresult.com.cm/#/schema/person/26eb381d868ac1b64f4222cd1c50f033\"},\"headline\":\"UPPSC APO Admit Card 2026 &#8211; Out\",\"datePublished\":\"2026-03-12T12:10:05+00:00\",\"dateModified\":\"2026-03-13...",
-      "detailError": "",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "sourceSectionUrls": [
-        "https://www.sarkariresult.com.cm/"
-      ],
-      "sourceJobUrls": [
-        "https://sarkariresult.com.cm/uppsc-apo-2025/"
-      ],
-      "sourceTitles": [
-        "UPPSC APO Admit Card 2026 – Out"
-      ],
-      "sourceRecords": [
-        {
-          "sectionName": "Sarkari Result",
-          "sectionUrls": [
-            "https://www.sarkariresult.com.cm/"
-          ],
-          "sourceSectionUrl": "https://www.sarkariresult.com.cm/",
-          "title": "UPPSC APO Admit Card 2026 – Out",
-          "jobUrl": "https://sarkariresult.com.cm/uppsc-apo-2025/"
-        }
-      ],
-      "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.903Z"
+      "updatedAt": "2026-03-24T03:25:52.800Z"
     },
     "cbee215a59ac511851c6df780f72273225d059e946f6ddb76109a1fda3ee939d": {
       "entityKey": "cbee215a59ac511851c6df780f72273225d059e946f6ddb76109a1fda3ee939d",
@@ -4654,7 +4580,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.267Z"
+      "updatedAt": "2026-03-24T03:25:52.722Z"
     },
     "e52b8783b5355abfd0ad9a07f16560643c519b3013ec1a6a0bba3fb0b9612aa6": {
       "entityKey": "e52b8783b5355abfd0ad9a07f16560643c519b3013ec1a6a0bba3fb0b9612aa6",
@@ -4698,7 +4624,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.999Z"
+      "updatedAt": "2026-03-24T03:25:53.138Z"
     },
     "931e7ef8963f29a046ddc162236f32a2d77595fa1d29e54f79c7be77e4b327c7": {
       "entityKey": "931e7ef8963f29a046ddc162236f32a2d77595fa1d29e54f79c7be77e4b327c7",
@@ -4742,7 +4668,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.163Z"
+      "updatedAt": "2026-03-24T03:25:52.763Z"
     },
     "c1e3bd6bf94fc354b0175c3d74f25997e792885713fc80f5201c2c7d20d8a1e3": {
       "entityKey": "c1e3bd6bf94fc354b0175c3d74f25997e792885713fc80f5201c2c7d20d8a1e3",
@@ -4786,7 +4712,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.865Z"
+      "updatedAt": "2026-03-24T03:25:52.713Z"
     },
     "0d9a37ec79ef2fe15e84eaa1843c71b06383a3c91dbf6a92314d53e2f6f676f6": {
       "entityKey": "0d9a37ec79ef2fe15e84eaa1843c71b06383a3c91dbf6a92314d53e2f6f676f6",
@@ -4830,7 +4756,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.175Z"
+      "updatedAt": "2026-03-24T03:25:54.054Z"
     },
     "3f647ee250a2f6a1713bf543269bf03c31febf8fa832ab42a6d41fd109a55230": {
       "entityKey": "3f647ee250a2f6a1713bf543269bf03c31febf8fa832ab42a6d41fd109a55230",
@@ -4875,7 +4801,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.728Z"
+      "updatedAt": "2026-03-24T03:25:54.211Z"
     },
     "60f6d6fa61680aeaa254caf9badcd54170fa33b23c3dbe55e4109156c8ab2add": {
       "entityKey": "60f6d6fa61680aeaa254caf9badcd54170fa33b23c3dbe55e4109156c8ab2add",
@@ -4918,7 +4844,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:13.049Z"
+      "updatedAt": "2026-03-24T03:25:54.787Z"
     },
     "5eb477a5eb6f7d7e85a7970d0511b082b75f986780399339d71895f77c3633a6": {
       "entityKey": "5eb477a5eb6f7d7e85a7970d0511b082b75f986780399339d71895f77c3633a6",
@@ -4964,7 +4890,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:07.953Z"
+      "updatedAt": "2026-03-24T03:25:52.855Z"
     },
     "7cdd9d868d450a26fdfec73d58c83a641952d8ce0734b9342478cdc18dae3921": {
       "entityKey": "7cdd9d868d450a26fdfec73d58c83a641952d8ce0734b9342478cdc18dae3921",
@@ -5008,7 +4934,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.266Z"
+      "updatedAt": "2026-03-24T03:25:53.099Z"
     },
     "c781c84e424f187f55b54e6fcb7ef13a1a9d9d4650227a82b2762d053a113743": {
       "entityKey": "c781c84e424f187f55b54e6fcb7ef13a1a9d9d4650227a82b2762d053a113743",
@@ -5052,7 +4978,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.017Z"
+      "updatedAt": "2026-03-24T03:25:53.129Z"
     },
     "9adab705dcc114e5e9a8a9616e71458e999285c5a3fb59841f72be1e280b2e3f": {
       "entityKey": "9adab705dcc114e5e9a8a9616e71458e999285c5a3fb59841f72be1e280b2e3f",
@@ -5096,7 +5022,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.073Z"
+      "updatedAt": "2026-03-24T03:25:52.785Z"
     },
     "b4f40d095a2db5714ff4cfd712f4298faa259220aae75710fa7ed8788e6eb25c": {
       "entityKey": "b4f40d095a2db5714ff4cfd712f4298faa259220aae75710fa7ed8788e6eb25c",
@@ -5140,7 +5066,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:08.346Z"
+      "updatedAt": "2026-03-24T03:25:54.835Z"
     },
     "4554dfae99b48da4395ecbc09e4adf7f6e0ff694de3c9b8472508fd0bb902e47": {
       "entityKey": "4554dfae99b48da4395ecbc09e4adf7f6e0ff694de3c9b8472508fd0bb902e47",
@@ -5184,7 +5110,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.775Z"
+      "updatedAt": "2026-03-24T03:25:54.713Z"
     },
     "e9e0341c0b443a468d1c151fe4904779a715e1ed5c61de0a8e74ce3a793a10e4": {
       "entityKey": "e9e0341c0b443a468d1c151fe4904779a715e1ed5c61de0a8e74ce3a793a10e4",
@@ -5227,7 +5153,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:09.022Z"
+      "updatedAt": "2026-03-24T03:25:53.155Z"
     },
     "fcc9951dc3426a6eb39e186398ab1e2eea25e6f5b51c3978cfcb8c6762db02dd": {
       "entityKey": "fcc9951dc3426a6eb39e186398ab1e2eea25e6f5b51c3978cfcb8c6762db02dd",
@@ -5270,7 +5196,7 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:12.280Z"
+      "updatedAt": "2026-03-24T03:25:53.234Z"
     },
     "80c1f48d34ec9ad42b3f0d8d92378b6926ac66bb798f0a87f771d90ccf4dadfd": {
       "entityKey": "80c1f48d34ec9ad42b3f0d8d92378b6926ac66bb798f0a87f771d90ccf4dadfd",
@@ -5308,25 +5234,35 @@
         }
       ],
       "seenOnSourcesCount": 1,
-      "updatedAt": "2026-03-22T14:00:10.811Z"
+      "updatedAt": "2026-03-24T03:25:54.549Z"
     }
   },
   "lastRun": {
-    "updatedAt": "2026-03-22T14:00:38.834Z",
+    "updatedAt": "2026-03-24T03:26:02.147Z",
     "totalUniqueJobs": 105,
-    "newJobs": 0,
-    "updatedJobs": 0,
+    "newJobs": 11,
+    "updatedJobs": 2,
     "processedTargets": 3,
     "preservedSnapshots": 0,
     "delivery": {
-      "attempted": 0,
-      "sent": 0,
+      "attempted": 3,
+      "sent": 3,
       "pending": 0,
       "failures": []
     },
     "errors": []
   },
   "runHistory": [
+    {
+      "updatedAt": "2026-03-24T03:26:02.147Z",
+      "processedTargets": 3,
+      "failedTargets": 0,
+      "totalUniqueJobs": 105,
+      "newJobs": 11,
+      "updatedJobs": 2,
+      "deliveryPending": 0,
+      "deliverySent": 3
+    },
     {
       "updatedAt": "2026-03-22T14:00:38.834Z",
       "processedTargets": 3,
@@ -5566,19 +5502,69 @@
       "updatedJobs": 0,
       "deliveryPending": 0,
       "deliverySent": 0
-    },
-    {
-      "updatedAt": "2026-03-22T12:37:41.287Z",
-      "processedTargets": 3,
-      "failedTargets": 0,
-      "totalUniqueJobs": 105,
-      "newJobs": 0,
-      "updatedJobs": 0,
-      "deliveryPending": 0,
-      "deliverySent": 0
     }
   ],
   "deliveryLog": [
+    {
+      "id": "a91ac2b4d0d57e2c196a1826",
+      "deliveryKey": "e03fe2e9ed79add02629b4bd",
+      "type": "new_jobs",
+      "sectionName": "Tracked Sources",
+      "title": "11 new jobs detected",
+      "jobUrl": "",
+      "sourceSites": [
+        "Rojgar Result",
+        "Sarkari Result"
+      ],
+      "changedFields": [],
+      "status": "sent",
+      "reason": "",
+      "error": "",
+      "messageId": "<68ff3d6d-75d0-89d1-6497-f22a2669c571@gmail.com>",
+      "createdAt": "2026-03-24T03:25:58.334Z"
+    },
+    {
+      "id": "8ecacfff090fa0efd8025f1c",
+      "deliveryKey": "b7ac315a909ef2e266939dd7",
+      "type": "job_update",
+      "sectionName": "Rojgar Result",
+      "title": "Central Bank of India Specialists Officers SO Online Form 2026 for 275 Post",
+      "jobUrl": "https://rojgarresult.com/central-bank-of-india-specialists-officers-2026/",
+      "sourceSites": [
+        "Rojgar Result"
+      ],
+      "changedFields": [
+        "Page Headings"
+      ],
+      "status": "sent",
+      "reason": "",
+      "error": "",
+      "messageId": "<9a0994e4-045d-6125-4c36-4c8c21c8fb12@gmail.com>",
+      "createdAt": "2026-03-24T03:26:00.044Z"
+    },
+    {
+      "id": "f95d134276e6fae99de185cc",
+      "deliveryKey": "8e5b64a52a3c357d8d14e9bb",
+      "type": "job_update",
+      "sectionName": "Sarkari Result",
+      "title": "UP Police SI Answer Key 2026 – Out",
+      "jobUrl": "https://sarkariresult.com.cm/up-police-si-2025/",
+      "sourceSites": [
+        "Sarkari Result"
+      ],
+      "changedFields": [
+        "Meta Description",
+        "Page Content Preview",
+        "Page Headings",
+        "Page Title",
+        "Title"
+      ],
+      "status": "sent",
+      "reason": "",
+      "error": "",
+      "messageId": "<af8a280c-215d-3a71-006c-f2e321ad6a86@gmail.com>",
+      "createdAt": "2026-03-24T03:26:02.146Z"
+    },
     {
       "id": "f9a296950f5407b3cb157d8f",
       "deliveryKey": "fc831096c45377cfa49b2c1f",
@@ -7440,63 +7426,6 @@
       "error": "",
       "messageId": "<8a531a34-5dd5-e851-6dde-9e7604dff68f@gmail.com>",
       "createdAt": "2026-03-21T08:22:42.561Z"
-    },
-    {
-      "id": "5a8f774c9aef352316fd5655",
-      "deliveryKey": "2628fa95b1c02e6a2de8cd9d",
-      "type": "job_update",
-      "sectionName": "Sarkari Result",
-      "title": "Supreme Court SCI Court Master Final Result 2026 – Out",
-      "jobUrl": "https://sarkariresult.com.cm/sci-court-master-2026/",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "changedFields": [
-        "Page Headings"
-      ],
-      "status": "sent",
-      "reason": "",
-      "error": "",
-      "messageId": "<0fcf0969-8ec4-3656-0163-bc3fa52e5ad9@gmail.com>",
-      "createdAt": "2026-03-21T08:22:44.161Z"
-    },
-    {
-      "id": "338db984f929545b4c5ffca7",
-      "deliveryKey": "0fab71e3066480819b65281e",
-      "type": "job_update",
-      "sectionName": "Sarkari Result",
-      "title": "UP Anganwadi Bharti Online Form 2026 (Updated)",
-      "jobUrl": "https://sarkariresult.com.cm/up-anganwadi-bharti-2026/",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "changedFields": [
-        "Page Headings"
-      ],
-      "status": "sent",
-      "reason": "",
-      "error": "",
-      "messageId": "<ff2a3a19-cc5c-4ac2-d1e1-cd2fdd9747af@gmail.com>",
-      "createdAt": "2026-03-21T08:22:45.656Z"
-    },
-    {
-      "id": "9413a05e08bdeeb0c3ef87eb",
-      "deliveryKey": "1af74ab817c3d0d5589b0e0d",
-      "type": "job_update",
-      "sectionName": "Sarkari Result",
-      "title": "UP Income, Cast, Residential Certificate Online Verification 2026",
-      "jobUrl": "https://sarkariresult.com.cm/up-income-cast-residential-certificate-online-verification-2026/",
-      "sourceSites": [
-        "Sarkari Result"
-      ],
-      "changedFields": [
-        "Page Headings"
-      ],
-      "status": "sent",
-      "reason": "",
-      "error": "",
-      "messageId": "<494e0aeb-7297-b774-ec78-61ef7a380c80@gmail.com>",
-      "createdAt": "2026-03-21T08:22:47.202Z"
     }
   ],
   "pendingNotifications": [
