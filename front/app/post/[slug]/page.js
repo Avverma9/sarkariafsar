@@ -11,8 +11,12 @@ import {
   buildArticleSchema,
   buildBreadcrumbSchema,
   buildCollectionPageSchema,
+  buildFAQPageSchema,
+  buildHowToSchema,
   buildItemListSchema,
   buildPageMetadata,
+  stripHtml,
+  trimText,
   buildWebPageSchema,
 } from "../../lib/seo";
 import Link from "next/link";
@@ -22,32 +26,24 @@ import {
   parseSectionJobsQuery,
   SECTION_JOBS_DEFAULT_LIMIT,
 } from "../../lib/sectionJobsPage";
-import { getPostSectionConfig } from "../../lib/postSections";
 import { buildPostDetailsHref } from "../../lib/postLink";
 import { shouldNoIndexCollectionView } from "../../lib/contentQuality";
 
 async function loadPostData(params, searchParams, options = {}) {
   const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
-  const rawJobUrl = String(getFirstValue(resolvedSearchParams?.jobUrl) || "");
+  await searchParams;
 
-  return loadCachedPostDetailPageData(
-    slug,
-    rawJobUrl,
-    options.includeFormattedHtml !== false,
-  );
+  return loadCachedPostDetailPageData(slug, options.includeFormattedHtml !== false);
 }
 
 export async function generateMetadata({ params, searchParams }) {
   const resolvedParams = await params;
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
   const query = parseSectionJobsQuery(await searchParams);
-  const sectionConfig = getPostSectionConfig(slug);
-  const sectionData = sectionConfig
+  const sectionData = slug
     ? await loadSectionJobsPage({
-        slug: sectionConfig.canonicalSlug,
-        sectionKeys: sectionConfig.sectionKeys,
+        slug,
         limit: 12,
         page: 1,
       })
@@ -67,17 +63,18 @@ export async function generateMetadata({ params, searchParams }) {
   }
 
   // Post detail metadata
-  const { fetchError, post, canonicalKey, quality } = await loadPostData(params, searchParams, {
+  const { fetchError, post, canonicalKey, quality, jobDetail } = await loadPostData(params, searchParams, {
     includeFormattedHtml: false,
   });
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
-  const title = post?.header?.title || "Job Details";
+  const title = post?.header?.title || jobDetail?.title || "Job Details";
   const description =
     quality?.description ||
+    trimText(jobDetail?.scrapedContent?.contentHtml || "", 180) ||
     post?.header?.shortInfo ||
     "Detailed government job update with important dates, eligibility and links.";
 
-  if (!post || fetchError) {
+  if (!jobDetail || fetchError) {
     return buildPageMetadata({
       title: "Post Not Available",
       description: "Requested post details are currently unavailable.",
@@ -90,9 +87,21 @@ export async function generateMetadata({ params, searchParams }) {
     title,
     description,
     path: `/post/${resolvedCanonicalKey}`,
-    keywords: ["job details", "sarkari post", "apply online", title],
+    keywords: [
+      "job details",
+      "sarkari post",
+      "apply online",
+      title,
+      jobDetail?.sectionName,
+      jobDetail?.sectionCanonicalUrl,
+      jobDetail?.category,
+    ],
     type: "article",
     noIndex: Boolean(quality?.noIndex),
+    category: jobDetail?.category || jobDetail?.sectionName || "Government Jobs",
+    publishedTime: jobDetail?.createdAt,
+    modifiedTime: jobDetail?.updatedAt || jobDetail?.scrapedContent?.extractedAt,
+    section: jobDetail?.sectionName || "Government Jobs",
   });
 }
 
@@ -101,12 +110,10 @@ export default async function PostSlugPage({ params, searchParams }) {
   const slug = String(getFirstValue(resolvedParams?.slug) || "");
   const resolvedSearchParams = await searchParams;
   const query = parseSectionJobsQuery(resolvedSearchParams);
-  const sectionConfig = getPostSectionConfig(slug);
-  const initialSectionData = sectionConfig
+  const initialSectionData = slug
     ? await loadSectionJobsPage({
         ...query,
-        slug: sectionConfig.canonicalSlug,
-        sectionKeys: sectionConfig.sectionKeys,
+        slug,
       })
     : null;
 
@@ -162,7 +169,7 @@ export default async function PostSlugPage({ params, searchParams }) {
   }
 
   // Otherwise render post detail
-  const { jobUrl, fetchError, jobDetail, post, canonicalKey, formattedHtml, quality } =
+  const { fetchError, jobDetail, post, canonicalKey, formattedHtml, quality } =
     await loadPostData(params, searchParams);
 
   const resolvedCanonicalKey = canonicalKey || slug || "post-detail";
@@ -178,56 +185,89 @@ export default async function PostSlugPage({ params, searchParams }) {
   }
 
   const path = `/post/${resolvedCanonicalKey}`;
-  const title = post?.header?.title || "Job Details";
+  const title = post?.header?.title || jobDetail?.title || "Job Details";
+  const bodyText = stripHtml(formattedHtml || "");
   const description =
     quality?.description ||
+    trimText(bodyText, 180) ||
+    jobDetail?.scrapedContent?.contentJson?.sectionName ||
     post?.header?.shortInfo ||
     "Detailed government job update with important dates, eligibility and links.";
-  const structuredData =
-    jobUrl && !fetchError && jobDetail && post && !quality?.noIndex
+  const breadcrumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Jobs", url: "/post" },
+    ...(jobDetail?.sectionCanonicalUrl
       ? [
-          buildBreadcrumbSchema(
-            [
-              { name: "Home", url: "/" },
-              { name: "Jobs", url: "/post" },
-              { name: title, url: path },
-            ],
-            { path },
-          ),
+          {
+            name: jobDetail?.sectionName || "Section",
+            url: `/post/${jobDetail.sectionCanonicalUrl}`,
+          },
+        ]
+      : []),
+    { name: title, url: path },
+  ];
+  const howToSteps =
+    Array.isArray(jobDetail?.how_to_apply?.steps)
+      ? jobDetail.how_to_apply.steps
+          .map((item) => item?.action || item?.text || "")
+          .filter(Boolean)
+      : [];
+  const faqQuestions = Array.isArray(jobDetail?.faq?.questions) ? jobDetail.faq.questions : [];
+  const structuredData =
+    !fetchError && jobDetail && !quality?.noIndex
+      ? [
+          buildBreadcrumbSchema(breadcrumbItems, { path }),
           buildWebPageSchema({
             title,
             description,
             path,
-            breadcrumbItems: [
-              { name: "Home", url: "/" },
-              { name: "Jobs", url: "/post" },
-              { name: title, url: path },
-            ],
+            breadcrumbItems,
             mainEntityId: absoluteUrl(`${path}#article`),
-            dateModified: jobDetail?.fetchedAt || jobDetail?.updatedAt,
+            datePublished: jobDetail?.createdAt,
+            dateModified: jobDetail?.updatedAt || jobDetail?.scrapedContent?.extractedAt,
           }),
           buildArticleSchema({
             title,
             description,
             path,
             type: "Article",
-            section: post?.header?.badge || "Government Jobs",
-            keywords: ["job details", "sarkari post", "apply online", title],
-            modifiedTime: jobDetail?.fetchedAt || jobDetail?.updatedAt,
+            section:
+              jobDetail?.sectionName ||
+              post?.header?.badge ||
+              "Government Jobs",
+            keywords: [
+              "job details",
+              "sarkari post",
+              "apply online",
+              title,
+              jobDetail?.sectionName,
+              jobDetail?.category,
+            ],
+            publishedTime: jobDetail?.createdAt,
+            modifiedTime: jobDetail?.updatedAt || jobDetail?.scrapedContent?.extractedAt,
+          }),
+          buildHowToSchema({
+            title: `How to apply for ${title}`,
+            description,
+            path,
+            steps: howToSteps,
+          }),
+          buildFAQPageSchema({
+            path,
+            questions: faqQuestions,
           }),
         ]
+          .filter(Boolean)
       : [];
 
   return (
     <PostPageShell showTopBanner={false}>
       <StructuredData data={structuredData} />
 
-      {!jobUrl ? (
+      {fetchError || !jobDetail || !formattedHtml ? (
         <div className="px-4 py-12">
           <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
-            <p className="text-sm font-semibold">
-              Yeh post ab direct resolve nahi ho pa raha. Aap relevant jobs list se dubara open kar sakte hain.
-            </p>
+            <p className="text-sm font-semibold">{fetchError || "Post detail data not available."}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href={fallbackHref}
@@ -244,22 +284,14 @@ export default async function PostSlugPage({ params, searchParams }) {
             </div>
           </div>
         </div>
-      ) : fetchError || !jobDetail || !post ? (
-        <div className="px-4 py-12">
-          <div className="mx-auto max-w-3xl rounded-2xl border border-rose-200 bg-rose-50 p-6 text-rose-700 shadow-sm">
-            <p className="text-sm font-semibold">{fetchError || "Post detail data not available."}</p>
-          </div>
-        </div>
       ) : null}
 
-      {jobUrl && !fetchError && (jobDetail || formattedHtml) ? (
+      {!fetchError && jobDetail && formattedHtml ? (
         <FullContent
-          postData={jobDetail}
           formattedHtml={formattedHtml}
-          title={title}
+          title={title || jobDetail?.title || "Job Details"}
           backHref="/post"
           backLabel="Back to Jobs"
-          badgeText="Job Details"
         />
       ) : null}
     </PostPageShell>

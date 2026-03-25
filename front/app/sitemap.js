@@ -114,6 +114,7 @@ function getPostEntries(sections = []) {
         return createEntry(`/post/${slug}`, {
           changeFrequency: "hourly",
           priority: 0.8,
+          lastModified: job?.updatedAt || section?.updatedAt || section?.createdAt || new Date(),
         });
       })
       .filter(Boolean),
@@ -136,7 +137,7 @@ async function getSitemapSections() {
       getSectionsWithJobs({ sectionLimit: 100, jobLimit: 100 }),
     );
 
-    return mapSectionsWithJobs(payload?.sections);
+    return mapSectionsWithJobs(payload?.sections || payload?.data);
   } catch {
     return [];
   }
@@ -166,6 +167,11 @@ export default async function sitemap() {
     createEntry("/post", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
     createEntry("/results", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
     createEntry("/admit-cards", {
+      changeFrequency: "hourly",
+      priority: 0.9,
+      lastModified: now,
+    }),
+    createEntry("/admission", {
       changeFrequency: "hourly",
       priority: 0.9,
       lastModified: now,

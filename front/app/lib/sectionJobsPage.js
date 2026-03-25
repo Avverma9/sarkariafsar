@@ -65,7 +65,7 @@ export async function loadSectionJobsPage({
       jobLimit: limit,
       jobSearch: normalizedQuery,
     });
-    const sections = mapSectionsWithJobs(payload?.sections);
+    const sections = mapSectionsWithJobs(payload?.sections || payload?.data);
     const section = findSectionByIdentifier(sections, {
       slug,
       sectionKeys,

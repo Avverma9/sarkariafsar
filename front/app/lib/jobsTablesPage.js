@@ -32,7 +32,7 @@ export async function loadJobsTablesPage({ limit = INITIAL_TABLE_LIMIT } = {}) {
       jobLimit: limit,
     });
 
-    const sections = mapSectionsWithJobs(payload?.sections);
+    const sections = mapSectionsWithJobs(payload?.sections || payload?.data);
     const cards = sections.map((section) => createSectionCard(section, limit));
 
     return {

@@ -65,6 +65,32 @@ async function requestJson(path, options = {}) {
   return response.json();
 }
 
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function extractCollection(payload) {
+  if (Array.isArray(payload?.data)) {
+    return payload.data;
+  }
+
+  if (Array.isArray(payload?.sections)) {
+    return payload.sections;
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return [];
+}
+
+function extractPagination(payload) {
+  return payload?.pagination && typeof payload.pagination === "object"
+    ? payload.pagination
+    : {};
+}
+
 export async function getStoredJobLists({ section } = {}) {
   return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`, {
     revalidate: SECTIONS_REVALIDATE_SECONDS,
@@ -73,31 +99,109 @@ export async function getStoredJobLists({ section } = {}) {
 }
 
 export async function getSectionsWithJobs({
-  status = "active",
-  search = "",
   section = "",
-  activeJobsOnly = "all",
   sectionLimit = 20,
   jobPage = 1,
   jobLimit = 10,
   jobSearch = "",
 } = {}) {
-  return requestJson(
-    `/section/get-all-sections-with-jobs${buildQueryString({
-      status,
-      search,
-      section,
-      activeJobsOnly,
-      sectionLimit,
-      jobPage,
-      jobLimit,
-      jobSearch,
-    })}`,
-    {
-      revalidate: SECTIONS_REVALIDATE_SECONDS,
-      tags: ["jobs-sections"],
-    },
+  const sectionsPayload = await requestJson("/postsection", {
+    revalidate: SECTIONS_REVALIDATE_SECONDS,
+    tags: ["jobs-sections"],
+  });
+  const allSections = extractCollection(sectionsPayload);
+  const normalizedSectionQuery = String(section || "").trim().toLowerCase();
+  const normalizedJobSearch = String(jobSearch || "").trim().toLowerCase();
+
+  const matchedSections = allSections.filter((item) => {
+    if (!normalizedSectionQuery) {
+      return true;
+    }
+
+    const aliases = [
+      item?.canonicalUrl,
+      item?.name,
+      item?.sourceSectionName,
+      ...(Array.isArray(item?.aliases) ? item.aliases : []),
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    return aliases.some((value) => value.includes(normalizedSectionQuery));
+  });
+
+  const limitedSections = matchedSections.slice(0, Math.max(1, Number(sectionLimit) || 20));
+  const sectionsWithJobs = await Promise.all(
+    limitedSections.map(async (item) => {
+      const canonicalUrl = String(item?.canonicalUrl || "").trim();
+
+      if (!canonicalUrl) {
+        return {
+          ...item,
+          jobs: [],
+          jobsPage: 1,
+          jobsLimit: Number(jobLimit) || 10,
+          jobsTotal: 0,
+          jobsTotalPages: 1,
+        };
+      }
+
+      try {
+        const jobsPayload = await requestJson(
+          `/post/section-list/${encodeURIComponent(canonicalUrl)}${buildQueryString({
+            page: jobPage,
+            limit: jobLimit,
+          })}`,
+          {
+            revalidate: SECTIONS_REVALIDATE_SECONDS,
+            tags: ["jobs-sections", `jobs-section-${canonicalUrl}`],
+          },
+        );
+        const jobs = extractCollection(jobsPayload).filter((job) => {
+          if (!normalizedJobSearch) {
+            return true;
+          }
+
+          return String(job?.title || "")
+            .trim()
+            .toLowerCase()
+            .includes(normalizedJobSearch);
+        });
+        const pagination = extractPagination(jobsPayload);
+
+        return {
+          ...item,
+          sectionCanonicalUrl: canonicalUrl,
+          sectionName: item?.name || item?.sectionName || "",
+          jobs,
+          jobsPage: Number(pagination?.page) || Number(jobPage) || 1,
+          jobsLimit: Number(pagination?.limit) || Number(jobLimit) || jobs.length,
+          jobsTotal: Number(pagination?.total) || jobs.length,
+          jobsTotalPages: Number(pagination?.totalPages) || 1,
+        };
+      } catch {
+        return {
+          ...item,
+          sectionCanonicalUrl: canonicalUrl,
+          sectionName: item?.name || item?.sectionName || "",
+          jobs: [],
+          jobsPage: Number(jobPage) || 1,
+          jobsLimit: Number(jobLimit) || 10,
+          jobsTotal: 0,
+          jobsTotalPages: 1,
+        };
+      }
+    }),
   );
+
+  return {
+    success: true,
+    message: sectionsPayload?.message || "Job sections fetched successfully",
+    sections: sectionsWithJobs,
+    data: sectionsWithJobs,
+    pagination: extractPagination(sectionsPayload),
+    total: asArray(sectionsWithJobs).length,
+  };
 }
 
 export async function getJobByUrl(jobUrl = "") {
@@ -110,7 +214,7 @@ export async function getJobByUrl(jobUrl = "") {
 export async function getJobBySlug(slug = "") {
   const cleanSlug = String(slug || "").trim();
 
-  return requestJson(`/jobs/get-post-details/${encodeURIComponent(cleanSlug)}`, {
+  return requestJson(`/post/slug/${encodeURIComponent(cleanSlug)}`, {
     revalidate: JOB_DETAIL_REVALIDATE_SECONDS,
     tags: ["job-detail"],
   });

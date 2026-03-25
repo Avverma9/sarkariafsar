@@ -126,7 +126,7 @@ export async function loadHomePageData() {
 
   const rawSectionsPayload =
     sectionsResult.status === "fulfilled" ? sectionsResult.value : null;
-  const sections = mapSectionsWithJobs(rawSectionsPayload?.sections);
+  const sections = mapSectionsWithJobs(rawSectionsPayload?.sections || rawSectionsPayload?.data);
 
   const rawSchemesPayload =
     schemesResult.status === "fulfilled" ? schemesResult.value : null;

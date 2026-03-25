@@ -7,7 +7,7 @@ import {
 
 export async function generateMetadata({ params }) {
   const resolvedParams = await params;
-  const config = getSectionConfig(resolvedParams?.section);
+  const config = getPostSectionConfig(resolvedParams?.section);
 
   if (!config) {
     return buildPageMetadata({
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }) {
 
 export default async function JobsSectionPage({ params, searchParams }) {
   const resolvedParams = await params;
-  const config = getSectionConfig(resolvedParams?.section);
+  const config = getPostSectionConfig(resolvedParams?.section);
 
   if (!config) {
     notFound();

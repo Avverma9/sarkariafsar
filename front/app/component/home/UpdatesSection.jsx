@@ -148,7 +148,7 @@ export default function UpdatesSection({
           jobPage: page,
           jobLimit: PAGE_SIZE,
         });
-        const sections = mapSectionsWithJobs(payload?.sections);
+        const sections = mapSectionsWithJobs(payload?.sections || payload?.data);
         const matchedSection = findSectionByIdentifier(
           sections,
           getSectionLookupConfig(block),
@@ -296,7 +296,7 @@ export default function UpdatesSection({
           sectionLimit: 20,
           jobLimit: PAGE_SIZE,
         });
-        const sections = mapSectionsWithJobs(payload?.sections);
+        const sections = mapSectionsWithJobs(payload?.sections || payload?.data);
         const blocks = sections.length > 0 ? sections : fallbackBlocks;
 
         if (!active) {

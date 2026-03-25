@@ -173,7 +173,10 @@ export function normalizeSectionJob(job, index = 0) {
     slug,
     status: String(source.status || "").trim(),
     applyLastDate: source.applyLastDate || null,
-    jobUrl: String(source.jobUrl || "").trim(),
+    jobUrl: String(source.jobUrl || source.sourceUrl || "").trim(),
+    sectionName: String(source.sectionName || "").trim(),
+    sectionCanonicalUrl: String(source.sectionCanonicalUrl || "").trim(),
+    updatedAt: source.updatedAt || null,
     _fromApi: true,
   };
 }
@@ -183,11 +186,21 @@ export function normalizeSectionWithJobs(section, index = 0) {
   const jobs = asArray(section?.jobs).map((job, jobIndex) =>
     normalizeSectionJob(job, jobIndex),
   );
+  const totalJobs =
+    Number.isFinite(Number(section?.jobsTotal)) ? Number(section.jobsTotal) : jobs.length;
+  const jobsPage = Number(section?.jobsPage) || 1;
+  const jobsLimit = Number(section?.jobsLimit) || jobs.length || 10;
+  const jobsTotalPages =
+    Number(section?.jobsTotalPages) || Math.max(1, Math.ceil(Math.max(totalJobs, 1) / jobsLimit));
 
   return {
     ...normalized,
     jobs,
-    totalJobs: jobs.length,
+    totalJobs,
+    jobsPage,
+    jobsLimit,
+    jobsTotal: totalJobs,
+    jobsTotalPages,
   };
 }
 

@@ -476,6 +476,39 @@ export function buildHowToSchema({
   };
 }
 
+export function buildFAQPageSchema({
+  path = "/",
+  questions = [],
+} = {}) {
+  const safeQuestions = (Array.isArray(questions) ? questions : [])
+    .map((item) => ({
+      question: stripHtml(item?.question || item?.q || ""),
+      answer: stripHtml(item?.answer || item?.a || ""),
+    }))
+    .filter((item) => item.question && item.answer);
+
+  if (safeQuestions.length === 0) {
+    return null;
+  }
+
+  const resolvedPath = normalizePath(path);
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "@id": absoluteUrl(`${resolvedPath}#faq`),
+    url: absoluteUrl(resolvedPath),
+    mainEntity: safeQuestions.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+}
+
 export function buildContactPageSchema({
   title = "Contact Us",
   description = DEFAULT_DESCRIPTION,

@@ -1,11 +1,8 @@
 import { cache } from "react";
-import { buildCanonicalKey, formatPostDetail } from "./postFormatter";
-import {
-  buildFormattedJobHtml,
-  formatRichJobDetail,
-} from "./jobDetailFormatter";
+import { formatPostDetail } from "./postFormatter";
+import { formatRichJobDetail } from "./jobDetailFormatter";
 import { assessPostContentQuality } from "./contentQuality";
-import { getJobBySlug, getJobByUrl } from "./siteApi";
+import { getJobBySlug } from "./siteApi";
 
 export function getFirstValue(value) {
   if (Array.isArray(value)) {
@@ -13,37 +10,6 @@ export function getFirstValue(value) {
   }
 
   return value || "";
-}
-
-function safeDecodeURIComponent(value) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-function extractAbsoluteUrl(value) {
-  const match = String(value || "").match(/https?:\/\/[^\s]+/i);
-  return match ? match[0] : "";
-}
-
-function normalizeJobUrl(rawValue) {
-  if (!rawValue) {
-    return "";
-  }
-
-  const firstPass = safeDecodeURIComponent(String(rawValue).trim());
-  const secondPass = safeDecodeURIComponent(firstPass);
-  const extracted = extractAbsoluteUrl(secondPass) || extractAbsoluteUrl(firstPass);
-  const candidate = extracted || secondPass;
-
-  try {
-    const parsed = new URL(candidate);
-    return `${parsed.origin}${parsed.pathname}${parsed.search}`;
-  } catch {
-    return "";
-  }
 }
 
 function normalizeSlug(value) {
@@ -62,18 +28,6 @@ function buildPostFromJobDetail(jobDetail) {
   return formatRichJobDetail(jobDetail) || formatPostDetail(jobDetail);
 }
 
-function buildFormattedHtml(jobDetail) {
-  if (!jobDetail) {
-    return "";
-  }
-
-  if (typeof jobDetail?.formattedHtml === "string" && jobDetail.formattedHtml.trim()) {
-    return jobDetail.formattedHtml;
-  }
-
-  return buildFormattedJobHtml(jobDetail);
-}
-
 async function fetchJobDetailBySlug(slug) {
   const cleanSlug = normalizeSlug(slug);
 
@@ -84,27 +38,12 @@ async function fetchJobDetailBySlug(slug) {
   return getJobBySlug(cleanSlug);
 }
 
-async function fetchJobDetailByUrl(jobUrl) {
-  const cleanJobUrl = normalizeJobUrl(jobUrl);
-
-  if (!cleanJobUrl) {
-    throw new Error("Job URL is invalid");
-  }
-
-  return getJobByUrl(cleanJobUrl);
-}
-
 async function loadPostDetailPageDataInternal({
   params,
-  searchParams,
   includeFormattedHtml = true,
 }) {
   const resolvedParams = await params;
-  const resolvedSearchParams = await searchParams;
   const slug = normalizeSlug(getFirstValue(resolvedParams?.slug));
-  const rawJobUrl = getFirstValue(resolvedSearchParams?.jobUrl);
-  const hasJobUrlParam = Boolean(rawJobUrl);
-  const normalizedJobUrl = normalizeJobUrl(rawJobUrl);
 
   let detailPayload = null;
   let fetchError = "";
@@ -117,30 +56,21 @@ async function loadPostDetailPageDataInternal({
     }
   }
 
-  if (!detailPayload && normalizedJobUrl) {
-    try {
-      detailPayload = await fetchJobDetailByUrl(normalizedJobUrl);
-      fetchError = "";
-    } catch (error) {
-      fetchError = error?.message || "Unable to fetch post detail";
-    }
-  }
-
-  const jobDetail = detailPayload?.job || null;
+  const jobDetail = detailPayload?.data || detailPayload?.job || null;
   const post = buildPostFromJobDetail(jobDetail);
   const quality = assessPostContentQuality({ jobDetail, post });
   const title = post?.header?.title || jobDetail?.title || jobDetail?.jobtitle || "";
-  const canonicalKey =
-    normalizeSlug(jobDetail?.slug) ||
-    slug ||
-    buildCanonicalKey({ title, jobUrl: normalizedJobUrl }) ||
-    "post-detail";
-  const formattedHtml = includeFormattedHtml ? buildFormattedHtml(jobDetail) : "";
-  const jobUrl = normalizedJobUrl || String(jobDetail?.slug || slug || "").trim();
+  const canonicalKey = normalizeSlug(jobDetail?.slug) || slug || "post-detail";
+  const formattedHtml = includeFormattedHtml
+    ? String(
+        jobDetail?.scrapedContent?.contentHtml ||
+          jobDetail?.formattedHtml ||
+          "",
+      ).trim()
+    : "";
 
   return {
     slug,
-    jobUrl,
     fetchError,
     detailPayload,
     jobDetail,
@@ -148,7 +78,6 @@ async function loadPostDetailPageDataInternal({
     quality,
     canonicalKey,
     formattedHtml,
-    hasJobUrlParam,
   };
 }
 
@@ -157,10 +86,9 @@ export async function loadPostDetailPageData(options) {
 }
 
 export const loadCachedPostDetailPageData = cache(
-  async (slug, rawJobUrl = "", includeFormattedHtml = true) =>
+  async (slug, includeFormattedHtml = true) =>
     loadPostDetailPageDataInternal({
       params: { slug },
-      searchParams: rawJobUrl ? { jobUrl: rawJobUrl } : {},
       includeFormattedHtml,
     }),
 );

@@ -262,29 +262,12 @@ export default function FullContent({
   backHref = "",
   backLabel = "Back to Results",
 }) {
-  if (postData && typeof postData === "object") {
-    return (
-      <ParsedPostDetails
-        postData={postData}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
-    );
-  }
-
-  // 1. If structured JSON exists, render the Custom Responsive Layout
-  if (job && typeof job === "object") {
-    return <StructuredJobDetails job={job} backHref={backHref} backLabel={backLabel} />;
-  }
-
-  // 2. If raw HTML exists (Fallback)
   if (formattedHtml) {
     const cleanAndSafeHtml = DOMPurify.sanitize(formattedHtml, purifyConfig);
 
     return (
-      <div className="w-full bg-white px-4 py-6 sm:py-10 md:px-8 lg:px-12 font-sans">
+      <div className="w-full bg-white px-4 py-6 font-sans sm:py-10 md:px-8 lg:px-12">
         <div className="mx-auto max-w-[1200px]">
-          
           {backHref && (
             <div className="mb-6">
               <Link
@@ -298,45 +281,57 @@ export default function FullContent({
           )}
 
           <header className="mb-10 border-b-4 border-blue-900 pb-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-gray-900 leading-snug tracking-tight">
-              {title || "Official Details"}
+            <h1 className="text-2xl leading-snug font-black tracking-tight text-gray-900 sm:text-3xl md:text-4xl lg:text-5xl">
+              {title || job?.title || "Official Details"}
             </h1>
           </header>
 
           <main className="w-full overflow-hidden">
-            {/* CSS to make classic HTML tables responsive and Click Here links */}
             <article
-              className="w-full max-w-none text-[16px] sm:text-[17px] leading-relaxed text-gray-800 
-              
-              [&_h1]:hidden 
-              [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-xl [&_h2]:sm:text-2xl [&_h2]:font-bold [&_h2]:bg-slate-800 [&_h2]:text-white [&_h2]:px-4 [&_h2]:py-2 [&_h2]:uppercase
-              [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-blue-900 
-              
+              className="w-full max-w-none text-[16px] leading-relaxed text-gray-800 sm:text-[17px]
+              [&_h1]:hidden
+              [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:bg-slate-800 [&_h2]:px-4 [&_h2]:py-2 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:text-white [&_h2]:uppercase [&_h2]:sm:text-2xl
+              [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:text-blue-900
               [&_p]:my-4 [&_p]:text-justify
-              
-              /* Responsive Table Wrapper Fix */
-              [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:whitespace-nowrap [&_table]:sm:table [&_table]:sm:whitespace-normal
-              
-              /* Classic Table Styling */
-              [&_table]:my-6 [&_table]:border-collapse [&_table]:border [&_table]:border-gray-300 
+              [&_table]:my-6 [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_table]:whitespace-nowrap [&_table]:border-collapse [&_table]:border [&_table]:border-gray-300 [&_table]:sm:table [&_table]:sm:whitespace-normal
               [&_th]:border [&_th]:border-gray-300 [&_th]:bg-gray-100 [&_th]:px-4 [&_th]:py-3 [&_th]:text-left [&_th]:font-bold [&_th]:text-gray-900
               [&_td]:border [&_td]:border-gray-300 [&_td]:px-4 [&_td]:py-3 [&_td]:text-gray-800
               hover:[&_tbody_tr]:bg-blue-50
-              
-              /* Links styling as Click Here Buttons inside Tables */
               [&_td_a]:inline-block [&_td_a]:bg-blue-600 [&_td_a]:px-6 [&_td_a]:py-2 [&_td_a]:text-sm [&_td_a]:font-bold [&_td_a]:text-white [&_td_a]:uppercase [&_td_a]:no-underline hover:[&_td_a]:bg-blue-800
-              
-              /* General links outside tables */
               [&_p_a]:font-bold [&_p_a]:text-blue-700 hover:[&_p_a]:underline
-              
               [&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_li]:mb-2"
-              
               dangerouslySetInnerHTML={{ __html: cleanAndSafeHtml }}
             />
           </main>
         </div>
       </div>
     );
+  }
+
+  const hasStructuredPostData =
+    postData &&
+    typeof postData === "object" &&
+    (
+      postData?.header ||
+      postData?.details ||
+      postData?.tables ||
+      postData?.links ||
+      postData?.otherInfo
+    );
+
+  if (hasStructuredPostData) {
+    return (
+      <ParsedPostDetails
+        postData={postData}
+        backHref={backHref}
+        backLabel={backLabel}
+      />
+    );
+  }
+
+  // 1. If structured JSON exists, render the Custom Responsive Layout
+  if (job && typeof job === "object") {
+    return <StructuredJobDetails job={job} backHref={backHref} backLabel={backLabel} />;
   }
 
   // 3. Loading State
