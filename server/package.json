@@ -1,42 +1,24 @@
 {
-  "name": "scrapper",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.mjs",
+  "name": "sarkariafsar",
+  "version": "2.0.1",
+  "description": "sarkariafsar server",
+  "license": "MIT",
+  "author": "Ankit Kumar Verma",
+  "type": "commonjs",
+  "main": "index.js",
   "scripts": {
-    "start": "node start.mjs",
-    "dev": "nodemon start.mjs",
-    "ai:jobs": "node ai/ai.js",
-    "ai:jobs:cron": "node ai/ai.js --cron",
-    "ai:jobs:repair": "node ai/ai.js --repair-only",
-    "ai:jobs:validate": "node ai/ai.js --validate",
-    "schema:heal": "node schema-heal.mjs",
-    "jobs:pipeline": "node job-pipeline.mjs",
-    "jobs:pipeline:cron": "node job-pipeline.mjs --cron",
-    "official:sync": "node official-sync.mjs",
-    "notify:jobs": "node job-notification/notification.mjs",
-    "notify:jobs:cron": "node job-notification/notification.mjs --cron",
-    "test": "node --test tests/job-family.test.mjs tests/official-source-sync.test.mjs tests/source-post-ai.test.mjs tests/job-status.test.mjs",
-    "test:job-sync": "node --test tests/job-sync.integration.test.mjs tests/jobs-controller.test.mjs"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
   "dependencies": {
-    "@google/genai": "^1.46.0",
-    "axios": "^1.13.5",
+    "axios": "^1.13.6",
     "cheerio": "^1.2.0",
-    "compression": "^1.8.1",
     "cors": "^2.8.6",
+    "dotenv": "^17.3.1",
     "express": "^5.2.1",
-    "mongoose": "^8.23.0",
+    "mongoose": "^9.3.2",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.1",
-    "p-limit": "^7.3.0",
-    "sanitize-html": "^2.17.1"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
+    "nodemailer": "^8.0.3",
+    "nodemon": "^3.1.14",
+    "sanitize-html": "^2.17.2"
   }
 }
