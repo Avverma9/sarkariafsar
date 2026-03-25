@@ -1,0 +1,7 @@
+echo "server/job-notification/.notification-state.json" >> .gitignore
+echo "server/job-notification/.notification-state.json.bak" >> .gitignore
+git rm --cached server/job-notification/.notification-state.json
+git rm --cached server/job-notification/.notification-state.json.bak
+git add .gitignore
+git commit -m "ignore notification state files"
+git push
