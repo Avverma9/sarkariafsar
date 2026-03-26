@@ -92,10 +92,37 @@ function extractPagination(payload) {
 }
 
 export async function getStoredJobLists({ section } = {}) {
-  return requestJson(`/fetch-stored-joblist${buildQueryString({ section })}`, {
+  const payload = await requestJson("/postsection/", {
     revalidate: SECTIONS_REVALIDATE_SECONDS,
     tags: ["jobs-sections", "jobs-stored-lists"],
   });
+
+  const sections = extractCollection(payload);
+  const normalizedSection = String(section || "").trim().toLowerCase();
+
+  if (!normalizedSection) {
+    return payload;
+  }
+
+  const filteredSections = sections.filter((item) => {
+    const aliases = [
+      item?.canonicalUrl,
+      item?.name,
+      item?.sourceSectionName,
+      ...(Array.isArray(item?.aliases) ? item.aliases : []),
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    return aliases.some((value) => value.includes(normalizedSection));
+  });
+
+  return {
+    ...payload,
+    sections: filteredSections,
+    data: filteredSections,
+    total: filteredSections.length,
+  };
 }
 
 export async function getSectionsWithJobs({
@@ -105,7 +132,7 @@ export async function getSectionsWithJobs({
   jobLimit = 10,
   jobSearch = "",
 } = {}) {
-  const sectionsPayload = await requestJson("/postsection", {
+  const sectionsPayload = await requestJson("/postsection/", {
     revalidate: SECTIONS_REVALIDATE_SECONDS,
     tags: ["jobs-sections"],
   });
@@ -205,10 +232,32 @@ export async function getSectionsWithJobs({
 }
 
 export async function getJobByUrl(jobUrl = "") {
-  return requestJson(`/fetch/job-by-url${buildQueryString({ jobUrl })}`, {
+  const normalizedJobUrl = String(jobUrl || "").trim();
+
+  if (!normalizedJobUrl) {
+    return null;
+  }
+
+  const payload = await requestJson("/post/", {
     revalidate: JOB_DETAIL_REVALIDATE_SECONDS,
     tags: ["job-detail"],
   });
+  const jobs = extractCollection(payload);
+
+  return (
+    jobs.find((job) => {
+      const candidates = [
+        job?.jobUrl,
+        job?.url,
+        job?.applyLink,
+        job?.officialWebsite,
+      ]
+        .map((value) => String(value || "").trim())
+        .filter(Boolean);
+
+      return candidates.includes(normalizedJobUrl);
+    }) || null
+  );
 }
 
 export async function getJobBySlug(slug = "") {
@@ -221,15 +270,55 @@ export async function getJobBySlug(slug = "") {
 }
 
 export async function getJobReminders({ days = 7, signal } = {}) {
-  return requestJson(`/jobs/reminder${buildQueryString({ days })}`, {
+  const payload = await requestJson("/post/get-deadline-jobs", {
     revalidate: REMINDERS_REVALIDATE_SECONDS,
     tags: ["job-reminders"],
     signal,
   });
+
+  const now = new Date();
+  const maxDays = Math.max(1, Number(days) || 7);
+  const jobs = extractCollection(payload).filter((job) => {
+    const rawDate = job?.applyLastDate || job?.lastDate || job?.deadline;
+
+    if (!rawDate) {
+      return false;
+    }
+
+    const deadline = new Date(rawDate);
+
+    if (Number.isNaN(deadline.getTime())) {
+      return false;
+    }
+
+    const diffDays = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    return diffDays >= 0 && diffDays <= maxDays;
+  });
+
+  return {
+    ...payload,
+    jobs,
+    data: jobs,
+    total: jobs.length,
+  };
 }
 
 export async function searchGlobalContent({ q = "", limit = 50, signal } = {}) {
-  return requestJson(`/jobs/search${buildQueryString({ q, limit })}`, {
-    signal,
-  });
+  const payload = await requestJson(
+    `/search/search-with-title${buildQueryString({ title: q, limit })}`,
+    {
+      signal,
+    },
+  );
+  const results = extractCollection(payload).map((item) => ({
+    ...item,
+    type: item?.type === "post" ? "job" : item?.type,
+  }));
+
+  return {
+    ...payload,
+    results,
+    data: results,
+  };
 }

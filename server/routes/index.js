@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 
+router.get('/', (req, res) => {
+    res.status(200).json({ message: 'API is working' });
+});
+
 // Routes
 router.use('/postsection', require('./postsection'));
 router.use('/post', require('./post'));

@@ -1,3 +1,8 @@
+# Frontend: Gov Schemes API client fix
+
+The following file contains the corrected frontend API client for gov schemes. Replace your existing client with this code or copy into your frontend project.
+
+```javascript
 import baseUrl from "./baseUrl";
 import { buildJsonFetchOptions } from "./fetchConfig";
 
@@ -126,8 +131,7 @@ export async function getGovSchemeByState(state) {
 
 export async function getGovSchemeById(id) {
   if (!id) throw new Error("Missing id");
-  // API uses GET /schemes/:id
-  return requestJson(`/${encodeURIComponent(String(id))}`, undefined, {
+  return requestJson(`/id/${encodeURIComponent(String(id))}`, undefined, {
     revalidate: SCHEMES_REVALIDATE_SECONDS,
     tags: ["gov-schemes-detail"],
   });
@@ -141,3 +145,4 @@ export async function getGovSchemeBySlug(slug) {
     tags: ["gov-schemes-detail"],
   });
 }
+```

@@ -8,7 +8,6 @@ import {
   Users,
 } from "lucide-react";
 import Link from "next/link";
-import { buildSchemeSlug } from "../../lib/schemeSlug";
 
 const schemeIcons = {
   Landmark,
@@ -25,11 +24,9 @@ export default function SchemesSection({
   error = "",
 }) {
   const safeSchemes = Array.isArray(filteredSchemes) ? filteredSchemes : [];
-
   if (!hasLoaded && loading) {
     return null;
   }
-
   return (
     <section id="schemes-section" aria-labelledby="featured-schemes-heading">
       <div className="mb-8 flex items-center justify-between px-2">
@@ -61,14 +58,11 @@ export default function SchemesSection({
             <p className="font-medium text-rose-600">{error}</p>
           </div>
         ) : safeSchemes.length > 0 ? (
-          safeSchemes.map((scheme) => {
+          safeSchemes.map((scheme, idx) => {
             const Icon = schemeIcons[scheme.icon] || Landmark;
-            const schemeSlug = buildSchemeSlug(scheme);
 
-            return (
-              <Link
-                key={scheme.id}
-                href={`/schemes/${schemeSlug}`}
+            const card = (
+              <div
                 className="group flex cursor-pointer flex-col rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-xl"
               >
                 <div className="mb-6 flex items-start justify-between">
@@ -94,14 +88,23 @@ export default function SchemesSection({
                 </div>
 
                 <div className="flex items-center justify-between border-t border-slate-100 pt-4">
-                  <span className="text-sm font-bold text-slate-400">
-                    Read full details
-                  </span>
+                  <span className="text-sm font-bold text-slate-400">Read full details</span>
                   <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 transition-colors group-hover:bg-indigo-600">
                     <ArrowRight className="h-5 w-5 text-slate-400 transition-colors group-hover:text-white" />
                   </div>
                 </div>
+              </div>
+            );
+
+            const hasSlug = Boolean(scheme?.slug);
+            const key = scheme?.slug || scheme?.id || scheme?._id || idx;
+
+            return hasSlug ? (
+              <Link key={key} href={`/schemes/${scheme.slug}`} data-slug={scheme.slug}>
+                {card}
               </Link>
+            ) : (
+              <div key={key} data-slug={scheme.slug}>{card}</div>
             );
           })
         ) : (

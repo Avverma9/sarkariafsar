@@ -292,6 +292,39 @@ exports.getGovSchemeById = async (req, res) => {
   }
 };
 
+exports.getGovSchemeBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug || !String(slug).trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Slug is required",
+      });
+    }
+
+    const value = String(slug).trim();
+
+    const doc = isValidObjectId(value)
+      ? await GovScheme.findOne({ $or: [{ _id: value }, { slug: value }] })
+      : await GovScheme.findOne({ slug: value });
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: "Scheme not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Scheme fetched successfully",
+      data: doc,
+    });
+  } catch (error) {
+    return handleMongooseError(error, res, "Get gov scheme by slug error:");
+  }
+};
 // UPDATE
 exports.updateGovScheme = async (req, res) => {
   try {
@@ -365,5 +398,129 @@ exports.deleteGovScheme = async (req, res) => {
     });
   } catch (error) {
     return handleMongooseError(error, res, "Delete gov scheme error:");
+  }
+};
+
+// READ BY SLUG
+exports.getGovSchemeBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    if (!slug || typeof slug !== 'string' || !slug.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid slug',
+      });
+    }
+
+    const doc = await GovScheme.findOne({ slug: slug.trim() });
+
+    if (!doc) {
+      return res.status(404).json({
+        success: false,
+        message: 'Scheme not found',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Scheme fetched successfully',
+      data: doc,
+    });
+  } catch (error) {
+    return handleMongooseError(error, res, 'Get gov scheme by slug error:');
+  }
+};
+
+// GET unique state names for schemes
+exports.getGovSchemeStateNameOnly = async (req, res) => {
+  try {
+    // Use distinct to get unique state values and filter out empty strings
+    const states = await GovScheme.distinct('state', { state: { $ne: '' } });
+    const cleaned = states
+      .filter((s) => typeof s === 'string' && s.trim())
+      .map((s) => s.trim())
+      .sort((a, b) => a.localeCompare(b));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Scheme states fetched successfully',
+      data: cleaned,
+    });
+  } catch (error) {
+    return handleMongooseError(error, res, 'Get scheme state names error:');
+  }
+};
+
+// GET schemes filtered by state (supports pagination + sorting)
+exports.getGovSchemeByState = async (req, res) => {
+  try {
+    const {
+      state,
+      page = 1,
+      limit = 10,
+      search,
+      sortBy = 'createdAt',
+      order = 'desc',
+      upcoming,
+      expired,
+    } = req.query;
+
+    if (!state || !String(state).trim()) {
+      return res.status(400).json({ success: false, message: 'state query parameter is required' });
+    }
+
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const filter = { state: String(state).trim() };
+
+    if (search) {
+      filter.$or = [
+        { schemeTitle: { $regex: search, $options: 'i' } },
+        { schemetype: { $regex: search, $options: 'i' } },
+        { process: { $regex: search, $options: 'i' } },
+        { aboutScheme: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const now = new Date();
+
+    if (upcoming === 'true') filter.schemeLastDate = { $gte: now };
+    if (expired === 'true') filter.schemeLastDate = { $lt: now };
+
+    const allowedSortFields = [
+      'createdAt',
+      'updatedAt',
+      'schemeTitle',
+      'schemeStartDate',
+      'schemeLastDate',
+      'state',
+      'city',
+      'schemetype',
+    ];
+
+    const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    const sortOrder = order === 'asc' ? 1 : -1;
+
+    const [items, total] = await Promise.all([
+      GovScheme.find(filter).sort({ [finalSortBy]: sortOrder }).skip(skip).limit(parsedLimit),
+      GovScheme.countDocuments(filter),
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Schemes fetched successfully',
+      data: items,
+      pagination: {
+        total,
+        page: parsedPage,
+        limit: parsedLimit,
+        totalPages: Math.ceil(total / parsedLimit),
+      },
+    });
+  } catch (error) {
+    return handleMongooseError(error, res, 'Get schemes by state error:');
   }
 };

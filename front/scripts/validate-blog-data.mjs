@@ -112,4 +112,3 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log(`Blog data validation passed for ${BLOG_POSTS.length} posts.`);

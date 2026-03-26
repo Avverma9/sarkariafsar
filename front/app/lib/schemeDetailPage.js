@@ -1,5 +1,5 @@
 import { cache } from "react";
-import { getAllGovSchemes } from "./govSchemesApi";
+import { getAllGovSchemes, getGovSchemeBySlug } from "./govSchemesApi";
 import { assessSchemeContentQuality } from "./contentQuality";
 import { buildSchemeSlug, isSchemeSlugMatch } from "./schemeSlug";
 
@@ -155,6 +155,24 @@ function normalizeSchemeDetail(scheme) {
 
 export async function loadSchemeDetailPageData(slug) {
   try {
+    // Prefer fetching by slug via the dedicated endpoint if available.
+    try {
+      const payload = await getGovSchemeBySlug(slug);
+      const schemes = extractSchemes(payload);
+      const matched = schemes.length > 0 ? schemes[0] : payload?.scheme || payload || null;
+
+      if (matched) {
+        return {
+          scheme: normalizeSchemeDetail(matched),
+          canonicalSlug: matched?.slug || buildSchemeSlug(matched),
+          error: "",
+        };
+      }
+      // If slug endpoint didn't return a match, fall through to full list fallback.
+    } catch (err) {
+      // swallow and fallback to getAllGovSchemes
+    }
+
     const payload = await getAllGovSchemes();
     const schemes = extractSchemes(payload);
     const matched = schemes.find((scheme) => isSchemeSlugMatch(slug, scheme));
@@ -169,7 +187,7 @@ export async function loadSchemeDetailPageData(slug) {
 
     return {
       scheme: normalizeSchemeDetail(matched),
-      canonicalSlug: buildSchemeSlug(matched),
+      canonicalSlug: matched?.slug || buildSchemeSlug(matched),
       error: "",
     };
   } catch (error) {
@@ -184,3 +202,5 @@ export async function loadSchemeDetailPageData(slug) {
 export const loadCachedSchemeDetailPageData = cache(async (slug) =>
   loadSchemeDetailPageData(slug),
 );
+
+// No id-based loader: frontend expects slug-based routing per API spec.

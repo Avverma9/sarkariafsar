@@ -2,6 +2,7 @@ import { getJobReminders, getSectionsWithJobs } from "./siteApi";
 import { getGovSchemesList } from "./govSchemesApi";
 import { assessSchemeContentQuality, createExcerpt } from "./contentQuality";
 import { mapSectionsWithJobs } from "./sections";
+import { buildSchemeSlug } from "./schemeSlug";
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -91,6 +92,7 @@ function normalizeScheme(scheme, index) {
   return {
     id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
     type: "scheme",
+    slug: scheme?.slug || buildSchemeSlug(scheme),
     title: quality.title || title,
     category,
     state,

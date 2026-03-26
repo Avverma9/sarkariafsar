@@ -7,25 +7,16 @@ import {
   Search,
   SearchX,
 } from "lucide-react";
+import { buildSchemeSlug } from "../../lib/schemeSlug";
 
 function buildListingHref(basePath, { view, q, state, limit, page }) {
   const query = new URLSearchParams();
 
-  if (view) {
-    query.set("view", view);
-  }
-  if (q) {
-    query.set("q", q);
-  }
-  if (state) {
-    query.set("state", state);
-  }
-  if (limit) {
-    query.set("limit", String(limit));
-  }
-  if (page && Number(page) > 1) {
-    query.set("page", String(page));
-  }
+  if (view) query.set("view", view);
+  if (q) query.set("q", q);
+  if (state) query.set("state", state);
+  if (limit) query.set("limit", String(limit));
+  if (page && Number(page) > 1) query.set("page", String(page));
 
   const qs = query.toString();
   return qs ? `${basePath}?${qs}` : basePath;
@@ -36,16 +27,16 @@ function getPaginationItems(currentPage, totalPages) {
   const start = Math.max(1, currentPage - 2);
   const end = Math.min(totalPages, currentPage + 2);
 
-  for (let page = start; page <= end; page += 1) {
-    items.push(page);
-  }
+  for (let page = start; page <= end; page += 1) items.push(page);
 
   return items;
 }
 
 function SchemeListItem({ item }) {
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+  const hasSlug = Boolean(item?.slug);
+
+  const card = (
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5" data-slug={item?.slug}>
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-1 text-[10px] font-bold tracking-wide text-indigo-700 uppercase">
           {item?.category || "Scheme"}
@@ -56,23 +47,35 @@ function SchemeListItem({ item }) {
       </div>
 
       <h3 className="mt-3 text-lg leading-7 font-black text-slate-900">{item?.title}</h3>
-      <p className="mt-2 line-clamp-3 text-sm leading-6 font-medium text-slate-600">
-        {item?.about}
-      </p>
+      <p className="mt-2 line-clamp-3 text-sm leading-6 font-medium text-slate-600">{item?.about}</p>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link
-          href={`/schemes/${item?.slug}`}
-          className="inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
-        >
-          View Scheme
-        </Link>
+        {hasSlug ? (
+          <Link
+            href={`/schemes/${item.slug}`}
+            className="inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
+          >
+            View Scheme
+          </Link>
+        ) : (
+          <button
+            type="button"
+            disabled
+            className="inline-flex items-center rounded-full bg-slate-200 px-4 py-2 text-xs font-bold text-slate-400"
+          >
+            Missing slug
+          </button>
+        )}
       </div>
     </article>
   );
+
+  return hasSlug ? <Link href={`/schemes/${item.slug}`} data-slug={item.slug}>{card}</Link> : card;
 }
 
 function SchemeGridCard({ item }) {
+  const slug = item?.slug || buildSchemeSlug(item);
+
   return (
     <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -85,13 +88,11 @@ function SchemeGridCard({ item }) {
       </div>
 
       <h3 className="text-xl leading-7 font-black text-slate-900">{item?.title}</h3>
-      <p className="mt-2 line-clamp-4 text-sm leading-6 font-medium text-slate-600">
-        {item?.about}
-      </p>
+      <p className="mt-2 line-clamp-4 text-sm leading-6 font-medium text-slate-600">{item?.about}</p>
 
       <div className="mt-5">
         <Link
-          href={`/schemes/${item?.slug}`}
+          href={`/schemes/${slug}`}
           className="inline-flex items-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-indigo-500"
         >
           View Scheme
@@ -104,42 +105,37 @@ function SchemeGridCard({ item }) {
 export default function SchemesListingPage({
   title,
   description,
-  items,
-  stateOptions,
-  selectedState,
-  query,
-  view,
-  page,
-  limit,
-  totalItems,
-  totalPages,
-  error,
+  items = [],
+  stateOptions = [],
+  selectedState = "All India",
+  query = "",
+  view = "list",
+  page = 1,
+  limit = 12,
+  totalItems = 0,
+  totalPages = 1,
+  error = "",
 }) {
   const basePath = "/schemes";
-  const safeItems = Array.isArray(items) ? items : [];
-  const safeStateOptions = Array.isArray(stateOptions) ? stateOptions : ["All India"];
-  const safePage = Number(page) > 0 ? Number(page) : 1;
-  const safeLimit = Number(limit) > 0 ? Number(limit) : 12;
-  const safeTotalPages = Number(totalPages) > 0 ? Number(totalPages) : 1;
-  const safeTotalItems = Number(totalItems) > 0 ? Number(totalItems) : 0;
   const isGridView = view === "grid";
+  const safeLimit = Number(limit) || 12;
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeTotalItems = Number(totalItems) || (items ? items.length : 0);
+  const safeTotalPages = Math.max(1, Number(totalPages) || 1);
+  const safeStateOptions = Array.isArray(stateOptions) ? stateOptions : [];
+  const safeItems = Array.isArray(items) ? items : [];
+
   const paginationItems = getPaginationItems(safePage, safeTotalPages);
-  const showingStart = safeTotalItems === 0 ? 0 : (safePage - 1) * safeLimit + 1;
+  const showingStart = Math.min((safePage - 1) * safeLimit + 1, safeTotalItems || 1);
   const showingEnd = Math.min(safePage * safeLimit, safeTotalItems);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
       <div className="mb-6 rounded-3xl bg-gradient-to-br from-emerald-900 via-slate-900 to-indigo-950 p-6 text-white shadow-xl sm:p-8">
-        <p className="text-xs font-bold tracking-wider text-emerald-200 uppercase">
-          Sarkari Yojna
-        </p>
+        <p className="text-xs font-bold tracking-wider text-emerald-200 uppercase">Sarkari Yojna</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">{title}</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200 sm:text-base">
-          {description}
-        </p>
-        <p className="mt-4 text-xs font-semibold tracking-wide text-slate-200 uppercase">
-          {selectedState || "All India"} • {safeTotalItems} Schemes
-        </p>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-200 sm:text-base">{description}</p>
+        <p className="mt-4 text-xs font-semibold tracking-wide text-slate-200 uppercase">{selectedState || "All India"} • {safeTotalItems} Schemes</p>
       </div>
 
       <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -156,15 +152,9 @@ export default function SchemesListingPage({
           </div>
 
           <div className="lg:col-span-3">
-            <select
-              name="state"
-              defaultValue={selectedState || "All India"}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none"
-            >
+            <select name="state" defaultValue={selectedState || "All India"} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none">
               {safeStateOptions.map((stateOption) => (
-                <option key={stateOption} value={stateOption}>
-                  {stateOption}
-                </option>
+                <option key={stateOption} value={stateOption}>{stateOption}</option>
               ))}
             </select>
           </div>
@@ -172,64 +162,30 @@ export default function SchemesListingPage({
           <input type="hidden" name="view" value={isGridView ? "grid" : "list"} />
 
           <div className="lg:col-span-2">
-            <select
-              name="limit"
-              defaultValue={String(safeLimit)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none"
-            >
+            <select name="limit" defaultValue={String(safeLimit)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none">
               {[12, 24, 36, 48, 60].map((option) => (
-                <option key={option} value={option}>
-                  {option} per page
-                </option>
+                <option key={option} value={option}>{option} per page</option>
               ))}
             </select>
           </div>
 
-          <button
-            type="submit"
-            className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-500 lg:col-span-2"
-          >
-            Apply
-          </button>
+          <button type="submit" className="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-indigo-500 lg:col-span-2">Apply</button>
         </form>
 
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-            Showing {showingStart}-{showingEnd} of {safeTotalItems}
-          </div>
+          <div className="text-xs font-semibold tracking-wide text-slate-500 uppercase">Showing {showingStart}-{showingEnd} of {safeTotalItems}</div>
 
           <div className="inline-flex rounded-xl border border-slate-200 bg-slate-50 p-1">
             <Link
-              href={buildListingHref(basePath, {
-                view: "list",
-                q: query,
-                state: selectedState,
-                limit: safeLimit,
-                page: 1,
-              })}
-              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                !isGridView
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-slate-600 hover:text-indigo-600"
-              }`}
-            >
+              href={buildListingHref(basePath, { view: "list", q: query, state: selectedState, limit: safeLimit, page: 1 })}
+              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${!isGridView ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600 hover:text-indigo-600"}`}>
               <List className="h-3.5 w-3.5" />
               List
             </Link>
+
             <Link
-              href={buildListingHref(basePath, {
-                view: "grid",
-                q: query,
-                state: selectedState,
-                limit: safeLimit,
-                page: 1,
-              })}
-              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                isGridView
-                  ? "bg-white text-indigo-700 shadow-sm"
-                  : "text-slate-600 hover:text-indigo-600"
-              }`}
-            >
+              href={buildListingHref(basePath, { view: "grid", q: query, state: selectedState, limit: safeLimit, page: 1 })}
+              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-bold transition ${isGridView ? "bg-white text-indigo-700 shadow-sm" : "text-slate-600 hover:text-indigo-600"}`}>
               <LayoutGrid className="h-3.5 w-3.5" />
               Grid
             </Link>
@@ -238,9 +194,7 @@ export default function SchemesListingPage({
       </div>
 
       {error ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">
-          {error}
-        </div>
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{error}</div>
       ) : null}
 
       {!error && safeItems.length === 0 ? (
@@ -253,75 +207,31 @@ export default function SchemesListingPage({
       {!error && safeItems.length > 0 ? (
         isGridView ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {safeItems.map((item) => (
-              <SchemeGridCard key={item.id} item={item} />
-            ))}
+            {safeItems.map((item) => (<SchemeGridCard key={item.id} item={item} />))}
           </div>
         ) : (
-          <div className="space-y-3">
-            {safeItems.map((item) => (
-              <SchemeListItem key={item.id} item={item} />
-            ))}
-          </div>
+          <div className="space-y-3">{safeItems.map((item) => (<SchemeListItem key={item.id} item={item} />))}</div>
         )
       ) : null}
 
       {!error && safeTotalPages > 1 ? (
         <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
           <Link
-            href={buildListingHref(basePath, {
-              view: isGridView ? "grid" : "list",
-              q: query,
-              state: selectedState,
-              limit: safeLimit,
-              page: Math.max(1, safePage - 1),
-            })}
-            className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-bold ${
-              safePage <= 1
-                ? "pointer-events-none border-slate-200 text-slate-300"
-                : "border-slate-300 text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            Prev
+            href={buildListingHref(basePath, { view: isGridView ? "grid" : "list", q: query, state: selectedState, limit: safeLimit, page: Math.max(1, safePage - 1) })}
+            className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-bold ${safePage <= 1 ? "pointer-events-none border-slate-200 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+            <ChevronLeft className="h-3.5 w-3.5" /> Prev
           </Link>
 
-          {paginationItems.map((item) => (
-            <Link
-              key={item}
-              href={buildListingHref(basePath, {
-                view: isGridView ? "grid" : "list",
-                q: query,
-                state: selectedState,
-                limit: safeLimit,
-                page: item,
-              })}
-              className={`rounded-lg px-3 py-1.5 text-xs font-bold ${
-                item === safePage
-                  ? "bg-indigo-600 text-white"
-                  : "border border-slate-300 text-slate-700 hover:bg-slate-50"
-              }`}
-            >
-              {item}
+          {paginationItems.map((p) => (
+            <Link key={p} href={buildListingHref(basePath, { view: isGridView ? "grid" : "list", q: query, state: selectedState, limit: safeLimit, page: p })} className={`rounded-lg px-3 py-1.5 text-xs font-bold ${p === safePage ? "bg-indigo-600 text-white" : "border border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+              {p}
             </Link>
           ))}
 
           <Link
-            href={buildListingHref(basePath, {
-              view: isGridView ? "grid" : "list",
-              q: query,
-              state: selectedState,
-              limit: safeLimit,
-              page: Math.min(safeTotalPages, safePage + 1),
-            })}
-            className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-bold ${
-              safePage >= safeTotalPages
-                ? "pointer-events-none border-slate-200 text-slate-300"
-                : "border-slate-300 text-slate-700 hover:bg-slate-50"
-            }`}
-          >
-            Next
-            <ChevronRight className="h-3.5 w-3.5" />
+            href={buildListingHref(basePath, { view: isGridView ? "grid" : "list", q: query, state: selectedState, limit: safeLimit, page: Math.min(safeTotalPages, safePage + 1) })}
+            className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-bold ${safePage >= safeTotalPages ? "pointer-events-none border-slate-200 text-slate-300" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}>
+            Next <ChevronRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       ) : null}

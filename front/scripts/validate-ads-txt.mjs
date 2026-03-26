@@ -45,4 +45,3 @@ lines.forEach((line, index) => {
   }
 });
 
-console.log(`ads.txt validation passed for ${lines.length} record(s).`);

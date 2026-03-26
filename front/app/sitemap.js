@@ -82,7 +82,7 @@ async function getSchemeEntries() {
     return schemes
       .map((scheme) => {
         const quality = assessSchemeContentQuality(scheme);
-        const slug = buildSchemeSlug(scheme);
+        const slug = String(scheme?.slug || buildSchemeSlug(scheme)).trim();
 
         if (!slug || quality.noIndex) {
           return null;

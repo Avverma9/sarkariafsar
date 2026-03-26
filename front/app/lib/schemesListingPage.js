@@ -52,6 +52,8 @@ function uniqueStrings(values = []) {
     const text = String(value || "").trim();
     const key = text.toLowerCase();
 
+
+
     if (!text || seen.has(key)) {
       return;
     }
@@ -150,7 +152,7 @@ function normalizeSchemeCard(scheme, index, selectedState) {
     state,
     about: quality.summary || createExcerpt(about, 180),
     applyLink: firstNonEmpty([scheme?.applyLink, scheme?.officialLink]),
-    slug: buildSchemeSlug(scheme),
+    slug: scheme?.slug || buildSchemeSlug(scheme),
     indexable: quality.cardIndexable,
   };
 }

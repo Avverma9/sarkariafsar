@@ -9,6 +9,10 @@ router.post("/add", schemeController.addGovScheme);
 
 // READ
 router.get("/", schemeController.getAllGovSchemes);
+// extra helper endpoints
+router.get("/getSchemeStateNameOnly", schemeController.getGovSchemeStateNameOnly);
+router.get("/getSchemeByState", schemeController.getGovSchemeByState);
+router.get("/slug/:slug", schemeController.getGovSchemeBySlug);
 router.get("/:id", schemeController.getGovSchemeById);
 
 // UPDATE

@@ -13,6 +13,7 @@ import DetailsModal from "./home/DetailsModal";
 import { updatesData } from "./home/data";
 import { getGovSchemesList } from "../lib/govSchemesApi";
 import { assessSchemeContentQuality, createExcerpt } from "../lib/contentQuality";
+import { buildSchemeSlug } from "../lib/schemeSlug";
 import { useGlobalSearch } from "../lib/useGlobalSearch";
 
 const HOME_SCHEMES_LIMIT = 6;
@@ -183,6 +184,7 @@ function normalizeScheme(scheme, index, selectedState) {
   return {
     id: scheme?.id || scheme?._id || `scheme-${index + 1}`,
     type: "scheme",
+    slug: scheme?.slug || buildSchemeSlug(scheme),
     title: quality.title || title,
     category,
     state,
@@ -287,7 +289,16 @@ export default function PortalApp({ initialData = {} }) {
       active = false;
     };
   }, [hasInitialSchemes, serverSchemes]);
-
+  try {
+    // Quick runtime debug to inspect slug/id used for homepage scheme cards
+    if (typeof window !== "undefined" && Array.isArray(schemesData)) {
+      console.table(
+        schemesData.map((s) => ({ title: s.title, slug: s.slug, id: s.id }))
+      );
+    }
+  } catch (e) {
+    // ignore
+  }
   const localFilteredSchemes = schemesData.slice(0, HOME_SCHEMES_LIMIT);
   const filteredUpdates = updatesData;
 
@@ -329,12 +340,12 @@ export default function PortalApp({ initialData = {} }) {
         />
 
        
-        <ReminderSection
+        {/* <ReminderSection
           initialDays={reminderDays}
           initialJobs={reminderJobs}
           initialTotal={reminderTotal}
           initialLoaded={reminderLoaded}
-        />
+        /> */}
 
         <SchemesSection
           filteredSchemes={filteredSchemes}

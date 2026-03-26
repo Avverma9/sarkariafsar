@@ -126,7 +126,7 @@ export default async function Home() {
       .slice(0, 6)
       .map((scheme) => ({
         name: scheme?.title || "Scheme",
-        url: `/schemes/${buildSchemeSlug(scheme)}`,
+        url: `/schemes/${String(scheme?.slug || buildSchemeSlug(scheme)).trim()}`,
       })),
   ].slice(0, 10);
 
