@@ -2,7 +2,6 @@
 Full API documentation focused on Government Schemes with examples and
 instructions. This file documents routes mounted under `/api` in the server.
 -->
-
 # Government Schemes API (Full Reference)
 
 Base path: `/api/schemes`
@@ -20,7 +19,7 @@ Server startup (for local testing):
 node index.js
 ```
 
-3. API base when running locally: `http://localhost:5000/api/schemes`
+3. API base when running locally: `https://sarkariafsar.com/api/api/schemes`
 
 Notes before using endpoints:
 - A migration script was added: `server/scripts/add_slug_to_schemes.js`.
@@ -86,7 +85,7 @@ endpoints are open unless you add middleware.
 - Example:
 
 ```bash
-curl 'http://localhost:5000/api/schemes?page=1&limit=20&search=scholarship&state=Bihar'
+curl 'https://sarkariafsar.com/api/schemes?page=1&limit=20&search=scholarship&state=Bihar'
 ```
 
 ### Get scheme by slug
@@ -97,7 +96,7 @@ curl 'http://localhost:5000/api/schemes?page=1&limit=20&search=scholarship&state
 - Example:
 
 ```bash
-curl 'http://localhost:5000/api/schemes/slug/bihar-student-credit-card-yojana'
+curl 'https://sarkariafsar.com/api/schemes/slug/bihar-student-credit-card-yojana'
 ```
 
 ### Get scheme by id
@@ -105,7 +104,7 @@ curl 'http://localhost:5000/api/schemes/slug/bihar-student-credit-card-yojana'
 - Example:
 
 ```bash
-curl 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296'
+curl 'https://sarkariafsar.com/api/schemes/69a143e9c16e4f567eda0296'
 ```
 
 ### Update scheme
@@ -116,7 +115,7 @@ curl 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296'
 Example:
 
 ```bash
-curl -X PUT 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296' \
+curl -X PUT 'https://sarkariafsar.com/api/schemes/69a143e9c16e4f567eda0296' \
 	-H 'Content-Type: application/json' \
 	-d '{"data":{"city":"New City"}}'
 ```
@@ -127,7 +126,7 @@ curl -X PUT 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296' \
 Example:
 
 ```bash
-curl -X DELETE 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296'
+curl -X DELETE 'https://sarkariafsar.com/api/schemes/69a143e9c16e4f567eda0296'
 ```
 
 ### Get list of distinct state names
@@ -137,7 +136,7 @@ curl -X DELETE 'http://localhost:5000/api/schemes/69a143e9c16e4f567eda0296'
 Example:
 
 ```bash
-curl 'http://localhost:5000/api/schemes/getSchemeStateNameOnly'
+curl 'https://sarkariafsar.com/api/schemes/getSchemeStateNameOnly'
 ```
 
 ### Get schemes filtered by state
@@ -147,7 +146,7 @@ curl 'http://localhost:5000/api/schemes/getSchemeStateNameOnly'
 Example:
 
 ```bash
-curl 'http://localhost:5000/api/schemes/getSchemeByState?state=Bihar&page=1&limit=20&search=scholarship'
+curl 'https://sarkariafsar.com/api/schemes/getSchemeByState?state=Bihar&page=1&limit=20&search=scholarship'
 ```
 
 ---
@@ -209,5 +208,16 @@ If you want, I can:
 Notes on request/response conventions:
 - Many controllers use a pattern of returning JSON with `success`, `message`, and `data` fields (e.g., errors return `{ success: false, message: '...', errors?: [...] }`).
 - Create endpoints return `201 Created` with the created document; GET returns `200 OK` with either a single document or an array; validation or mongoose errors return `400` or `409` as appropriate.
+
+**Smoke Test Results**
+- **Tested Endpoints:** `GET /schemes`, `GET /schemes/getSchemeStateNameOnly`, `GET /post`, `GET /blog`, `POST /schemes/add`, `POST /post/add`, `POST /blog/add`, and the corresponding `DELETE` endpoints used in cleanup.
+- **Status:** All tested endpoints responded successfully in local smoke tests (create → read → delete flows verified).
+- **Fixes Applied:**
+	- `controllers/post.js`: `addJobPost` now respects request body `data` when provided; falls back to internal `postData` only for seeding.
+	- `controllers/schemes.js`: removed a duplicate `getGovSchemeBySlug` override so the original handler (which accepts ObjectId or slug) is used.
+- **Test scripts added:** `server/tests/smoke.js` (quick GET checks) and `server/tests/create_and_cleanup.js` (create + delete verification).
+- **Notes / Next steps:**
+	- If you want, I can (a) run more exhaustive tests (filters, pagination, update flows), (b) generate a Postman collection, or (c) add Mongoose indexes and pre-save slug hook as suggested earlier.
+	- To reproduce locally: start the server with `node index.js` and run `node tests/create_and_cleanup.js` from the `server` folder.
 
 

@@ -166,7 +166,9 @@ async function createJobPost(jobData) {
 // CREATE
 exports.addJobPost = async (req, res) => {
   try {
-    const  data  = postData
+    // Prefer request body data; fall back to bundled `postData` for seeding
+    const { data: bodyData } = req.body || {};
+    const data = bodyData !== undefined ? bodyData : postData;
 
     if (!data) {
       return res.status(400).json({

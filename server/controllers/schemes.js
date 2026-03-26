@@ -401,36 +401,9 @@ exports.deleteGovScheme = async (req, res) => {
   }
 };
 
-// READ BY SLUG
-exports.getGovSchemeBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
-
-    if (!slug || typeof slug !== 'string' || !slug.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid slug',
-      });
-    }
-
-    const doc = await GovScheme.findOne({ slug: slug.trim() });
-
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        message: 'Scheme not found',
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: 'Scheme fetched successfully',
-      data: doc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, 'Get gov scheme by slug error:');
-  }
-};
+// NOTE: `getGovSchemeBySlug` is implemented earlier (supports ObjectId or slug).
+// The earlier implementation intentionally handles both `_id` and `slug` values.
+// Keep that single implementation to avoid duplicated handlers.
 
 // GET unique state names for schemes
 exports.getGovSchemeStateNameOnly = async (req, res) => {
