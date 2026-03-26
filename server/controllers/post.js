@@ -4,878 +4,330 @@ const { postData } = require("../bulk-post");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
-const normalizeString = (value) => {
-  if (typeof value !== "string") return value;
-  return value.trim();
-};
+const normalizeString = (value) => (typeof value === "string" ? value.trim() : value);
 
-const normalizeStringArray = (arr = []) => {
-  if (!Array.isArray(arr)) return [];
-  return arr
-    .filter((item) => typeof item === "string")
-    .map((item) => item.trim())
-    .filter(Boolean);
-};
+const normalizeStringArray = (arr = []) =>
+  Array.isArray(arr)
+    ? arr.filter((v) => typeof v === "string" && v.trim()).map((v) => v.trim())
+    : [];
 
-const generateSlug = (text = "") => {
-  return String(text)
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-};
+const generateSlug = (t = "") =>
+  t.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-");
 
 const sanitizeObject = (obj) => {
   if (!obj || typeof obj !== "object" || Array.isArray(obj)) return obj;
-
   const out = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === "string") {
-      out[key] = value.trim();
-    } else if (Array.isArray(value)) {
-      out[key] = value.map((item) => {
-        if (typeof item === "string") return item.trim();
-        if (item && typeof item === "object") return sanitizeObject(item);
-        return item;
-      });
-    } else if (value && typeof value === "object") {
-      out[key] = sanitizeObject(value);
-    } else {
-      out[key] = value;
-    }
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === "string") out[k] = v.trim();
+    else if (Array.isArray(v)) out[k] = v.map((i) => (typeof i === "string" ? i.trim() : sanitizeObject(i)));
+    else if (v && typeof v === "object") out[k] = sanitizeObject(v);
+    else out[k] = v;
   }
   return out;
 };
 
 const sanitizeJobPostData = (input = {}, { isUpdate = false } = {}) => {
   const data = sanitizeObject({ ...input });
-
-  if ("title" in data) data.title = normalizeString(data.title);
-  if ("jobtitle" in data) data.jobtitle = normalizeString(data.jobtitle);
-  if ("category" in data) data.category = normalizeString(data.category);
-  if ("sectionName" in data) data.sectionName = normalizeString(data.sectionName);
-  if ("sectionCanonicalUrl" in data) {
-    data.sectionCanonicalUrl = normalizeString(data.sectionCanonicalUrl);
-  }
-  if ("language" in data) data.language = normalizeString(data.language);
-  if ("status" in data) data.status = normalizeString(data.status);
-  if ("dedupeKey" in data) data.dedupeKey = normalizeString(data.dedupeKey);
-  if ("advertisement_number" in data) {
-    data.advertisement_number = normalizeString(data.advertisement_number);
-  }
-  if ("advertisementNumber" in data) {
-    data.advertisementNumber = normalizeString(data.advertisementNumber);
-  }
-  if ("conducting_authority" in data) {
-    data.conducting_authority = normalizeString(data.conducting_authority);
-  }
-  if ("conductingAuthority" in data) {
-    data.conductingAuthority = normalizeString(data.conductingAuthority);
-  }
-  if ("disclaimer" in data) data.disclaimer = normalizeString(data.disclaimer);
-
-  if ("tags" in data) {
-    data.tags = normalizeStringArray(data.tags);
-  }
-
-  if ("slug" in data && typeof data.slug === "string") {
-    data.slug = generateSlug(data.slug);
-  }
-
-  if (!isUpdate && !data.slug && data.title) {
-    data.slug = generateSlug(data.title);
-  }
-
+  for (const key of [
+    "title","jobtitle","category","sectionName","sectionCanonicalUrl","language","status",
+    "dedupeKey","advertisement_number","advertisementNumber","conducting_authority",
+    "conductingAuthority","disclaimer"
+  ]) if (key in data) data[key] = normalizeString(data[key]);
+  if ("tags" in data) data.tags = normalizeStringArray(data.tags);
+  if ("slug" in data && typeof data.slug === "string") data.slug = generateSlug(data.slug);
+  if (!isUpdate && !data.slug && data.title) data.slug = generateSlug(data.title);
   if ("applyLastDate" in data && data.applyLastDate) {
-    const parsedDate = new Date(data.applyLastDate);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      data.applyLastDate = parsedDate;
-    } else {
-      delete data.applyLastDate;
-    }
+    const d = new Date(data.applyLastDate);
+    if (Number.isNaN(d.getTime())) delete data.applyLastDate; else data.applyLastDate = d;
   }
-
   return data;
 };
 
 const validateCreatePayload = (data) => {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return "Valid data object is required";
-  }
-
-  const requiredFields = [ "title"];
-  for (const field of requiredFields) {
-    if (!data[field] || (typeof data[field] === "string" && !data[field].trim())) {
-      return `${field} is required`;
-    }
-  }
-
-  if (!data.slug && !data.title) {
-    return "slug or title is required";
-  }
-
+  if (!data || typeof data !== "object" || Array.isArray(data)) return "Valid data object is required";
+  if (!data.title || !String(data.title).trim()) return "title is required";
+  if (!data.slug && !data.title) return "slug or title is required";
   return null;
 };
 
-const validateUpdatePayload = (data) => {
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    return "Valid update data is required";
-  }
-  return null;
-};
+const validateUpdatePayload = (data) =>
+  !data || typeof data !== "object" || Array.isArray(data) ? "Valid update data is required" : null;
 
-const handleMongooseError = (error, res, fallbackLabel) => {
-  console.error(fallbackLabel, error);
-
+const handleMongooseError = (error, res, label) => {
+  console.error(label, error);
   if (error.code === 11000) {
-    const duplicateField = Object.keys(error.keyPattern || {})[0] || "field";
-    return res.status(409).json({
-      success: false,
-      message: `${duplicateField} already exists`,
-    });
+    const key = Object.keys(error.keyPattern || {})[0] || "field";
+    return res.status(409).json({ success: false, message: `${key} already exists` });
   }
-
   if (error.name === "ValidationError") {
-    const messages = Object.values(error.errors).map((err) => err.message);
-    return res.status(400).json({
-      success: false,
-      message: messages[0] || "Validation failed",
-      errors: messages,
-    });
+    const messages = Object.values(error.errors).map((e) => e.message);
+    return res.status(400).json({ success: false, message: messages[0] || "Validation failed", errors: messages });
   }
-
-  if (error.name === "CastError") {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid data format",
-    });
-  }
-
-  return res.status(500).json({
-    success: false,
-    message: error.message || "Internal server error",
-  });
+  if (error.name === "CastError") return res.status(400).json({ success: false, message: "Invalid data format" });
+  return res.status(500).json({ success: false, message: error.message || "Internal server error" });
 };
 
-async function createJobPost(jobData) {
-  const doc = new JobPost(jobData);
-  return await doc.save();
-}
+const createJobPost = async (jobData) => new JobPost(jobData).save();
 
-// CREATE
 exports.addJobPost = async (req, res) => {
   try {
-    // Prefer request body data; fall back to bundled `postData` for seeding
     const { data: bodyData } = req.body || {};
-    const data = bodyData !== undefined ? bodyData : postData;
-
-    if (!data) {
-      return res.status(400).json({
-        success: false,
-        message: "Data is required",
-      });
-    }
-
+    const data = bodyData ?? postData;
+    if (!data) return res.status(400).json({ success: false, message: "Data is required" });
     if (Array.isArray(data)) {
-      if (data.length === 0) {
-        return res.status(400).json({
-          success: false,
-          message: "Data array cannot be empty",
-        });
+      if (!data.length) return res.status(400).json({ success: false, message: "Data array cannot be empty" });
+      const docs = data.map((i) => sanitizeJobPostData(i?.post || i));
+      for (const d of docs) {
+        const err = validateCreatePayload(d);
+        if (err) return res.status(400).json({ success: false, message: err });
       }
-
-      const rawDocs = data.map((item) => item?.post || item);
-
-      const sanitizedDocs = rawDocs.map((item) => sanitizeJobPostData(item));
-
-      for (const item of sanitizedDocs) {
-        const validationError = validateCreatePayload(item);
-        if (validationError) {
-          return res.status(400).json({
-            success: false,
-            message: validationError,
-          });
-        }
-      }
-
-      const createdDocs = await JobPost.insertMany(sanitizedDocs, {
-        ordered: false,
-      });
-
-      return res.status(201).json({
-        success: true,
-        message: `${createdDocs.length} job posts created successfully`,
-        data: createdDocs,
-      });
+      const created = await JobPost.insertMany(docs, { ordered: false });
+      return res.status(201).json({ success: true, message: `${created.length} job posts created`, data: created });
     }
-
-    const rawDoc = data?.post || data;
-    const sanitizedData = sanitizeJobPostData(rawDoc);
-    const validationError = validateCreatePayload(sanitizedData);
-
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
-    const createdDoc = await createJobPost(sanitizedData);
-
-    return res.status(201).json({
-      success: true,
-      message: "Job post created successfully",
-      data: createdDoc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Add job post error:");
+    const sanitized = sanitizeJobPostData(data?.post || data);
+    const err = validateCreatePayload(sanitized);
+    if (err) return res.status(400).json({ success: false, message: err });
+    const created = await createJobPost(sanitized);
+    return res.status(201).json({ success: true, message: "Job post created", data: created });
+  } catch (e) {
+    return handleMongooseError(e, res, "Add job post error:");
   }
 };
+
 exports.getExpiringJobPostsReminder = async (req, res) => {
   try {
-    const { days , page , limit , category, sectionCanonicalUrl } = req.query;
-
-    const parsedDays = parseInt(days, 10);
-    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
-    const skip = (parsedPage - 1) * parsedLimit;
-
-    if (Number.isNaN(parsedDays) || parsedDays < 0) {
-      return res.status(400).json({
-        success: false,
-        message: "days must be a valid non-negative number",
-      });
-    }
-
-    const now = new Date();
-
-    // today start
-    const startDate = new Date(now);
-    startDate.setHours(0, 0, 0, 0);
-
-    // target day end
-    const endDate = new Date(startDate);
-    endDate.setDate(endDate.getDate() + parsedDays);
-    endDate.setHours(23, 59, 59, 999);
-
-    const filter = {
-      applyLastDate: {
-        $gte: startDate,
-        $lte: endDate,
-      },
-    };
-
-    if (category) {
-      filter.category = String(category).trim();
-    }
-
-    if (sectionCanonicalUrl) {
-      filter.sectionCanonicalUrl = String(sectionCanonicalUrl).trim();
-    }
-
+    const { days, page, limit, category, sectionCanonicalUrl } = req.query;
+    const d = parseInt(days, 10), p = Math.max(parseInt(page, 10) || 1, 1), l = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
+    if (isNaN(d) || d < 0) return res.status(400).json({ success: false, message: "days must be non-negative" });
+    const now = new Date(), s = new Date(now); s.setHours(0,0,0,0);
+    const e = new Date(s); e.setDate(e.getDate() + d); e.setHours(23,59,59,999);
+    const f = { applyLastDate: { $gte: s, $lte: e } };
+    if (category) f.category = String(category).trim();
+    if (sectionCanonicalUrl) f.sectionCanonicalUrl = String(sectionCanonicalUrl).trim();
+    const skip = (p - 1) * l;
     const [posts, total] = await Promise.all([
-      JobPost.find(filter)
-        .sort({ applyLastDate: 1 })
-        .skip(skip)
-        .limit(parsedLimit),
-      JobPost.countDocuments(filter),
+      JobPost.find(f).sort({ applyLastDate: 1 }).skip(skip).limit(l),
+      JobPost.countDocuments(f)
     ]);
-
-    const enrichedPosts = posts.map((post) => {
-      const applyDate = post.applyLastDate ? new Date(post.applyLastDate) : null;
-
+    const data = posts.map((pItem) => {
+      const applyDate = pItem.applyLastDate ? new Date(pItem.applyLastDate) : null;
       let daysLeft = null;
       if (applyDate) {
-        const tempApplyDate = new Date(applyDate);
-        tempApplyDate.setHours(23, 59, 59, 999);
-
-        daysLeft = Math.ceil(
-          (tempApplyDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const tmp = new Date(applyDate); tmp.setHours(23,59,59,999);
+        daysLeft = Math.ceil((tmp - now) / 86400000);
       }
-
-      return {
-        ...post.toObject(),
-        daysLeft,
-      };
+      return { ...pItem.toObject(), daysLeft };
     });
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: `Found ${total} job posts expiring within ${parsedDays} day(s)`,
-      data: enrichedPosts,
-      reminder: {
-        days: parsedDays,
-        from: startDate,
-        to: endDate,
-        totalExpiringPosts: total,
-      },
-      pagination: {
-        total,
-        page: parsedPage,
-        limit: parsedLimit,
-        totalPages: Math.ceil(total / parsedLimit),
-      },
+      message: `Found ${total} job posts expiring within ${d} day(s)`,
+      data,
+      reminder: { days: d, from: s, to: e, totalExpiringPosts: total },
+      pagination: { total, page: p, limit: l, totalPages: Math.ceil(total / l) },
     });
-  } catch (error) {
-    console.error("Get expiring job posts reminder error:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch expiring job posts",
-    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, message: e.message });
   }
 };
-// READ ALL
+
 exports.getAllJobPosts = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      status,
-      language,
-      tag,
-      search,
-      sortBy = "createdAt",
-      order = "desc",
-    } = req.query;
-
-    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
-    const skip = (parsedPage - 1) * parsedLimit;
-
-    const filter = {};
-
-    if (category) filter.category = category;
-    if (status) filter.status = status;
-    if (language) filter.language = language;
-    if (tag) filter.tags = tag;
-
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { jobtitle: { $regex: search, $options: "i" } },
-        { slug: { $regex: search, $options: "i" } },
-        { dedupeKey: { $regex: search, $options: "i" } },
-        { category: { $regex: search, $options: "i" } },
-        { advertisement_number: { $regex: search, $options: "i" } },
-        { advertisementNumber: { $regex: search, $options: "i" } },
-        { conducting_authority: { $regex: search, $options: "i" } },
-        { conductingAuthority: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const allowedSortFields = [
-      "createdAt",
-      "updatedAt",
-      "applyLastDate",
-      "title",
-      "category",
-      "status",
-    ];
-
-    const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
-    const sortOrder = order === "asc" ? 1 : -1;
-
+    const { page=1, limit=10, category, status, language, tag, search, sortBy="createdAt", order="desc" } = req.query;
+    const p = Math.max(parseInt(page, 10), 1), l = Math.min(Math.max(parseInt(limit, 10), 1), 100);
+    const skip = (p - 1) * l;
+    const f = {};
+    if (category) f.category = category;
+    if (status) f.status = status;
+    if (language) f.language = language;
+    if (tag) f.tags = tag;
+    if (search) f.$or = ["title","jobtitle","slug","dedupeKey","category","advertisement_number","advertisementNumber","conducting_authority","conductingAuthority","tags"]
+      .map((k) => ({ [k]: { $regex: search, $options: "i" } }));
+    const allowed = ["createdAt","updatedAt","applyLastDate","title","category","status"];
+    const s = allowed.includes(sortBy) ? sortBy : "createdAt";
+    const orderVal = order === "asc" ? 1 : -1;
     const [items, total] = await Promise.all([
-      JobPost.find(filter)
-        .sort({ [finalSortBy]: sortOrder })
-        .skip(skip)
-        .limit(parsedLimit),
-      JobPost.countDocuments(filter),
+      JobPost.find(f).sort({ [s]: orderVal }).skip(skip).limit(l),
+      JobPost.countDocuments(f)
     ]);
-
-    return res.status(200).json({
-      success: true,
-      message: "Job posts fetched successfully",
-      data: items,
-      pagination: {
-        total,
-        page: parsedPage,
-        limit: parsedLimit,
-        totalPages: Math.ceil(total / parsedLimit),
-      },
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Get all job posts error:");
-  }
+    res.status(200).json({ success: true, message: "Job posts fetched", data: items, pagination: { total, page: p, limit: l, totalPages: Math.ceil(total/l) }});
+  } catch (e) { return handleMongooseError(e,res,"Get all job posts error:"); }
 };
 
-// READ BY ID
-exports.getJobPostById = async (req, res) => {
+exports.getJobPostById = async (req,res) => {
   try {
     const { id } = req.params;
-
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid job post ID",
-      });
-    }
-
+    if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: "Invalid ID" });
     const doc = await JobPost.findById(id);
-
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post fetched successfully",
-      data: doc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Get job post by ID error:");
-  }
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+    res.status(200).json({ success: true, data: doc });
+  } catch (e) { return handleMongooseError(e,res,"Get by ID error:"); }
 };
 
-// READ BY SLUG
-exports.getJobPostBySlug = async (req, res) => {
+exports.getJobPostBySlug = async (req,res) => {
   try {
     const { slug } = req.params;
-
-    if (!slug || !String(slug).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Slug is required",
-      });
-    }
-
-    const normalizedSlug = generateSlug(slug);
-    const doc = await JobPost.findOne({ slug: normalizedSlug });
-
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post fetched successfully",
-      data: doc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Get job post by slug error:");
-  }
+    if (!slug?.trim()) return res.status(400).json({ success:false,message:"Slug required"});
+    const doc = await JobPost.findOne({ slug: generateSlug(slug) });
+    if (!doc) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,data:doc });
+  } catch(e){return handleMongooseError(e,res,"Get by slug error:");}
 };
 
-// READ BY DEDUPE KEY
-exports.getJobPostByDedupeKey = async (req, res) => {
+exports.getJobPostByDedupeKey = async (req,res) => {
   try {
     const { dedupeKey } = req.params;
-
-    if (!dedupeKey || !String(dedupeKey).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "dedupeKey is required",
-      });
-    }
-
+    if (!dedupeKey?.trim()) return res.status(400).json({ success:false,message:"dedupeKey required"});
     const doc = await JobPost.findOne({ dedupeKey: dedupeKey.trim() });
-
-    if (!doc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post fetched successfully",
-      data: doc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Get job post by dedupeKey error:");
-  }
+    if (!doc) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,data:doc });
+  } catch(e){return handleMongooseError(e,res,"Get by dedupeKey error:");}
 };
 
-// UPDATE BY ID
-exports.updateJobPost = async (req, res) => {
+exports.updateJobPost = async (req,res) => {
+  try {
+    const { id } = req.params; const { data } = req.body;
+    if (!isValidObjectId(id)) return res.status(400).json({ success:false,message:"Invalid ID"});
+    const err = validateUpdatePayload(data); if (err) return res.status(400).json({ success:false,message:err});
+    const updated = await JobPost.findByIdAndUpdate(id, sanitizeJobPostData(data,{isUpdate:true}), { new:true, runValidators:true });
+    if (!updated) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,message:"Updated",data:updated });
+  } catch(e){return handleMongooseError(e,res,"Update error:");}
+};
+
+exports.updateJobPostBySlug = async (req,res) => {
+  try {
+    const { slug } = req.params; const { data } = req.body;
+    if (!slug?.trim()) return res.status(400).json({ success:false,message:"Slug required"});
+    const err = validateUpdatePayload(data); if (err) return res.status(400).json({ success:false,message:err});
+    const updated = await JobPost.findOneAndUpdate({ slug: generateSlug(slug) }, sanitizeJobPostData(data,{isUpdate:true}), { new:true, runValidators:true });
+    if (!updated) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,message:"Updated",data:updated });
+  } catch(e){return handleMongooseError(e,res,"Update by slug error:");}
+};
+
+exports.deleteJobPost = async (req,res) => {
   try {
     const { id } = req.params;
-    const { data } = req.body;
-
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid job post ID",
-      });
-    }
-
-    const validationError = validateUpdatePayload(data);
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
-    const sanitizedData = sanitizeJobPostData(data, { isUpdate: true });
-
-    const updatedDoc = await JobPost.findByIdAndUpdate(id, sanitizedData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post updated successfully",
-      data: updatedDoc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Update job post error:");
-  }
+    if (!isValidObjectId(id)) return res.status(400).json({ success:false,message:"Invalid ID"});
+    const del = await JobPost.findByIdAndDelete(id);
+    if (!del) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,message:"Deleted",data:del });
+  } catch(e){return handleMongooseError(e,res,"Delete error:");}
 };
 
-// UPDATE BY SLUG
-exports.updateJobPostBySlug = async (req, res) => {
+exports.deleteJobPostBySlug = async (req,res) => {
   try {
     const { slug } = req.params;
-    const { data } = req.body;
-
-    if (!slug || !String(slug).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Slug is required",
-      });
-    }
-
-    const validationError = validateUpdatePayload(data);
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: validationError,
-      });
-    }
-
-    const sanitizedData = sanitizeJobPostData(data, { isUpdate: true });
-
-    const updatedDoc = await JobPost.findOneAndUpdate(
-      { slug: generateSlug(slug) },
-      sanitizedData,
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post updated successfully",
-      data: updatedDoc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Update job post by slug error:");
-  }
+    if (!slug?.trim()) return res.status(400).json({ success:false,message:"Slug required"});
+    const del = await JobPost.findOneAndDelete({ slug: generateSlug(slug) });
+    if (!del) return res.status(404).json({ success:false,message:"Not found"});
+    res.status(200).json({ success:true,message:"Deleted",data:del });
+  } catch(e){return handleMongooseError(e,res,"Delete by slug error:");}
 };
-
-// DELETE BY ID
-exports.deleteJobPost = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    if (!isValidObjectId(id)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid job post ID",
-      });
-    }
-
-    const deletedDoc = await JobPost.findByIdAndDelete(id);
-
-    if (!deletedDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post deleted successfully",
-      data: deletedDoc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Delete job post error:");
-  }
-};
-
-// DELETE BY SLUG
-exports.deleteJobPostBySlug = async (req, res) => {
-  try {
-    const { slug } = req.params;
-
-    if (!slug || !String(slug).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Slug is required",
-      });
-    }
-
-    const deletedDoc = await JobPost.findOneAndDelete({
-      slug: generateSlug(slug),
-    });
-
-    if (!deletedDoc) {
-      return res.status(404).json({
-        success: false,
-        message: "Job post not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post deleted successfully",
-      data: deletedDoc,
-    });
-  } catch (error) {
-    return handleMongooseError(error, res, "Delete job post by slug error:");
-  }
-};
-
-
 
 exports.getPostsWithSection = async (req, res) => {
   try {
-    const {
-      page = 1,
-      limit = 10,
-      category,
-      status,
-      language,
-      sectionCanonicalUrl,
-      search,
-      sortBy = "createdAt",
-      order = "desc",
-    } = req.query;
+    const { sectionCanonicalUrl, sortBy = "sectionName", order = "asc" } = req.query;
 
-    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100);
-    const skip = (parsedPage - 1) * parsedLimit;
+    // optional section filter
+    const sectionFilter = sectionCanonicalUrl
+      ? { sectionCanonicalUrl: String(sectionCanonicalUrl).trim() }
+      : { sectionCanonicalUrl: { $exists: true } };
 
-    const matchStage = {};
-
-    if (category) matchStage.category = String(category).trim();
-    if (status) matchStage.status = String(status).trim();
-    if (language) matchStage.language = String(language).trim();
-    if (sectionCanonicalUrl) {
-      matchStage.sectionCanonicalUrl = String(sectionCanonicalUrl).trim();
-    }
-
-    if (search) {
-      matchStage.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { jobtitle: { $regex: search, $options: "i" } },
-        { slug: { $regex: search, $options: "i" } },
-        { sectionName: { $regex: search, $options: "i" } },
-        { sectionCanonicalUrl: { $regex: search, $options: "i" } },
-        { category: { $regex: search, $options: "i" } },
-        { tags: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const allowedSortFields = [
-      "createdAt",
-      "updatedAt",
-      "applyLastDate",
-      "title",
-      "category",
-      "status",
-      "sectionName",
-    ];
-
-    const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
     const sortOrder = order === "asc" ? 1 : -1;
 
     const pipeline = [
-      { $match: matchStage },
-
-      // First try join by canonical URL
+      // 1. Posts + section data merge
       {
         $lookup: {
           from: "jobsections",
-          localField: "sectionCanonicalUrl",
-          foreignField: "canonicalUrl",
-          as: "sectionByCanonical",
-        },
+          pipeline: [
+            { $match: sectionFilter },
+            { $project: { name: 1, canonicalUrl: 1 } }
+          ],
+          let: { secCanonical: "$sectionCanonicalUrl" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [
+                    { $and: [{ $ne: ["$$secCanonical", null] }, { $eq: ["$canonicalUrl", "$$secCanonical"] }] },
+                    { $eq: ["$name", "$secName"] }
+                  ]
+                }
+              }
+            }
+          ],
+          as: "section"
+        }
       },
+      { $unwind: "$section" },
 
-      // Fallback join by section name
+      // 2. group by section info
       {
-        $lookup: {
-          from: "jobsections",
-          localField: "sectionName",
-          foreignField: "name",
-          as: "sectionByName",
-        },
-      },
-
-      // Pick sectionByCanonical first, otherwise sectionByName
-      {
-        $addFields: {
-          section: {
-            $ifNull: [
-              { $arrayElemAt: ["$sectionByCanonical", 0] },
-              { $arrayElemAt: ["$sectionByName", 0] },
-            ],
+        $group: {
+          _id: {
+            sectionName: "$section.name",
+            sectionCanonicalUrl: "$section.canonicalUrl"
           },
-        },
+          posts: {
+            $push: {
+              title: "$title",
+              slug: "$slug",
+              sectionName: "$section.name",
+              sectionCanonicalUrl: "$section.canonicalUrl"
+            }
+          }
+        }
       },
 
+      // 3. sort sections
+      { $sort: { "_id.sectionName": sortOrder } },
+
+      // 4. reshape to flat array
       {
         $project: {
-          sectionByCanonical: 0,
-          sectionByName: 0,
-        },
-      },
-
-      { $sort: { [finalSortBy]: sortOrder } },
-      { $skip: skip },
-      { $limit: parsedLimit },
+          sectionName: "$_id.sectionName",
+          sectionCanonicalUrl: "$_id.sectionCanonicalUrl",
+          posts: 1,
+          _id: 0
+        }
+      }
     ];
 
-    const countPipeline = [{ $match: matchStage }, { $count: "total" }];
-
-    const [posts, countResult] = await Promise.all([
-      JobPost.aggregate(pipeline),
-      JobPost.aggregate(countPipeline),
-    ]);
-
-    const total = countResult[0]?.total || 0;
+    const sections = await JobPost.aggregate(pipeline);
 
     return res.status(200).json({
       success: true,
-      message: "Job posts with section fetched successfully",
-      data: posts,
-      pagination: {
-        total,
-        page: parsedPage,
-        limit: parsedLimit,
-        totalPages: Math.ceil(total / parsedLimit),
-      },
+      message: "Sections with posts",
+      data: sections,
     });
   } catch (error) {
-    console.error("Get posts with section error:", error);
-    return res.status(500).json({
+    console.error("get postsWithSection error:", error);
+    res.status(500).json({
       success: false,
-      message: error.message || "Failed to fetch posts with section",
+      message: error.message || "Failed to fetch sections with posts",
     });
   }
 };
 
-exports.getPostListBySectionCanonicalUrl = async (req, res) => {
+
+exports.getPostListBySectionCanonicalUrl = async (req,res) => {
   try {
-    const { sectionCanonicalUrl } = req.params;
-    const { page = 1, limit = 50, search, order = "desc" } = req.query;
-
-    if (!sectionCanonicalUrl || !String(sectionCanonicalUrl).trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "sectionCanonicalUrl is required",
-      });
-    }
-
-    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
-    const parsedLimit = Math.min(Math.max(parseInt(limit, 10) || 50, 1), 200);
-    const skip = (parsedPage - 1) * parsedLimit;
-    const normalizedSectionCanonicalUrl = String(sectionCanonicalUrl).trim();
-
-    const filter = {
-      sectionCanonicalUrl: normalizedSectionCanonicalUrl,
-    };
-
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { slug: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    const sortOrder = order === "asc" ? 1 : -1;
-
-    const sortStage = { updatedAt: sortOrder, createdAt: sortOrder };
-    const pipeline = [
-      { $match: filter },
-      { $sort: sortStage },
-      {
-        $group: {
-          _id: {
-            slug: "$slug",
-            sourceUrl: "$sourceUrl",
-          },
-          doc: { $first: "$$ROOT" },
-        },
-      },
-      { $replaceRoot: { newRoot: "$doc" } },
-      { $sort: sortStage },
-      {
-        $project: {
-          title: 1,
-          slug: 1,
-          sectionName: 1,
-          sectionCanonicalUrl: 1,
-          sourceUrl: 1,
-          updatedAt: 1,
-        },
-      },
-      { $skip: skip },
-      { $limit: parsedLimit },
-    ];
-
-    const countPipeline = [
-      { $match: filter },
-      {
-        $group: {
-          _id: {
-            slug: "$slug",
-            sourceUrl: "$sourceUrl",
-          },
-        },
-      },
-      { $count: "total" },
-    ];
-
-    const [posts, countResult] = await Promise.all([
-      JobPost.aggregate(pipeline),
-      JobPost.aggregate(countPipeline),
-    ]);
-    const total = countResult[0]?.total || 0;
-
-    return res.status(200).json({
-      success: true,
-      message: "Job post list fetched successfully",
-      data: posts,
-      pagination: {
-        total,
-        page: parsedPage,
-        limit: parsedLimit,
-        totalPages: Math.ceil(total / parsedLimit),
-      },
-    });
-  } catch (error) {
-    console.error("Get post list by section canonicalUrl error:", error);
-    return res.status(500).json({
-      success: false,
-      message: error.message || "Failed to fetch job post list",
-    });
-  }
+    const { sectionCanonicalUrl } = req.params; const { page=1, limit=50, search, order="desc" } = req.query;
+    if (!sectionCanonicalUrl?.trim()) return res.status(400).json({ success:false, message:"sectionCanonicalUrl required"});
+    const p = Math.max(parseInt(page,10),1), l=Math.min(Math.max(parseInt(limit,10),1),200), skip=(p-1)*l;
+    const filter={sectionCanonicalUrl:sectionCanonicalUrl.trim()};
+    if(search) filter.$or=[{title:{$regex:search,$options:"i"}},{slug:{$regex:search,$options:"i"}}];
+    const orderVal=order==="asc"?1:-1;
+    const sortStage={updatedAt:orderVal,createdAt:orderVal};
+    const pipeline=[{$match:filter},{$sort:sortStage},{$group:{_id:{slug:"$slug",sourceUrl:"$sourceUrl"},doc:{$first:"$$ROOT"}}},
+      {$replaceRoot:{newRoot:"$doc"}},{$sort:sortStage},{$project:{title:1,slug:1,sectionName:1,sectionCanonicalUrl:1,sourceUrl:1,updatedAt:1}},
+      {$skip:skip},{$limit:l}];
+    const countPipe=[{$match:filter},{$group:{_id:{slug:"$slug",sourceUrl:"$sourceUrl"}}},{$count:"total"}];
+    const [posts,count]=await Promise.all([JobPost.aggregate(pipeline),JobPost.aggregate(countPipe)]);
+    const total=count[0]?.total||0;
+    res.status(200).json({success:true,message:"Job post list fetched",data:posts,pagination:{total,page:p,limit:l,totalPages:Math.ceil(total/l)}});
+  } catch(e){console.error(e);res.status(500).json({success:false,message:e.message});}
 };
