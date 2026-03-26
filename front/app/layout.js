@@ -1,14 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import StructuredData from "./component/seo/StructuredData";
-import {
-  BRAND_NAME,
-  DEFAULT_DESCRIPTION,
-  SITE_ICON_PATH,
-  buildOrganizationSchema,
-  buildWebsiteSchema,
-  getSiteUrl,
-} from "./lib/seo";
+import StoreProvider from "./StoreProvider";
+import CookieBanner from "./components/CookieBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,92 +13,77 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sarkariafsar.com";
+
 export const metadata = {
-  metadataBase: new URL(getSiteUrl()),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
-    template: `%s | ${BRAND_NAME}`,
+    default: "SarkariAfsar — Sarkari Naukri, Govt Jobs, Schemes & Updates",
+    template: "%s | SarkariAfsar",
   },
-  description: DEFAULT_DESCRIPTION,
-  applicationName: BRAND_NAME,
-  authors: [{ name: BRAND_NAME, url: getSiteUrl() }],
-  creator: BRAND_NAME,
-  publisher: BRAND_NAME,
-  category: "Government Jobs and Schemes",
-  alternates: {
-    canonical: "/",
-  },
-  manifest: "/manifest.webmanifest",
+  description:
+    "SarkariAfsar provides real-time updates on government jobs, admit cards, results, sarkari yojana and recruitment notifications across India.",
   keywords: [
+    "sarkari naukri",
     "government jobs",
-    "latest government jobs",
-    "exam results",
-    "admit cards",
-    "government schemes",
+    "sarkari result",
+    "admit card",
+    "sarkari yojana",
+    "govt schemes",
+    "latest govt jobs",
+    "sarkari afsar",
+    "free job alert",
+    "ssc",
+    "upsc",
+    "railway jobs",
   ],
-  openGraph: {
-    type: "website",
-    url: "/",
-    title: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
-    description: DEFAULT_DESCRIPTION,
-    siteName: BRAND_NAME,
-    locale: "en-IN",
-    images: [
-      {
-        url: SITE_ICON_PATH,
-        width: 256,
-        height: 256,
-        alt: BRAND_NAME,
-      },
-    ],
-  },
-  twitter: {
-    card: "summary",
-    title: `${BRAND_NAME} - Sarkari Jobs, Results, Schemes`,
-    description: DEFAULT_DESCRIPTION,
-    images: [SITE_ICON_PATH],
-  },
+  authors: [{ name: "SarkariAfsar Editorial" }],
+  creator: "SarkariAfsar",
+  publisher: "SarkariAfsar",
   robots: {
     index: true,
     follow: true,
     googleBot: {
       index: true,
       follow: true,
+      "max-video-preview": -1,
       "max-image-preview": "large",
       "max-snippet": -1,
-      "max-video-preview": -1,
     },
   },
-  icons: {
-    icon: [{ url: SITE_ICON_PATH, type: "image/svg+xml" }],
-    shortcut: [SITE_ICON_PATH],
-    apple: [{ url: SITE_ICON_PATH }],
+  alternates: {
+    canonical: SITE_URL,
   },
-  formatDetection: {
-    telephone: false,
-    email: false,
-    address: false,
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: SITE_URL,
+    siteName: "SarkariAfsar",
+    title: "SarkariAfsar — Sarkari Naukri, Govt Jobs, Schemes & Updates",
+    description:
+      "Real-time updates on government jobs, admit cards, results, sarkari yojana and recruitment notifications across India.",
   },
-};
-
-export const viewport = {
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
-  themeColor: "#0f172a",
+  twitter: {
+    card: "summary_large_image",
+    title: "SarkariAfsar — Sarkari Naukri, Govt Jobs, Schemes & Updates",
+    description:
+      "Real-time updates on government jobs, admit cards, results, sarkari yojana and recruitment notifications across India.",
+  },
+  verification: {
+    // Add your verification codes here when available
+    // google: "your-google-verification-code",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en-IN" suppressHydrationWarning>
-      <body
-        suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <StructuredData
-          data={[buildOrganizationSchema(), buildWebsiteSchema()]}
-        />
-        {children}
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <StoreProvider>{children}</StoreProvider>
+        <CookieBanner />
       </body>
     </html>
   );

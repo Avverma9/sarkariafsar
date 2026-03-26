@@ -1,219 +1,109 @@
-import { getAllGovSchemes } from "./lib/govSchemesApi";
-import { assessSchemeContentQuality } from "./lib/contentQuality";
-import { buildSchemeSlug } from "./lib/schemeSlug";
-import { getSectionsWithJobs } from "./lib/siteApi";
-import { absoluteUrl } from "./lib/seo";
-import { getAllBlogPosts } from "./lib/blogs";
-import { getSectionHref, mapSectionsWithJobs } from "./lib/sections";
+import { baseUrl } from "../lib/baseUrl";
 
-const SITEMAP_FETCH_TIMEOUT_MS = 15000;
-export const dynamic = "force-dynamic";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://sarkariafsar.com";
 
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
+// Static routes always included
+const staticRoutes = [
+  { url: "/", priority: 1.0, changeFrequency: "daily" },
+  { url: "/jobpost", priority: 0.9, changeFrequency: "daily" },
+  { url: "/post", priority: 0.9, changeFrequency: "daily" },
+  { url: "/blog", priority: 0.9, changeFrequency: "daily" },
+  { url: "/schemes", priority: 0.9, changeFrequency: "daily" },
+  { url: "/about", priority: 0.5, changeFrequency: "yearly" },
+  { url: "/contact", priority: 0.4, changeFrequency: "yearly" },
+  { url: "/disclaimer", priority: 0.3, changeFrequency: "yearly" },
+  { url: "/privacy-policy", priority: 0.3, changeFrequency: "yearly" },
+  { url: "/terms", priority: 0.3, changeFrequency: "yearly" },
+  { url: "/cookie-policy", priority: 0.3, changeFrequency: "yearly" },
+];
 
-function toValidDate(value, fallback = new Date()) {
-  const date = new Date(value || "");
-  return Number.isNaN(date.getTime()) ? fallback : date;
-}
-
-function createEntry(path, { changeFrequency, priority, lastModified } = {}) {
-  return {
-    url: absoluteUrl(path),
-    changeFrequency,
-    priority,
-    lastModified: toValidDate(lastModified),
-  };
-}
-
-function dedupeEntries(entries = []) {
-  const seen = new Set();
-  const result = [];
-
-  asArray(entries).forEach((entry) => {
-    const url = String(entry?.url || "");
-
-    if (!url || seen.has(url)) {
-      return;
-    }
-
-    seen.add(url);
-    result.push(entry);
-  });
-
-  return result;
-}
-
-function extractSchemes(payload) {
-  if (Array.isArray(payload?.schemes)) {
-    return payload.schemes;
-  }
-
-  if (Array.isArray(payload?.data)) {
-    return payload.data;
-  }
-
-  return asArray(payload);
-}
-
-async function withTimeout(task, timeoutMs = SITEMAP_FETCH_TIMEOUT_MS) {
-  let timeoutId;
-
+async function fetchJson(endpoint) {
   try {
-    return await Promise.race([
-      task,
-      new Promise((_, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error(`Timed out after ${timeoutMs}ms`));
-        }, timeoutMs);
-      }),
-    ]);
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-async function getSchemeEntries() {
-  try {
-    const payload = await withTimeout(getAllGovSchemes());
-    const schemes = extractSchemes(payload);
-
-    return schemes
-      .map((scheme) => {
-        const quality = assessSchemeContentQuality(scheme);
-        const slug = String(scheme?.slug || buildSchemeSlug(scheme)).trim();
-
-        if (!slug || quality.noIndex) {
-          return null;
-        }
-
-        return createEntry(`/schemes/${slug}`, {
-          changeFrequency: "daily",
-          priority: 0.7,
-          lastModified:
-            scheme?.updatedAt || scheme?.schemeLastDate || scheme?.createdAt || new Date(),
-        });
-      })
-      .filter(Boolean);
-  } catch {
-    return [];
-  }
-}
-
-function getPostEntries(sections = []) {
-  return asArray(sections).flatMap((section) =>
-    asArray(section?.jobs)
-      .map((job) => {
-        const slug = String(job?.slug || "").trim();
-
-        if (!slug) {
-          return null;
-        }
-
-        return createEntry(`/post/${slug}`, {
-          changeFrequency: "hourly",
-          priority: 0.8,
-          lastModified: job?.updatedAt || section?.updatedAt || section?.createdAt || new Date(),
-        });
-      })
-      .filter(Boolean),
-  );
-}
-
-function getSectionEntries(sections = []) {
-  return asArray(sections).map((section) =>
-    createEntry(getSectionHref(section), {
-      changeFrequency: "hourly",
-      priority: 0.9,
-      lastModified: section?.updatedAt || section?.createdAt || new Date(),
-    }),
-  );
-}
-
-async function getSitemapSections() {
-  try {
-    const payload = await withTimeout(
-      getSectionsWithJobs({ sectionLimit: 100, jobLimit: 100 }),
-    );
-
-    return mapSectionsWithJobs(payload?.sections || payload?.data);
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(`${baseUrl}${endpoint}`, {
+      signal: controller.signal,
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const items = json?.data ?? json;
+    return Array.isArray(items) ? items : [];
   } catch {
     return [];
   }
 }
 
 export default async function sitemap() {
-  const now = new Date();
-  const blogPosts = await withTimeout(getAllBlogPosts()).catch(() => []);
-  const blogEntries = asArray(blogPosts)
-    .map((post) => {
-      const slug = String(post?.slug || "").trim();
+  // Fetch dynamic data in parallel
+  const [sectionData, blogs, schemes] = await Promise.all([
+    fetchJson("/post/get-posts-with-section"),
+    fetchJson("/blog"),
+    fetchJson("/schemes"),
+  ]);
 
-      if (!slug) {
-        return null;
-      }
+  // Extract section pages + individual posts from sections
+  const allPosts = [];
+  const seenSlugs = new Set();
+  const sectionEntries = [];
 
-      return createEntry(`/blog/${slug}`, {
-        changeFrequency: "weekly",
-        priority: 0.6,
-        lastModified: post?.updatedAt || post?.publishedAt || now,
+  for (const section of sectionData) {
+    // /post/section/<sectionCanonicalUrl>
+    if (section?.sectionCanonicalUrl) {
+      sectionEntries.push({
+        url: `${SITE_URL}/post/section/${encodeURIComponent(section.sectionCanonicalUrl)}`,
+        changeFrequency: "daily",
+        priority: 0.85,
       });
-    })
-    .filter(Boolean);
+    }
 
-  const staticEntries = [
-    createEntry("/", { changeFrequency: "hourly", priority: 1.0, lastModified: now }),
-    createEntry("/post", { changeFrequency: "hourly", priority: 0.95, lastModified: now }),
-    createEntry("/results", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
-    createEntry("/admit-cards", {
-      changeFrequency: "hourly",
-      priority: 0.9,
-      lastModified: now,
-    }),
-    createEntry("/admission", {
-      changeFrequency: "hourly",
-      priority: 0.9,
-      lastModified: now,
-    }),
-    createEntry("/schemes", { changeFrequency: "hourly", priority: 0.9, lastModified: now }),
-    createEntry("/blog", { changeFrequency: "weekly", priority: 0.75, lastModified: now }),
-    createEntry("/about", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),
-    createEntry("/contact-us", { changeFrequency: "monthly", priority: 0.5, lastModified: now }),
-    createEntry("/privacy-policy", {
-      changeFrequency: "monthly",
-      priority: 0.4,
-      lastModified: now,
-    }),
-    createEntry("/terms-and-conditions", {
-      changeFrequency: "monthly",
-      priority: 0.4,
-      lastModified: now,
-    }),
-    createEntry("/cookie-policy", {
-      changeFrequency: "monthly",
-      priority: 0.4,
-      lastModified: now,
-    }),
-    createEntry("/disclaimer", {
-      changeFrequency: "monthly",
-      priority: 0.4,
-      lastModified: now,
-    }),
-  ];
+    if (Array.isArray(section?.posts)) {
+      for (const p of section.posts) {
+        if (p?.slug && !seenSlugs.has(p.slug)) {
+          seenSlugs.add(p.slug);
+          allPosts.push(p);
+        }
+      }
+    }
+    // If the API returns flat posts (fallback)
+    if (section?.slug && !section?.posts) {
+      if (!seenSlugs.has(section.slug)) {
+        seenSlugs.add(section.slug);
+        allPosts.push(section);
+      }
+    }
+  }
 
-  const [schemeEntries, sections] = await Promise.all([
-    getSchemeEntries(),
-    getSitemapSections(),
-  ]);
-  const postEntries = getPostEntries(sections);
-  const sectionEntries = getSectionEntries(sections);
+  const postEntries = allPosts.map((p) => ({
+    url: `${SITE_URL}/post/${encodeURIComponent(p.slug)}`,
+    lastModified: p.updatedAt || p.createdAt || new Date().toISOString(),
+    changeFrequency: "weekly",
+    priority: 0.8,
+  }));
 
-  return dedupeEntries([
-    ...staticEntries,
-    ...blogEntries,
-    ...schemeEntries,
-    ...postEntries,
-    ...sectionEntries,
-  ]);
+  const blogEntries = blogs
+    .filter((b) => b?.slug)
+    .map((b) => ({
+      url: `${SITE_URL}/blog/${encodeURIComponent(b.slug)}`,
+      lastModified: b.updatedAt || b.createdAt || new Date().toISOString(),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    }));
+
+  const schemeEntries = schemes
+    .filter((s) => s?.slug)
+    .map((s) => ({
+      url: `${SITE_URL}/schemes/${encodeURIComponent(s.slug)}`,
+      lastModified: s.updatedAt || s.createdAt || new Date().toISOString(),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    }));
+
+  const staticEntries = staticRoutes.map((r) => ({
+    url: `${SITE_URL}${r.url}`,
+    changeFrequency: r.changeFrequency,
+    priority: r.priority,
+  }));
+
+  return [...staticEntries, ...sectionEntries, ...postEntries, ...blogEntries, ...schemeEntries];
 }

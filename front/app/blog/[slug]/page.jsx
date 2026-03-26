@@ -1,196 +1,220 @@
-import StructuredData from "../../component/seo/StructuredData";
+"use client";
+
+import { useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import PostPageShell from "../../component/layout/PostPageShell";
-import { getAllBlogPosts, getBlogPostBySlug } from "../../lib/blogs";
-import {
-  absoluteUrl,
-  buildArticleSchema,
-  buildBreadcrumbSchema,
-  buildPageMetadata,
-  buildWebPageSchema,
-} from "../../lib/seo";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchBlogBySlug } from "../../../store/slices/blogSlice";
+import Header from "../../components/header";
+import Footer from "../../components/footer";
+import Breadcrumb from "../../components/Breadcrumb";
+import EditorialSummary from "../../components/EditorialSummary";
+import OfficialSourceBox from "../../components/OfficialSourceBox";
 
-export const dynamic = 'force-dynamic';
-
-function formatDate(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+function extractFirstUrl(text = "") {
+  const match = String(text).match(/https?:\/\/[^\s)\]">]+/i);
+  return match ? match[0] : null;
 }
 
-export async function generateMetadata({ params }) {
-  const resolvedParams = await params;
-  const slug = String(resolvedParams?.slug || "");
-  const post = await getBlogPostBySlug(slug);
+export default function BlogDetailPage() {
+  const { slug } = useParams();
+  const dispatch = useDispatch();
+  const { currentBlog, blogLoading, blogError } = useSelector((s) => s.blog);
 
-  if (!post) {
-    return buildPageMetadata({
-      title: "Blog Not Found",
-      description: "Requested blog is currently unavailable.",
-      path: `/blog/${slug}`,
-      noIndex: true,
-    });
+  useEffect(() => {
+    if (slug) dispatch(fetchBlogBySlug(slug));
+  }, [dispatch, slug]);
+
+  if (blogLoading) {
+    return (
+      <>
+        <Header />
+        <main className="max-w-3xl mx-auto px-4 py-10 animate-pulse space-y-4">
+          <div className="h-8 bg-slate-200 rounded w-3/4" />
+          <div className="h-4 bg-slate-100 rounded w-1/3" />
+          <div className="h-4 bg-slate-100 rounded w-full" />
+          <div className="h-4 bg-slate-100 rounded w-5/6" />
+          <div className="h-40 bg-slate-100 rounded" />
+        </main>
+        <Footer />
+      </>
+    );
   }
 
-  return buildPageMetadata({
-    title: post.title,
-    description: post.excerpt,
-    path: `/blog/${post.slug}`,
-    keywords: ["blog", "sarkari updates", ...(post.seoTags || post.tags)],
-    type: "article",
-    authors: [post.author],
-    publishedTime: post.publishedAt,
-    modifiedTime: post.publishedAt,
-    category: post.category,
-    section: post.category,
-  });
-}
-
-export default async function BlogDetailPage({ params }) {
-  const resolvedParams = await params;
-  const slug = String(resolvedParams?.slug || "");
-  const post = await getBlogPostBySlug(slug);
-
-  if (!post) {
-    notFound();
+  if (blogError) {
+    return (
+      <>
+        <Header />
+        <main className="max-w-3xl mx-auto px-4 py-10">
+          <p className="text-red-500 mb-4">Failed to load: {blogError}</p>
+          <Link href="/blog" className="text-indigo-600 hover:underline">← Back to Blog</Link>
+        </main>
+        <Footer />
+      </>
+    );
   }
 
-  const relatedPosts = (await getAllBlogPosts())
-    .filter((item) => item.slug !== post.slug)
-    .slice(0, 3);
-  const breadcrumbItems = [
-    { name: "Home", url: "/" },
-    { name: "Blog", url: "/blog" },
-    { name: post.title, url: `/blog/${post.slug}` },
-  ];
-  const structuredData = [
-    buildBreadcrumbSchema(breadcrumbItems, { path: `/blog/${post.slug}` }),
-    buildWebPageSchema({
-      title: post.title,
-      description: post.excerpt,
-      path: `/blog/${post.slug}`,
-      breadcrumbItems,
-      mainEntityId: absoluteUrl(`/blog/${post.slug}#article`),
-      datePublished: post.publishedAt,
-      dateModified: post.publishedAt,
-    }),
-    buildArticleSchema({
-      title: post.title,
-      description: post.excerpt,
-      path: `/blog/${post.slug}`,
-      type: "BlogPosting",
-      authorName: post.author,
-      publishedTime: post.publishedAt,
-      modifiedTime: post.publishedAt,
-      section: post.category,
-      keywords: post.seoTags || post.tags,
-    }),
-  ];
+  if (!currentBlog) return null;
+
+  const _raw = currentBlog.data ?? currentBlog;
+  const blog = Array.isArray(_raw) ? _raw[0] : _raw;
+  if (!blog) return null;
+
+  const blogText = [
+    blog.title,
+    blog.excerpt,
+    blog.intro,
+    ...(Array.isArray(blog.sections)
+      ? blog.sections.flatMap((section) => [
+          section.heading,
+          ...(Array.isArray(section.paragraphs) ? section.paragraphs : []),
+          ...(Array.isArray(section.bullets) ? section.bullets : []),
+        ])
+      : []),
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const blogSourceUrl =
+    blog.sourceUrl ||
+    blog.referenceUrl ||
+    blog.officialUrl ||
+    blog.externalUrl ||
+    extractFirstUrl(blogText);
 
   return (
-    <PostPageShell>
-      <StructuredData data={structuredData} />
-      <div className="mx-auto w-full max-w-4xl px-4 pb-16 sm:px-6 lg:px-8">
-        <article className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-          <header className="border-b border-slate-200 bg-slate-50 px-6 py-8 sm:px-10">
-            <p className="text-xs font-bold tracking-[0.2em] text-indigo-600 uppercase">
-              {post.category}
-            </p>
-            <h1 className="mt-3 text-3xl leading-tight font-black tracking-tight text-slate-900 sm:text-4xl">
-              {post.title}
-            </h1>
-            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm font-medium text-slate-600">
-              <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
-              <span>•</span>
-              <span>{post.readingTime}</span>
-              <span>•</span>
-              <span>{post.author}</span>
-            </div>
-            <p className="mt-4 text-sm leading-relaxed text-slate-700 sm:text-base">{post.intro}</p>
-          </header>
+    <div className="min-h-screen flex flex-col bg-zinc-50">
+      <Header />
+      <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-10">
+        <Breadcrumb
+          theme="light"
+          items={[
+            { label: "Home", href: "/" },
+            { label: "Blog", href: "/blog" },
+            { label: blog.title || slug },
+          ]}
+        />
 
-          <div className="space-y-8 px-6 py-8 sm:px-10">
-            {post.sections.map((section, index) => (
-              <section
-                key={`${post.slug}-section-${index + 1}`}
-                className={index > 0 ? "border-t border-slate-100 pt-8" : ""}
-              >
-                <h2 className="text-xl font-black tracking-tight text-slate-900">{section.heading}</h2>
+        {/* Meta */}
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          {blog.category && (
+            <span className="text-xs font-semibold bg-violet-100 text-violet-700 px-2 py-0.5 rounded">
+              {blog.category}
+            </span>
+          )}
+          {blog.readingTime && (
+            <span className="text-xs text-slate-500">{blog.readingTime}</span>
+          )}
+        </div>
 
-                {section.paragraphs?.map((paragraph, paragraphIndex) => (
-                  <p
-                    key={`${post.slug}-paragraph-${paragraphIndex + 1}`}
-                    className="mt-3 text-sm leading-relaxed text-slate-700 sm:text-base"
-                  >
-                    {paragraph}
-                  </p>
-                ))}
+        {/* Title */}
+        <h1 className="text-2xl md:text-3xl font-bold text-slate-900 leading-snug mb-3">
+          {blog.title}
+        </h1>
 
-                {section.bullets?.length ? (
-                  <ul className="mt-4 list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-700 sm:text-base">
-                    {section.bullets.map((bullet, bulletIndex) => (
-                      <li key={`${post.slug}-bullet-${bulletIndex + 1}`}>{bullet}</li>
+        {/* Author & date */}
+        <div className="flex items-center gap-4 text-xs text-slate-400 mb-6 pb-6 border-b border-slate-200">
+          {blog.author && <span>{blog.author}</span>}
+          {blog.publishedAt && (
+            <span>
+              {new Date(blog.publishedAt).toLocaleDateString("en-IN", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })}
+            </span>
+          )}
+        </div>
+
+        {/* Intro */}
+        {blog.intro && (
+          <p className="text-slate-700 text-base leading-relaxed mb-8 font-medium">
+            {blog.intro}
+          </p>
+        )}
+
+        <EditorialSummary
+          title={blog.title || slug}
+          sectionLabel={blog.category || "Blog article"}
+          authorName={blog.author || "SarkariAfsar Editorial"}
+          published={blog.publishedAt}
+          lastUpdated={blog.updatedAt || blog.lastModified}
+          rawText={blogText}
+          facts={[
+            ...(blog.readingTime ? [{ label: "Reading Time", value: blog.readingTime }] : []),
+            ...(Array.isArray(blog.tags) && blog.tags.length ? [{ label: "Tags", value: blog.tags.slice(0, 3).join(', ') }] : []),
+          ]}
+          mode="blog"
+        />
+
+        <OfficialSourceBox
+          title="Editorial Source Check"
+          description={
+            blogSourceUrl
+              ? "This article is written by the SarkariAfsar editorial desk. Use the linked reference alongside the article if you need to confirm a department, policy, or exam-related claim."
+              : "This article is an original editorial explainer. No external official notification URL is stored in this record, so verify policy-sensitive claims on the relevant department site if needed."
+          }
+          links={blogSourceUrl ? [{ label: "Open referenced source", href: blogSourceUrl }] : []}
+          facts={[
+            { label: "Content Type", value: blog.category || "Editorial article" },
+            { label: "Author", value: blog.author || "SarkariAfsar Editorial" },
+            { label: "Published", value: blog.publishedAt, formatAsDate: true },
+            { label: "Updated", value: blog.updatedAt || blog.lastModified, formatAsDate: true },
+          ]}
+          mode="blog"
+        />
+
+        {/* Sections */}
+        {Array.isArray(blog.sections) && blog.sections.length > 0 && (
+          <div className="space-y-8">
+            {blog.sections.map((section, i) => (
+              <div key={i}>
+                {section.heading && (
+                  <h2 className="text-lg font-bold text-slate-900 mb-3 pb-2 border-b border-slate-100">
+                    {section.heading}
+                  </h2>
+                )}
+
+                {Array.isArray(section.paragraphs) &&
+                  section.paragraphs.map((para, j) => (
+                    <p key={j} className="text-slate-600 text-sm leading-relaxed mb-3">
+                      {para}
+                    </p>
+                  ))}
+
+                {Array.isArray(section.bullets) && section.bullets.length > 0 && (
+                  <ul className="space-y-2 mt-2">
+                    {section.bullets.map((bullet, k) => (
+                      <li
+                        key={k}
+                        className="flex gap-2 text-sm text-slate-600 leading-relaxed"
+                      >
+                        <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0" />
+                        <span>{bullet}</span>
+                      </li>
                     ))}
                   </ul>
-                ) : null}
-              </section>
+                )}
+              </div>
             ))}
           </div>
+        )}
 
-          <footer className="border-t border-slate-200 bg-slate-50 px-6 py-6 sm:px-10">
-            <div className="flex flex-wrap gap-2">
-              {post.tags.map((tag) => (
-                <span
-                  key={`${post.slug}-tag-${tag}`}
-                  className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700"
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-
-            <Link
-              href="/blog"
-              className="mt-5 inline-flex rounded-full border border-indigo-200 bg-indigo-50 px-4 py-2 text-sm font-bold text-indigo-700 transition-colors hover:bg-indigo-100"
-            >
-              Back To All Blogs
-            </Link>
-          </footer>
-        </article>
-
-        {relatedPosts.length > 0 ? (
-          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-            <h3 className="text-lg font-black tracking-tight text-slate-900 sm:text-xl">
-              Related Blogs
-            </h3>
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              {relatedPosts.map((relatedPost) => (
-                <Link
-                  key={relatedPost.slug}
-                  href={`/blog/${relatedPost.slug}`}
-                  className="rounded-2xl border border-slate-200 p-4 transition-colors hover:border-indigo-300 hover:bg-indigo-50/40"
-                >
-                  <p className="text-xs font-bold tracking-wide text-indigo-600 uppercase">
-                    {relatedPost.category}
-                  </p>
-                  <p className="mt-2 text-sm font-bold leading-snug text-slate-900">
-                    {relatedPost.title}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </section>
-        ) : null}
-      </div>
-    </PostPageShell>
+        {/* Tags */}
+        {Array.isArray(blog.tags) && blog.tags.length > 0 && (
+          <div className="mt-10 pt-6 border-t border-slate-200 flex flex-wrap gap-2">
+            {blog.tags.map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded"
+              >
+                #{tag}
+              </span>
+            ))}
+          </div>
+        )}
+      </main>
+      <Footer />
+    </div>
   );
 }
