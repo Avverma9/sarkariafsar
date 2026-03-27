@@ -7,7 +7,14 @@ import EditorialSummary from './EditorialSummary';
 import OfficialSourceBox from './OfficialSourceBox';
 
 const CACHE_TTL_MS = 30 * 60 * 1000;
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
 const cacheKey = (slug) => `sarkari_post_${slug}`;
+
+function buildShareUrl(slug, explicitUrl) {
+  if (explicitUrl) return explicitUrl;
+  if (!slug) return SITE_URL;
+  return SITE_URL ? `${SITE_URL}/post/${slug}` : `/post/${slug}`;
+}
 
 function readCache(slug) {
   try {
@@ -113,7 +120,7 @@ function extractPostTrustLinks(html = '', post = {}) {
     .slice(0, 6);
 }
 
-export default function PostContent({ slug, initialPost, initialHtml }) {
+export default function PostContent({ slug, initialPost, initialHtml, shareUrl: initialShareUrl }) {
   const [post, setPost]           = useState(initialPost ?? null);
   const [html, setHtml]           = useState(initialHtml ?? '');
   const [tipContents, setTipContents] = useState([]);
@@ -145,15 +152,16 @@ export default function PostContent({ slug, initialPost, initialHtml }) {
 
   const title       = post?.title || post?.heading || 'SarkariAfsar Update';
   const authorName  = post?.author || post?.source || 'SarkariAfsar Editorial';
-  const published   = post?.publishedAt || post?.createdAt || new Date().toISOString();
+  const published   = post?.publishedAt || post?.createdAt || post?.updatedAt || post?.lastModified || null;
   const section     = post?.sectionName || post?.category || null;
   const lastUpdated = post?.updatedAt || post?.lastModified || null;
   const trustLinks  = extractPostTrustLinks(html, post);
+  const shareUrl    = buildShareUrl(slug, initialShareUrl);
 
   const shareLinks = [
-    { label: 'WhatsApp',  bg: '#25d366', href: `https://wa.me/?text=${encodeURIComponent(title + ' ' + (typeof window !== 'undefined' ? window.location.href : ''))}` },
-    { label: 'Telegram',  bg: '#0088cc', href: `https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(title)}` },
-    { label: 'X',         bg: '#000',    href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}` },
+    { label: 'WhatsApp',  bg: '#25d366', href: `https://wa.me/?text=${encodeURIComponent(`${title} ${shareUrl}`.trim())}` },
+    { label: 'Telegram',  bg: '#0088cc', href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(title)}` },
+    { label: 'X',         bg: '#000',    href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(shareUrl)}` },
   ];
 
   return (
@@ -172,12 +180,14 @@ export default function PostContent({ slug, initialPost, initialHtml }) {
               <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
               {authorName}
             </span>
-            <span className="pc-meta-item">
-              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
-              <time dateTime={published}>
-                {new Date(published).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-              </time>
-            </span>
+            {published && (
+              <span className="pc-meta-item">
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                <time dateTime={published}>
+                  {new Date(published).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </time>
+              </span>
+            )}
             {lastUpdated && (
               <span className="pc-meta-item">
                 <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>

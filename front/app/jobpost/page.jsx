@@ -156,7 +156,7 @@ export default function JobPostPage() {
                   <div className="hqc-card-body">
                     {posts.length > 0 ? (
                       <ul className="hqc-list">
-                        {posts.slice(0, 12).map((post, pi) => (
+                        {posts.slice(0, 30).map((post, pi) => (
                           <li key={post._id || pi} className="hqc-item">
                             <Link href={`/post/${post.slug}`} className="hqc-link">
                               <span className="hqc-bullet" />
@@ -192,7 +192,7 @@ export default function JobPostPage() {
 }
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
   .hqc-heading-row {
     display: flex;
@@ -223,7 +223,7 @@ const css = `
     50%       { opacity: 0.35; transform: scale(0.7); }
   }
   .hqc-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: clamp(1.25rem, 2.5vw, 1.6rem);
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -276,7 +276,7 @@ const css = `
   .hqc-head-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .hqc-icon { font-size: 1rem; flex-shrink: 0; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3)); }
   .hqc-section-name {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;

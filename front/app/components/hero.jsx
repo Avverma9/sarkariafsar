@@ -32,7 +32,7 @@ export default function Hero() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap');
 
         .hero-root {
           font-family: 'DM Sans', sans-serif;
@@ -109,7 +109,7 @@ export default function Hero() {
         }
 
         .hero-heading {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: clamp(2.6rem, 5vw, 4rem);
           font-weight: 800;
           line-height: 1.08;
@@ -238,7 +238,7 @@ export default function Hero() {
         .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.09); }
 
         .stat-val {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 2rem;
           font-weight: 800;
           color: #1a1a1a;
@@ -284,7 +284,7 @@ export default function Hero() {
         }
 
         .alert-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 0.92rem;
           font-weight: 700;
           color: #fff;

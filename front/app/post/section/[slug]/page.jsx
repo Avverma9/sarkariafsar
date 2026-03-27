@@ -125,7 +125,7 @@ const Shimmer = () => (
 );
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
   /* Hero */
   .sp-hero {
@@ -137,7 +137,7 @@ const css = `
 
   .sp-hero-icon { font-size: 2.4rem; margin-bottom: 8px; }
   .sp-hero-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: clamp(1.6rem, 4vw, 2.4rem);
     font-weight: 800;
     color: #fff;
@@ -185,7 +185,7 @@ const css = `
     50%       { opacity: 0.35; transform: scale(0.7); }
   }
   .sp-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: clamp(1.1rem, 2vw, 1.4rem);
     font-weight: 800;
     letter-spacing: -0.03em;

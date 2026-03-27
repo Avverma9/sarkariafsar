@@ -186,7 +186,7 @@ export default function PostsPage() {
 
 // ─── Styles (same as home-quick-cards) ────────────────────────────────────────
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
   .hqc-heading-row {
     display: flex;
@@ -217,7 +217,7 @@ const css = `
     50%       { opacity: 0.35; transform: scale(0.7); }
   }
   .hqc-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: clamp(1.25rem, 2.5vw, 1.6rem);
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -279,7 +279,7 @@ const css = `
     filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
   }
   .hqc-section-name {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;

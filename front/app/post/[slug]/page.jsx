@@ -174,6 +174,7 @@ export default async function PostDetailPage({ params }) {
           slug={slug}
           initialPost={post}
           initialHtml={sanitizedHtml}
+          shareUrl={seo.canonical}
         />
       </main>
 

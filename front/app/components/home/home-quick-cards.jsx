@@ -146,7 +146,7 @@ export default function HomeQuickCards() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap');
 
   .hqc-shell {
     padding: 0 0 48px;
@@ -188,7 +188,7 @@ const css = `
   }
 
   .hqc-title {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: clamp(1.25rem, 2.5vw, 1.6rem);
     font-weight: 800;
     letter-spacing: -0.03em;
@@ -263,7 +263,7 @@ const css = `
   }
 
   .hqc-section-name {
-    font-family: 'Syne', sans-serif;
+    font-family: 'Roboto', sans-serif;
     font-size: 0.72rem;
     font-weight: 800;
     letter-spacing: 0.08em;

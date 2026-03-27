@@ -28,7 +28,7 @@ export default function Footer() {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=DM+Sans:wght@400;500;600&display=swap');
 
         .ftr {
           font-family: 'DM Sans', sans-serif;
@@ -55,7 +55,7 @@ export default function Footer() {
         }
 
         .ftr-nl-text h3 {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 1.15rem;
           font-weight: 800;
           color: #fff;
@@ -140,14 +140,14 @@ export default function Footer() {
         }
 
         .ftr-brand-sp {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 0.85rem;
           font-weight: 800;
           color: #1a1a1a;
         }
 
         .ftr-brand-name {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 1.25rem;
           font-weight: 800;
           color: #fff;
@@ -189,7 +189,7 @@ export default function Footer() {
 
         /* Column headings */
         .ftr-col-title {
-          font-family: 'Syne', sans-serif;
+          font-family: 'Roboto', sans-serif;
           font-size: 0.78rem;
           font-weight: 700;
           color: #fff;
