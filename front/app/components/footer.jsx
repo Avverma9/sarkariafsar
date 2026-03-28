@@ -1,5 +1,8 @@
 'use client';
 import Link from 'next/link';
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPostsAdvanced } from '../../store/slices/statsSlice';
 
 const quickLinks = [
   { href: '/jobpost', label: 'Latest Jobs', badge: 'Hot' },
@@ -15,7 +18,7 @@ const legalLinks = [
   { href: '/disclaimer', label: 'Disclaimer' },
 ];
 
-const categories = [
+const staticCategories = [
   { label: 'SSC', count: '240+' },
   { label: 'UPSC', count: '18+' },
   { label: 'Railway', count: '95+' },
@@ -24,7 +27,63 @@ const categories = [
   { label: 'State PSC', count: '310+' },
 ];
 
+function formatChip(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K+`;
+  return `${n}+`;
+}
+
 export default function Footer() {
+  const dispatch = useDispatch();
+  const { postsByOrganization, postsAdvancedTotal, loading } = useSelector((s) => s.stats || {});
+
+  useEffect(() => {
+    dispatch(fetchPostsAdvanced());
+  }, [dispatch]);
+
+  // Map API organizations to our footer categories using simple regex matchers.
+  let categories = staticCategories;
+  if (Array.isArray(postsByOrganization) && postsByOrganization.length > 0) {
+    const orgs = postsByOrganization.filter(o => o && o.organization && typeof o.count === 'number');
+    const totalFromApi = postsAdvancedTotal ?? orgs.reduce((s, o) => s + (o.count || 0), 0);
+
+    const matchers = {
+      SSC: [/\bssc\b/i],
+      UPSC: [/\bupsc\b/i, /\bupsssc\b/i, /\bupsssc\b/i],
+      Railway: [/\brailway\b/i, /\brrb\b/i, /\brrc\b/i],
+      Banking: [/\bbank\b/i],
+      Defence: [/\bdefence\b/i, /\barmy\b/i, /\bnavy\b/i, /\bair ?force\b/i],
+      'State PSC': [/\bpsc\b/i],
+    };
+
+    const matchedSet = new Set();
+    const computed = Object.keys(matchers).map((label) => {
+      const patterns = matchers[label];
+      let sum = 0;
+      orgs.forEach((o) => {
+        const name = String(o.organization || '').trim();
+        if (patterns.some((rx) => rx.test(name))) {
+          sum += Number(o.count || 0);
+          matchedSet.add(name);
+        }
+      });
+      return { label, count: formatChip(sum), raw: sum };
+    });
+
+    const matchedTotal = computed.reduce((s, c) => s + (c.raw || 0), 0);
+    const otherCount = Math.max(0, (totalFromApi || 0) - matchedTotal);
+
+    // Build categories list preserving original order and replacing counts.
+    categories = staticCategories.map((c) => {
+      const found = computed.find((x) => x.label === c.label);
+      return { label: c.label, count: found && found.raw ? formatChip(found.raw) : c.count };
+    });
+
+    if (otherCount > 0) {
+      categories.push({ label: 'Other', count: formatChip(otherCount) });
+    }
+  }
+
   return (
     <>
       <style>{`

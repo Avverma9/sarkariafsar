@@ -71,10 +71,33 @@ const blogSlice = createSlice({
       })
       .addCase(fetchBlogs.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload.data ?? action.payload;
-        state.total = action.payload.total ?? state.items.length;
-        state.page = action.payload.page ?? 1;
-        state.limit = action.payload.limit ?? 10;
+        const payload = action.payload ?? {};
+
+        // Determine items array from common response shapes
+        let items = [];
+        if (Array.isArray(payload)) {
+          items = payload;
+        } else if (Array.isArray(payload.data)) {
+          items = payload.data;
+        } else if (Array.isArray(payload.docs)) {
+          items = payload.docs;
+        } else if (Array.isArray(payload.items)) {
+          items = payload.items;
+        }
+
+        state.items = items;
+
+        // Extract total from various possible fields
+        const totalFromPayload =
+          payload.total ?? payload.count ?? payload.totalDocs ?? payload.meta?.total ?? payload.pagination?.total ?? null;
+        state.total = typeof totalFromPayload === 'number' ? totalFromPayload : items.length;
+
+        // Extract page & limit with fallbacks
+        const pageFromPayload = payload.page ?? payload.currentPage ?? payload.meta?.page ?? payload.pagination?.page ?? null;
+        const limitFromPayload = payload.limit ?? payload.perPage ?? payload.pageSize ?? payload.meta?.limit ?? payload.pagination?.limit ?? null;
+
+        state.page = Number(pageFromPayload ?? state.page ?? 1);
+        state.limit = Number(limitFromPayload ?? state.limit ?? 10);
       })
       .addCase(fetchBlogs.rejected, (state, action) => {
         state.loading = false;

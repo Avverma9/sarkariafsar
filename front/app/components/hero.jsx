@@ -1,18 +1,24 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
-
-const stats = [
-  { value: '1K+', label: 'Active Jobs' },
-  { value: '800+', label: 'Govt Schemes' },
-];
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchStats } from '../../store/slices/statsSlice';
 
 const tags = ['SSC', 'UPSC', 'Railway', 'Banking', 'Defence', 'State PSC'];
 
+function formatCount(n) {
+  if (n === null || n === undefined) return '—';
+  if (n >= 1000) return `${(n / 1000).toFixed(1).replace(/\.0$/, '')}K+`;
+  return `${n}+`;
+}
+
 export default function Hero() {
   const containerRef = useRef(null);
+  const dispatch = useDispatch();
+  const { posts, schemes, blogs, loading } = useSelector((s) => s.stats);
 
   useEffect(() => {
+    dispatch(fetchStats());
     const el = containerRef.current;
     if (!el) return;
     const items = el.querySelectorAll('[data-reveal]');
@@ -351,7 +357,11 @@ export default function Hero() {
 
           {/* Right panel */}
           <div className="hero-right">
-            {stats.map(({ value, label, icon }, i) => (
+            {[
+              { value: formatCount(posts), label: 'Active Jobs', icon: '💼' },
+              { value: formatCount(schemes), label: 'Govt Schemes', icon: '📋' },
+              { value: formatCount(blogs), label: 'Blog Articles', icon: '📝' },
+            ].map(({ value, label, icon }, i) => (
               <div
                 key={label}
                 className="stat-card"
@@ -359,23 +369,21 @@ export default function Hero() {
                 style={{ transitionDelay: `${0.4 + i * 0.1}s` }}
               >
                 <div>
-                  <div className="stat-val">{value}</div>
+                  <div className="stat-val">{loading && value === '—' ? '…' : value}</div>
                   <div className="stat-label">{label}</div>
                 </div>
-                <div className="stat-icon">
-                  {i === 0 ? '💼' : i === 1 ? '📋' : '👥'}
-                </div>
+                <div className="stat-icon">{icon}</div>
               </div>
             ))}
 
-            <div className="alert-card" data-reveal style={{ transitionDelay: '0.7s' }}>
+            {/* <div className="alert-card" data-reveal style={{ transitionDelay: '0.8s' }}>
               <div className="alert-icon">🔔</div>
               <div>
                 <div className="alert-title">Live Notification Active</div>
                 <div className="alert-text">SSC CGL 2025 Admit Card released. UPSC Prelims result expected this week.</div>
                 <span className="alert-badge">● LIVE UPDATES</span>
               </div>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>
