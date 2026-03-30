@@ -20,7 +20,10 @@ async function generateWithFallback(prompt, maxTokens = 250) {
       try {
         const genAI = new GoogleGenerativeAI(apiKey)
         const model = genAI.getGenerativeModel({ model: modelName, generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 } })
-        const result = await model.generateContent(prompt)
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000))
+        ])
         const text = result.response.text().trim()
         if (text && text.length > 10) return text
       } catch { continue }
@@ -31,8 +34,9 @@ async function generateWithFallback(prompt, maxTokens = 250) {
 
 // ============ generateMetadata ============
 export async function generateMetadata({ params }) {
+  const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${params.slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 86400 } })
     const data = await res.json()
     const scheme = data?.data
     if (!scheme) return { title: 'Scheme Not Found - Sarkari Afsar' }
@@ -263,9 +267,10 @@ async function AiFaqBox({ content, title }) {
 
 // ============ Main Page ============
 export default async function SchemeDetailPage({ params }) {
+  const { slug } = await params
   let scheme = null
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${params.slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 86400 } })
     const data = await res.json()
     scheme = data?.data
   } catch {}
@@ -359,17 +364,6 @@ export default async function SchemeDetailPage({ params }) {
         <Suspense fallback={<FaqSkeleton />}>
           <AiFaqBox content={aiContent} title={scheme.schemeTitle} />
         </Suspense>
-
-        {scheme.applyLink && (
-          <div className="bg-gradient-to-r from-[#1e3a5f] to-[#1e4a7f] rounded-2xl p-6 text-center text-white mb-6">
-            <h3 className="text-lg font-bold mb-2">Apply for This Scheme</h3>
-            <p className="text-blue-200 text-sm mb-4">Click below to visit the official portal.</p>
-            <a href={scheme.applyLink} target="_blank" rel="nofollow noopener noreferrer"
-              className="inline-block bg-[#f59e0b] hover:bg-[#d97706] text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-lg">
-              Apply Now →
-            </a>
-          </div>
-        )}
         <Link href="/yojana" className="text-[#1e3a5f] hover:underline text-sm font-medium">&larr; Back to All Yojana</Link>
       </div>
     </div>

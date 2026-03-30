@@ -27,7 +27,10 @@ async function generateWithFallback(prompt, maxTokens = 250) {
           model: modelName,
           generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
         })
-        const result = await model.generateContent(prompt)
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000))
+        ])
         const text = result.response.text().trim()
         if (text && text.length > 10) return text
       } catch {

@@ -3,8 +3,9 @@ import Link from 'next/link'
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 
 export async function generateMetadata({ params }) {
+  const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/blog/slug/${params.slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { next: { revalidate: 86400 } })
     const data = await res.json()
     const blog = data?.data
     if (!blog) return { title: 'Blog - Sarkari Afsar' }
@@ -18,9 +19,10 @@ export async function generateMetadata({ params }) {
 }
 
 export default async function BlogDetailPage({ params }) {
+  const { slug } = await params
   let blog = null
   try {
-    const res = await fetch(`${API_BASE}/blog/slug/${params.slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { next: { revalidate: 86400 } })
     const data = await res.json()
     blog = data?.data
   } catch {}
