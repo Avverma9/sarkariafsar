@@ -1,4 +1,5 @@
 const JobPost = require("../models/post");
+const { parseLastDateFromHtml } = require("../utils/parseLastDate");
 
 function cleanText(value = "") {
   return String(value || "").replace(/\s+/g, " ").trim();
@@ -100,6 +101,7 @@ async function saveOrPatchJobPost({
     category: "Government Exam",
     status: "active",
     isActive: true,
+    applyLastDate: parseLastDateFromHtml(formattedHtml) || null,
     htmlSnapshot,
     titleSignature,
     lastPatchedAt: new Date(),

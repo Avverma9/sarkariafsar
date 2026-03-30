@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-zinc-950 text-zinc-100;
+  }
+}
+
+@layer utilities {
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    @apply bg-zinc-950;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    @apply bg-zinc-800 rounded-full hover:bg-zinc-700 transition-colors;
+  }
+}
+
+/* Sarkari Content Styles for Preview */
+.sarkari-content {
+  color: #333;
+  font-family: Arial, sans-serif;
+}
+
+.sarkari-content h1 {
+  color: #ff0000;
+  font-size: 24px;
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #ff0000;
+  padding-bottom: 10px;
+}
+
+.sarkari-content h2 {
+  color: #0000ff;
+  font-size: 20px;
+  border-bottom: 1px solid #ccc;
+  margin-top: 30px;
+  margin-bottom: 15px;
+  padding-bottom: 5px;
+}
+
+.sarkari-content ul {
+  list-style-type: disc;
+  margin-left: 25px;
+  margin-bottom: 20px;
+}
+
+.sarkari-content li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.sarkari-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 25px;
+  border: 1px solid #ccc;
+}
+
+.sarkari-content th, .sarkari-content td {
+  border: 1px solid #ccc;
+  padding: 12px;
+  text-align: left;
+}
+
+.sarkari-content tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.sarkari-content a {
+  color: #ff0000;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.sarkari-content a:hover {
+  text-decoration: underline;
+}
+

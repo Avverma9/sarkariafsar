@@ -138,7 +138,7 @@ exports.getExpiringJobPostsReminder = async (req, res) => {
 
 exports.getAllJobPosts = async (req, res) => {
   try {
-    const { page=1, limit=10, category, status, language, tag, search, sortBy="createdAt", order="desc" } = req.query;
+    const { page=1, limit=10, category, status, language, tag, search, sectionName } = req.query;
     const p = Math.max(parseInt(page, 10), 1), l = Math.min(Math.max(parseInt(limit, 10), 1), 100);
     const skip = (p - 1) * l;
     const f = {};
@@ -146,15 +146,42 @@ exports.getAllJobPosts = async (req, res) => {
     if (status) f.status = status;
     if (language) f.language = language;
     if (tag) f.tags = tag;
+    if (sectionName) f.sectionName = { $regex: String(sectionName).trim(), $options: "i" };
     if (search) f.$or = ["title","jobtitle","slug","dedupeKey","category","advertisement_number","advertisementNumber","conducting_authority","conductingAuthority","tags"]
       .map((k) => ({ [k]: { $regex: search, $options: "i" } }));
-    const allowed = ["createdAt","updatedAt","applyLastDate","title","category","status"];
-    const s = allowed.includes(sortBy) ? sortBy : "createdAt";
-    const orderVal = order === "asc" ? 1 : -1;
-    const [items, total] = await Promise.all([
-      JobPost.find(f).sort({ [s]: orderVal }).skip(skip).limit(l),
-      JobPost.countDocuments(f)
-    ]);
+
+    const now = new Date();
+    // Sort logic:
+    //   Group 0 → upcoming applyLastDate (nearest first)
+    //   Group 1 → no date / expired → sort by updatedAt DESC (most recently active first)
+    const MAX_SORT_MS = 9007199254740991; // Number.MAX_SAFE_INTEGER
+
+    const pipeline = [
+      { $match: f },
+      {
+        $addFields: {
+          _sortKey: {
+            $cond: {
+              if: { $and: [{ $gt: ["$applyLastDate", null] }, { $gte: ["$applyLastDate", now] }] },
+              then: { $toLong: "$applyLastDate" },
+              else: MAX_SORT_MS,
+            },
+          },
+        },
+      },
+      { $sort: { _sortKey: 1, updatedAt: -1 } },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: l }, { $project: { _sortKey: 0 } }],
+          total: [{ $count: "count" }],
+        },
+      },
+    ];
+
+    const [result] = await JobPost.aggregate(pipeline);
+    const items = result?.data || [];
+    const total = result?.total?.[0]?.count || 0;
+
     res.status(200).json({ success: true, message: "Job posts fetched", data: items, pagination: { total, page: p, limit: l, totalPages: Math.ceil(total/l) }});
   } catch (e) { return handleMongooseError(e,res,"Get all job posts error:"); }
 };
