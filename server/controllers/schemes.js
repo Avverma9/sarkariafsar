@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const GovScheme  = require( "../models/schemes");
+const { applyNoIndexFlag } = require("../utils/thinContentCheck");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -32,6 +33,10 @@ const sanitizeGovSchemeData = (input = {}) => {
   if ("city" in data) data.city = normalizeString(data.city);
   if ("applyLink" in data) data.applyLink = normalizeString(data.applyLink);
   if ("aboutScheme" in data) data.aboutScheme = normalizeString(data.aboutScheme);
+  if ("officialSourceUrl" in data) data.officialSourceUrl = normalizeString(data.officialSourceUrl);
+  if ("authorName" in data) data.authorName = normalizeString(data.authorName);
+  if ("authorProfileUrl" in data) data.authorProfileUrl = normalizeString(data.authorProfileUrl);
+  if ("authorBio" in data) data.authorBio = normalizeString(data.authorBio);
 
   if ("requiredDocs" in data) {
     data.requiredDocs = normalizeStringArray(data.requiredDocs);
@@ -48,6 +53,8 @@ const sanitizeGovSchemeData = (input = {}) => {
   return data;
 };
 
+const OFFICIAL_SOURCE_REGEX = /\.(gov\.in|nic\.in)(\/|$)/i;
+
 const validateCreatePayload = (data) => {
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     return "Valid data object is required";
@@ -59,6 +66,14 @@ const validateCreatePayload = (data) => {
 
   if ("requiredDocs" in data && !Array.isArray(data.requiredDocs)) {
     return "requiredDocs must be an array";
+  }
+
+  // Mandatory official source for govt schemes
+  if (!data.officialSourceUrl || !String(data.officialSourceUrl).trim()) {
+    return "officialSourceUrl is required (must be a .gov.in or .nic.in link)";
+  }
+  if (!OFFICIAL_SOURCE_REGEX.test(data.officialSourceUrl)) {
+    return "officialSourceUrl must be an official .gov.in or .nic.in link";
   }
 
   return null;
@@ -75,6 +90,13 @@ const validateUpdatePayload = (data) => {
 
   if ("requiredDocs" in data && !Array.isArray(data.requiredDocs)) {
     return "requiredDocs must be an array";
+  }
+
+  // Validate officialSourceUrl if provided during update
+  if ("officialSourceUrl" in data && data.officialSourceUrl) {
+    if (!OFFICIAL_SOURCE_REGEX.test(data.officialSourceUrl)) {
+      return "officialSourceUrl must be an official .gov.in or .nic.in link";
+    }
   }
 
   return null;

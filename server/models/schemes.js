@@ -56,6 +56,50 @@ const govSchemeSchema = new mongoose.Schema({
     default: "",
     trim: true,
   },
+
+  // ── Official Source (YMYL - mandatory for govt schemes) ──
+  officialSourceUrl: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+
+  slug: {
+    type: String,
+    default: "",
+    trim: true,
+    index: true,
+  },
+
+  // ── Author / YMYL fields ──
+  authorName: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+
+  authorProfileUrl: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+
+  authorBio: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+
+  wordCount: {
+    type: Number,
+    default: 0,
+  },
+
+  noIndex: {
+    type: Boolean,
+    default: false,
+    index: true,
+  },
 }, {
   strict: false,
   minimize: false,

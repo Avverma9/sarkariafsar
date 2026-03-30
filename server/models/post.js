@@ -167,6 +167,93 @@ const jobPostSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+
+    // ── Custom Content Fields (SEO / 1000+ word content) ──
+    examPreparationStrategy: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    syllabusBreakdown: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    physicalTestDetails: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    selectionProcess: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    ageLimit: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    applicationFee: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    salary: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    location: {
+      type: String,
+      default: "",
+      trim: true,
+      index: true,
+    },
+
+    totalVacancies: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    wordCount: {
+      type: Number,
+      default: 0,
+    },
+
+    // ── Author / YMYL fields ──
+    authorName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    authorProfileUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    authorBio: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    // ── Auto noIndex for thin content ──
+    noIndex: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

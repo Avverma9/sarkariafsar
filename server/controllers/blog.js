@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Blog = require('../models/blog');
+const { applyNoIndexFlag } = require('../utils/thinContentCheck');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -55,6 +56,9 @@ const sanitizeBlogData = (input = {}, { isUpdate = false } = {}) => {
   if ('author' in data) data.author = normalizeString(data.author);
   if ('category' in data) data.category = normalizeString(data.category);
   if ('intro' in data) data.intro = normalizeString(data.intro);
+  if ('authorProfileUrl' in data) data.authorProfileUrl = normalizeString(data.authorProfileUrl);
+  if ('authorBio' in data) data.authorBio = normalizeString(data.authorBio);
+  if ('authorCredentials' in data) data.authorCredentials = normalizeString(data.authorCredentials);
 
   if ('tags' in data) {
     data.tags = normalizeStringArray(data.tags);

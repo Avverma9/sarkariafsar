@@ -16,7 +16,16 @@ const blogSchema = new mongoose.Schema({
   category: { type: String, required: true },
   tags: [{ type: String }],
   intro: { type: String, required: true },
-  sections: [sectionSchema]  // Embedded sections array
+  sections: [sectionSchema],  // Embedded sections array
+
+  // ── Author Profile (YMYL) ──
+  authorProfileUrl: { type: String, default: '', trim: true },
+  authorBio: { type: String, default: '', trim: true },
+  authorCredentials: { type: String, default: '', trim: true },
+
+  // ── SEO / thin content ──
+  wordCount: { type: Number, default: 0 },
+  noIndex: { type: Boolean, default: false, index: true },
 }, {
   strict: false,  // Allows extra fields if needed
   timestamps: true

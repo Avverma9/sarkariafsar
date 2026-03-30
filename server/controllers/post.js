@@ -1,6 +1,8 @@
 const mongoose = require("mongoose");
 const JobPost = require("../models/post");
 const { postData } = require("../bulk-post");
+const { generateJobPostingLD } = require("../utils/generateJobPostingLD");
+const { applyNoIndexFlag } = require("../utils/thinContentCheck");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -31,7 +33,10 @@ const sanitizeJobPostData = (input = {}, { isUpdate = false } = {}) => {
   for (const key of [
     "title","jobtitle","category","sectionName","sectionCanonicalUrl","language","status",
     "dedupeKey","advertisement_number","advertisementNumber","conducting_authority",
-    "conductingAuthority","disclaimer"
+    "conductingAuthority","disclaimer",
+    "examPreparationStrategy","syllabusBreakdown","physicalTestDetails",
+    "selectionProcess","ageLimit","applicationFee","salary","location","totalVacancies",
+    "authorName","authorProfileUrl","authorBio"
   ]) if (key in data) data[key] = normalizeString(data[key]);
   if ("tags" in data) data.tags = normalizeStringArray(data.tags);
   if ("slug" in data && typeof data.slug === "string") data.slug = generateSlug(data.slug);
@@ -76,7 +81,7 @@ exports.addJobPost = async (req, res) => {
     if (!data) return res.status(400).json({ success: false, message: "Data is required" });
     if (Array.isArray(data)) {
       if (!data.length) return res.status(400).json({ success: false, message: "Data array cannot be empty" });
-      const docs = data.map((i) => sanitizeJobPostData(i?.post || i));
+      const docs = data.map((i) => applyNoIndexFlag(sanitizeJobPostData(i?.post || i)));
       for (const d of docs) {
         const err = validateCreatePayload(d);
         if (err) return res.status(400).json({ success: false, message: err });
@@ -84,7 +89,7 @@ exports.addJobPost = async (req, res) => {
       const created = await JobPost.insertMany(docs, { ordered: false });
       return res.status(201).json({ success: true, message: `${created.length} job posts created`, data: created });
     }
-    const sanitized = sanitizeJobPostData(data?.post || data);
+    const sanitized = applyNoIndexFlag(sanitizeJobPostData(data?.post || data));
     const err = validateCreatePayload(sanitized);
     if (err) return res.status(400).json({ success: false, message: err });
     const created = await createJobPost(sanitized);
@@ -189,8 +194,16 @@ exports.updateJobPost = async (req,res) => {
     const { id } = req.params; const { data } = req.body;
     if (!isValidObjectId(id)) return res.status(400).json({ success:false,message:"Invalid ID"});
     const err = validateUpdatePayload(data); if (err) return res.status(400).json({ success:false,message:err});
-    const updated = await JobPost.findByIdAndUpdate(id, sanitizeJobPostData(data,{isUpdate:true}), { new:true, runValidators:true });
+    const sanitized = sanitizeJobPostData(data,{isUpdate:true});
+    const updated = await JobPost.findByIdAndUpdate(id, sanitized, { new:true, runValidators:true });
     if (!updated) return res.status(404).json({ success:false,message:"Not found"});
+    // re-compute noIndex after update
+    const plain = updated.toObject();
+    const flagged = applyNoIndexFlag(plain);
+    if (flagged.noIndex !== updated.noIndex || flagged.wordCount !== updated.wordCount) {
+      updated.noIndex = flagged.noIndex; updated.wordCount = flagged.wordCount;
+      await updated.save();
+    }
     res.status(200).json({ success:true,message:"Updated",data:updated });
   } catch(e){return handleMongooseError(e,res,"Update error:");}
 };
@@ -330,4 +343,28 @@ exports.getPostListBySectionCanonicalUrl = async (req,res) => {
     const total=count[0]?.total||0;
     res.status(200).json({success:true,message:"Job post list fetched",data:posts,pagination:{total,page:p,limit:l,totalPages:Math.ceil(total/l)}});
   } catch(e){console.error(e);res.status(500).json({success:false,message:e.message});}
+};
+
+// ─── JSON-LD endpoint ───
+exports.getJobPostJsonLD = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug?.trim()) return res.status(400).json({ success: false, message: "Slug required" });
+    const doc = await JobPost.findOne({ slug: generateSlug(slug) });
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+    const ld = generateJobPostingLD(doc.toObject());
+    if (!ld) return res.status(500).json({ success: false, message: "Could not generate JSON-LD" });
+    res.status(200).json({ success: true, data: ld, noIndex: doc.noIndex });
+  } catch (e) { return handleMongooseError(e, res, "JSON-LD error:"); }
+};
+
+// ─── noIndex meta helper (frontend can call this to decide <meta robots>) ───
+exports.getPostMeta = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    if (!slug?.trim()) return res.status(400).json({ success: false, message: "Slug required" });
+    const doc = await JobPost.findOne({ slug: generateSlug(slug) }, "slug title noIndex wordCount");
+    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
+    res.status(200).json({ success: true, data: { slug: doc.slug, noIndex: doc.noIndex, wordCount: doc.wordCount } });
+  } catch (e) { return handleMongooseError(e, res, "Post meta error:"); }
 };
