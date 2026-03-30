@@ -1,9 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import dynamic from 'next/dynamic'
-
-const AdsenseUnit = dynamic(() => import('@/components/ads/AdsenseUnit'), { ssr: false })
+import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -43,8 +41,9 @@ async function generateWithFallback(prompt, maxTokens = 250) {
 
 // ============ generateMetadata ============
 export async function generateMetadata({ params }) {
+  const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/post/slug/${params.slug}`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
     const data = await res.json()
     const job = data?.data
     if (!job) return { title: 'Job Not Found - Sarkari Afsar' }
@@ -80,6 +79,35 @@ function parseTextDate(str) {
   return null
 }
 
+const DATE_LABEL_KEYWORDS = [
+  { re: /fee\s*(?:payment|deposit)|last\s*date\s*for\s*fee|payment\s*last\s*date/i, label: 'Fee Last Date' },
+  { re: /application\s*(?:start|begin|open)|apply\s*start\s*date|online\s*apply\s*start/i, label: 'Application Start' },
+  { re: /(?:last\s*date|closing\s*date|apply\s*(?:by|before)|end\s*date)/i, label: 'Last Date to Apply' },
+  { re: /(?:admit\s*card|hall\s*ticket)/i, label: 'Admit Card' },
+  { re: /(?:exam\s*date|written\s*test|cbt|examination\s*date)/i, label: 'Exam Date' },
+  { re: /(?:result|merit\s*list)/i, label: 'Result Date' },
+  { re: /(?:interview|document\s*verif)/i, label: 'Interview' },
+  { re: /(?:notification|advt|advertisement)/i, label: 'Notification' },
+  { re: /(?:age\s*limit|age\s*as\s*on|as\s*on\s*date)/i, label: 'Age Cutoff Date' },
+  { re: /(?:registration|apply\s*online)/i, label: 'Registration' },
+  { re: /(?:dob|date\s*of\s*birth|born)/i, label: 'Date of Birth' },
+]
+
+function getDateLabel(text, idx) {
+  // First: check same line only (most accurate)
+  const lineStart = text.lastIndexOf('\n', idx - 1) + 1
+  const sameLine = text.slice(lineStart, idx)
+  for (const { re, label } of DATE_LABEL_KEYWORDS) {
+    if (re.test(sameLine)) return label
+  }
+  // Fallback: check nearby 50 chars (same sentence/bullet)
+  const nearby = text.slice(Math.max(lineStart, idx - 50), idx)
+  for (const { re, label } of DATE_LABEL_KEYWORDS) {
+    if (re.test(nearby)) return label
+  }
+  return null
+}
+
 function extractAllDates(text) {
   const patterns = [
     /\d{1,2}-\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi,
@@ -93,7 +121,10 @@ function extractAllDates(text) {
       const raw = m[0].trim()
       if (!found.has(raw)) {
         const d = parseTextDate(raw)
-        if (d) found.set(raw, { text: raw, date: d, idx: m.index })
+        if (d) {
+          const label = getDateLabel(text, m.index)
+          found.set(raw, { text: raw, date: d, idx: m.index, label })
+        }
       }
     }
   }
@@ -288,7 +319,9 @@ async function AiSummaryBox({ content, title, type, contentHtml }) {
           <div className="flex flex-wrap gap-2">
             {upcoming.map((item, i) => (
               <span key={i} className="text-xs text-green-700 bg-green-100 border border-green-300 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
-                <span>📅</span> {item.text}
+                <span>📅</span>
+                {item.label && <span className="text-green-600 font-normal">{item.label}:</span>}
+                <span>{item.text}</span>
               </span>
             ))}
           </div>
@@ -303,9 +336,10 @@ async function AiSummaryBox({ content, title, type, contentHtml }) {
           </p>
           <div className="flex flex-wrap gap-2">
             {expired.map((item, i) => (
-              <del key={i} className="text-xs text-red-600 bg-red-100 border border-red-200 px-2 py-0.5 rounded decoration-red-500 decoration-2">
-                {item.text}
-              </del>
+              <span key={i} className="text-xs text-red-600 bg-red-50 border border-red-400 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
+                {item.label && <span className="text-red-500 font-normal">{item.label}:</span>}
+                <span>{item.text}</span>
+              </span>
             ))}
           </div>
         </div>
@@ -354,9 +388,10 @@ async function AiFaqBox({ content, title }) {
 
 // ============ Main Page ============
 export default async function JobDetailPage({ params }) {
+  const { slug } = await params
   let job = null
   try {
-    const res = await fetch(`${API_BASE}/post/slug/${params.slug}`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
     const data = await res.json()
     job = data?.data
   } catch {}
@@ -376,7 +411,32 @@ export default async function JobDetailPage({ params }) {
   const canonical = `${SITE_URL}/jobs/${job.slug}`
 
   const breadcrumbSchema = { '@context':'https://schema.org','@type':'BreadcrumbList', itemListElement:[{"@type":"ListItem",position:1,name:'Home',item:SITE_URL},{"@type":"ListItem",position:2,name:'Jobs',item:`${SITE_URL}/jobs`},{"@type":"ListItem",position:3,name:job.title,item:canonical}] }
-  const jobPostingSchema = { '@context':'https://schema.org','@type':'JobPosting', title:job.title, description:`${job.title} - Government job notification`, identifier:{'@type':'PropertyValue',name:'SarkariAfsar',value:job.slug}, datePosted:job.createdAt, validThrough:job.applyLastDate, employmentType:'FULL_TIME', hiringOrganization:{'@type':'Organization',name:job.conductingAuthority||'Government of India'}, jobLocation:{'@type':'Place',address:{'@type':'PostalAddress',addressCountry:'IN'}}, url:canonical }
+
+  const descParts = [job.title]
+  if (job.jobtitle) descParts.push(`Job Title: ${job.jobtitle}`)
+  if (job.category) descParts.push(`Category: ${job.category}`)
+  if (job.totalVacancies) descParts.push(`Total Vacancies: ${job.totalVacancies}`)
+  if (job.salary) descParts.push(`Salary: ${job.salary}`)
+  if (job.ageLimit) descParts.push(`Age Limit: ${job.ageLimit}`)
+  if (job.applicationFee) descParts.push(`Application Fee: ${job.applicationFee}`)
+  if (job.selectionProcess) descParts.push(`Selection Process: ${job.selectionProcess}`)
+
+  const jobPostingSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'JobPosting',
+    title: job.jobtitle || job.title,
+    description: descParts.join('. '),
+    datePosted: job.createdAt ? new Date(job.createdAt).toISOString() : undefined,
+    validThrough: job.applyLastDate ? new Date(job.applyLastDate).toISOString() : undefined,
+    employmentType: 'FULL_TIME',
+    url: canonical,
+    identifier: job.advertisementNumber
+      ? { '@type': 'PropertyValue', name: 'Advertisement Number', value: job.advertisementNumber }
+      : { '@type': 'PropertyValue', name: 'SarkariAfsar', value: job.slug },
+    hiringOrganization: { '@type': 'Organization', name: job.conductingAuthority || 'Government of India' },
+    jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressCountry: 'IN', addressLocality: job.location || '' } },
+    ...(job.salary && { baseSalary: { '@type': 'MonetaryAmount', currency: 'INR', value: { '@type': 'QuantitativeValue', value: job.salary, unitText: 'MONTH' } } }),
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -385,7 +445,7 @@ export default async function JobDetailPage({ params }) {
 
       {/* Header — INSTANT */}
       <div className="bg-[#1e3a5f] text-white py-10 px-4">
-        <div className="container mx-auto max-w-4xl">
+        <div className="mx-auto w-full max-w-5xl px-2">
           <nav aria-label="breadcrumb" className="text-sm text-blue-300 mb-4 flex flex-wrap gap-1">
             <Link href="/" className="hover:text-white transition-colors">Home</Link>
             <span>&rsaquo;</span>
@@ -409,7 +469,15 @@ export default async function JobDetailPage({ params }) {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mx-auto w-full max-w-5xl px-4 py-8">
+
+        {/* Back link — top */}
+        <div className="mb-4">
+          <Link href="/jobs" className="inline-flex items-center gap-1.5 text-[#1e3a5f] hover:text-[#f59e0b] text-sm font-medium transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
+            Back to All Jobs
+          </Link>
+        </div>
 
         {/* AI Summary — shimmer while loading, fades in when ready, hidden if all fail */}
         <Suspense fallback={<AiSkeleton />}>
@@ -427,18 +495,6 @@ export default async function JobDetailPage({ params }) {
         <Suspense fallback={<FaqSkeleton />}>
           <AiFaqBox content={plainText} title={job.title} />
         </Suspense>
-
-        {job.sourceUrl && (
-          <div className="bg-gradient-to-r from-[#1e3a5f] to-[#1e4a7f] rounded-2xl p-6 text-center text-white mb-6">
-            <h3 className="text-lg font-bold mb-2">Ready to Apply?</h3>
-            <p className="text-blue-200 text-sm mb-4">Click below to visit the official website.</p>
-            <a href={job.sourceUrl} target="_blank" rel="nofollow noopener noreferrer"
-              className="inline-block bg-[#f59e0b] hover:bg-[#d97706] text-white font-bold px-8 py-3 rounded-xl transition-colors shadow-lg">
-              Apply Now →
-            </a>
-          </div>
-        )}
-        <Link href="/jobs" className="text-[#1e3a5f] hover:underline text-sm font-medium">&larr; Back to All Jobs</Link>
       </div>
     </div>
   )

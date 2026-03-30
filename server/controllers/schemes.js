@@ -519,3 +519,13 @@ exports.getGovSchemeByState = async (req, res) => {
     return handleMongooseError(error, res, 'Get schemes by state error:');
   }
 };
+
+// ─── Sitemap endpoint — only slug + updatedAt (lightweight) ───
+exports.getSitemapSchemes = async (req, res) => {
+  try {
+    const docs = await GovScheme.find({}, "slug updatedAt").lean();
+    res.status(200).json({ success: true, data: docs });
+  } catch (error) {
+    return handleMongooseError(error, res, 'Sitemap schemes error:');
+  }
+};

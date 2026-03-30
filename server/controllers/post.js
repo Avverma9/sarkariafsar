@@ -1,7 +1,6 @@
 const mongoose = require("mongoose");
 const JobPost = require("../models/post");
 const { postData } = require("../bulk-post");
-const { generateJobPostingLD } = require("../utils/generateJobPostingLD");
 const { applyNoIndexFlag } = require("../utils/thinContentCheck");
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -372,19 +371,6 @@ exports.getPostListBySectionCanonicalUrl = async (req,res) => {
   } catch(e){console.error(e);res.status(500).json({success:false,message:e.message});}
 };
 
-// ─── JSON-LD endpoint ───
-exports.getJobPostJsonLD = async (req, res) => {
-  try {
-    const { slug } = req.params;
-    if (!slug?.trim()) return res.status(400).json({ success: false, message: "Slug required" });
-    const doc = await JobPost.findOne({ slug: generateSlug(slug) });
-    if (!doc) return res.status(404).json({ success: false, message: "Not found" });
-    const ld = generateJobPostingLD(doc.toObject());
-    if (!ld) return res.status(500).json({ success: false, message: "Could not generate JSON-LD" });
-    res.status(200).json({ success: true, data: ld, noIndex: doc.noIndex });
-  } catch (e) { return handleMongooseError(e, res, "JSON-LD error:"); }
-};
-
 // ─── noIndex meta helper (frontend can call this to decide <meta robots>) ───
 exports.getPostMeta = async (req, res) => {
   try {
@@ -394,4 +380,12 @@ exports.getPostMeta = async (req, res) => {
     if (!doc) return res.status(404).json({ success: false, message: "Not found" });
     res.status(200).json({ success: true, data: { slug: doc.slug, noIndex: doc.noIndex, wordCount: doc.wordCount } });
   } catch (e) { return handleMongooseError(e, res, "Post meta error:"); }
+};
+
+// ─── Sitemap endpoint — only slug + updatedAt (lightweight) ───
+exports.getSitemapPosts = async (req, res) => {
+  try {
+    const docs = await JobPost.find({ status: { $ne: 'draft' } }, "slug updatedAt").lean();
+    res.status(200).json({ success: true, data: docs });
+  } catch (e) { return handleMongooseError(e, res, "Sitemap posts error:"); }
 };

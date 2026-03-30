@@ -36,6 +36,9 @@ export const metadata = {
   },
   verification: { google: '' },
   alternates: { canonical: SITE_URL },
+  other: {
+    'google-adsense-account': 'ca-pub-5390089359360512',
+  },
 }
 
 // JSON-LD for WebSite + SiteLinksSearchBox
@@ -68,7 +71,7 @@ function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-[#f59e0b]">&#9733;</span>
+            <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-[#1d4ed8] text-white text-sm font-bold tracking-wide">SA</span>
             <span>Sarkari<span className="text-[#f59e0b]">Afsar</span></span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
@@ -171,18 +174,20 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
-        <script dangerouslySetInnerHTML={{__html:'window.addEventListener("error",function(e){if(e.error instanceof DOMException&&e.error.name==="DataCloneError"&&e.message&&e.message.includes("PerformanceServerTiming")){e.stopImmediatePropagation();e.preventDefault()}},true);'}} />
         {/* JSON-LD Structured Data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
-        {/* Google AdSense — pre-declared auto-ads */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5390089359360512"
-          crossOrigin="anonymous"
-        />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* Google AdSense — afterInteractive prevents hydration mismatch with JSON-LD in <head> */}
+        {ADSENSE_CLIENT && (
+          <Script
+            id="adsense-script"
+            src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
+            strategy="afterInteractive"
+            crossOrigin="anonymous"
+          />
+        )}
         {/* GA4 */}
         {GA4_ID && (
           <>

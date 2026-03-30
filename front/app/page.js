@@ -1,7 +1,5 @@
 import Link from 'next/link'
-import dynamic from 'next/dynamic'
-
-const AdsenseUnit = dynamic(() => import('@/components/ads/AdsenseUnit'), { ssr: false })
+import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'

@@ -8,6 +8,8 @@ router.post("/add", schemeController.addGovScheme);
 
 // READ
 router.get("/", cacheMiddleware(60), schemeController.getAllGovSchemes);
+// Sitemap endpoint
+router.get("/sitemap", cacheMiddleware(3600), schemeController.getSitemapSchemes);
 // extra helper endpoints
 router.get("/getSchemeStateNameOnly", cacheMiddleware(300), schemeController.getGovSchemeStateNameOnly);
 router.get("/getSchemeByState", cacheMiddleware(120), schemeController.getGovSchemeByState);

@@ -14,7 +14,7 @@ router.get("/get-posts-with-section", cacheMiddleware(120), jobPostController.ge
 router.get("/section-list/:sectionCanonicalUrl", cacheMiddleware(120), jobPostController.getPostListBySectionCanonicalUrl);
 
 // SEO endpoints
-router.get("/jsonld/:slug", cacheMiddleware(600), jobPostController.getJobPostJsonLD);
+router.get("/sitemap", cacheMiddleware(3600), jobPostController.getSitemapPosts);
 router.get("/meta/:slug", cacheMiddleware(600), jobPostController.getPostMeta);
 
 router.put("/id/:id", jobPostController.updateJobPost);

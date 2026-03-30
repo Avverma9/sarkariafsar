@@ -18,7 +18,7 @@ export default async function sitemap() {
   let blogUrls = []
 
   try {
-    const jobsRes = await fetch(`${API_BASE}/post/?page=1&limit=200`, { next: { revalidate: 3600 } })
+    const jobsRes = await fetch(`${API_BASE}/post/sitemap`, { next: { revalidate: 3600 } })
     const jobsData = await jobsRes.json()
     jobUrls = (jobsData?.data || []).map(j => ({
       url: `${SITE_URL}/jobs/${j.slug}`,
@@ -29,7 +29,7 @@ export default async function sitemap() {
   } catch {}
 
   try {
-    const schemesRes = await fetch(`${API_BASE}/schemes/?page=1&limit=200`, { next: { revalidate: 86400 } })
+    const schemesRes = await fetch(`${API_BASE}/schemes/sitemap`, { next: { revalidate: 86400 } })
     const schemesData = await schemesRes.json()
     schemeUrls = (schemesData?.data || []).map(s => ({
       url: `${SITE_URL}/yojana/${s.slug}`,
