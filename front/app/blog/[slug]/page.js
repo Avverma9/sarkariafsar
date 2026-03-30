@@ -1,6 +1,7 @@
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export async function generateMetadata({ params }) {
   const { slug } = await params
@@ -9,9 +10,23 @@ export async function generateMetadata({ params }) {
     const data = await res.json()
     const blog = data?.data
     if (!blog) return { title: 'Blog - Sarkari Afsar' }
+    const canonical = `${SITE_URL}/blog/${blog.slug || slug}`
+    const title = blog.title || blog.slug?.replace(/-/g, ' ')
+    const description = blog.excerpt || blog.intro?.slice(0, 155)
     return {
-      title: `${blog.title || blog.slug?.replace(/-/g, ' ')} - Sarkari Afsar`,
-      description: blog.excerpt || blog.intro?.slice(0, 155),
+      title: `${title} - Sarkari Afsar`,
+      description,
+      alternates: { canonical },
+      openGraph: {
+        title,
+        description,
+        url: canonical,
+        siteName: 'Sarkari Afsar',
+        images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=blog`, width: 1200, height: 630 }],
+        locale: 'en_IN',
+        type: 'article',
+      },
+      twitter: { card: 'summary_large_image', title, site: '@sarkariafsar' },
     }
   } catch {
     return { title: 'Blog - Sarkari Afsar' }

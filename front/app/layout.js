@@ -34,10 +34,9 @@ export const metadata = {
     description: 'Latest Sarkari Jobs, Government Schemes, Results & Admit Cards 2026.',
     images: [`${SITE_URL}/api/og?title=Sarkari+Afsar`],
   },
-  verification: { google: '' },
   alternates: { canonical: SITE_URL },
   other: {
-    'google-adsense-account': 'ca-pub-5390089359360512',
+    'google-adsense-account': ADSENSE_CLIENT || 'ca-pub-5390089359360512',
   },
 }
 
@@ -61,7 +60,15 @@ const orgSchema = {
   name: 'Sarkari Afsar',
   url: SITE_URL,
   logo: `${SITE_URL}/logo.svg`,
-  contactPoint: { '@type': 'ContactPoint', email: 'contact@sarkariafsar.com', contactType: 'customer support' },
+  contactPoint: { '@type': 'ContactPoint', telephone: '+919153630507', email: 'support@sarkariafsar.com', contactType: 'customer support' },
+  address: {
+    '@type': 'PostalAddress',
+    streetAddress: 'Bakhtiyarpur Purani Bazar',
+    addressLocality: 'Patna',
+    addressRegion: 'Bihar',
+    postalCode: '803212',
+    addressCountry: 'IN',
+  },
   sameAs: ['https://twitter.com/sarkariafsar'],
 }
 

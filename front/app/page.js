@@ -250,10 +250,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ===== AD PLACEMENT 1: Below Stats Bar (Horizontal Banner) ===== */}
-      <div className="container mx-auto px-4 py-4">
-        <AdsenseUnit placement="home-below-stats" className="w-full" />
-      </div>
+      {/* (moved) AD PLACEMENT: moved below the top row of section tables */}
 
       <div className="container mx-auto px-4 py-6">
 
@@ -271,7 +268,13 @@ export default async function HomePage() {
 
           {/* 2x2 Grid of Tables */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {sections.map(({ name, jobs, color }) => (
+            {sections.slice(0,2).map(({ name, jobs, color }) => (
+              <JobTable key={name} section={name} jobs={jobs} color={color} />
+            ))}
+            <div className="col-span-1 lg:col-span-2">
+              <AdsenseUnit placement="home-between-sections" className="w-full" />
+            </div>
+            {sections.slice(2).map(({ name, jobs, color }) => (
               <JobTable key={name} section={name} jobs={jobs} color={color} />
             ))}
           </div>
@@ -302,7 +305,7 @@ export default async function HomePage() {
           <section className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-[#1e3a5f]">From Our Blog</h2>
+                <h2 className="text-2xl font-bold text-[#1e3a5f]">Our Informational Blogs</h2>
                 <p className="text-gray-500 text-sm mt-1">Tips, guides and government updates</p>
               </div>
               <Link href="/blog" className="text-sm bg-[#1e3a5f] text-white px-4 py-2 rounded-lg hover:bg-[#153060] transition-colors font-medium">

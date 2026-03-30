@@ -22,8 +22,8 @@ export default function AdsenseUnit({ placement, className = '' }) {
     return <div className={`${className}`} style={{ minHeight: 90 }} aria-hidden="true" />
   }
 
-  const client = 'ca-pub-5390089359360512'
-  const slot = '5781285537'
+  const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-5390089359360512'
+  const slot = '7294493703'
 
   return (
     <ClientAd client={client} slot={slot} placement={placement} className={className} />
@@ -54,11 +54,11 @@ function ClientAd({ client, slot, placement, className }) {
     >
       <ins
         className="adsbygoogle"
-        style={{ display: 'block' }}
+        style={{ display: 'block', textAlign: 'center' }}
         data-ad-client={client}
         data-ad-slot={slot}
-        data-ad-format="auto"
-        data-full-width-responsive="true"
+        data-ad-layout="in-article"
+        data-ad-format="fluid"
       />
     </div>
   )

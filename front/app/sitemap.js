@@ -40,14 +40,20 @@ export default async function sitemap() {
   } catch {}
 
   try {
-    const blogsRes = await fetch(`${API_BASE}/blog/?page=1&limit=131`, { next: { revalidate: 86400 } })
-    const blogsData = await blogsRes.json()
-    blogUrls = (blogsData?.data || []).map(b => ({
-      url: `${SITE_URL}/blog/${b.slug}`,
-      lastModified: b.updatedAt ? new Date(b.updatedAt) : new Date(),
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    }))
+    let page = 1
+    while (true) {
+      const blogsRes = await fetch(`${API_BASE}/blog/?page=${page}&limit=100`, { next: { revalidate: 86400 } })
+      const blogsData = await blogsRes.json()
+      const batch = blogsData?.data || []
+      blogUrls.push(...batch.map(b => ({
+        url: `${SITE_URL}/blog/${b.slug}`,
+        lastModified: b.updatedAt ? new Date(b.updatedAt) : new Date(),
+        changeFrequency: 'monthly',
+        priority: 0.6,
+      })))
+      if (batch.length < 100) break
+      page++
+    }
   } catch {}
 
   return [...staticPages, ...jobUrls, ...schemeUrls, ...blogUrls]
