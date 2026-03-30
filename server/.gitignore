@@ -5,3 +5,4 @@ git rm --cached server/job-notification/.notification-state.json.bak
 git add .gitignore
 git commit -m "ignore notification state files"
 git push
+node_modules/
