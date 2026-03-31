@@ -1,6 +1,13 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
+const RESERVED_HEIGHTS = {
+  'home-below-stats': 260,
+  'listing-infeed': 320,
+  'detail-inarticle': 300,
+}
+const DEFAULT_HEIGHT = 220
+
 /**
  * AdsenseUnit - Google AdSense Ad Component
  * Client-only rendering to prevent hydration mismatch
@@ -12,6 +19,7 @@ import { useEffect, useRef, useState } from 'react'
  */
 export default function AdsenseUnit({ placement, className = '' }) {
   const [mounted, setMounted] = useState(false)
+  const reservedHeight = RESERVED_HEIGHTS[placement] || DEFAULT_HEIGHT
 
   useEffect(() => {
     setMounted(true)
@@ -19,18 +27,24 @@ export default function AdsenseUnit({ placement, className = '' }) {
 
   // Never render on server — prevents hydration mismatch
   if (!mounted) {
-    return <div className={`${className}`} style={{ minHeight: 90 }} aria-hidden="true" />
+    return <div className={`${className}`} style={{ minHeight: reservedHeight }} aria-hidden="true" />
   }
 
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-5390089359360512'
   const slot = '7294493703'
 
   return (
-    <ClientAd client={client} slot={slot} placement={placement} className={className} />
+    <ClientAd
+      client={client}
+      slot={slot}
+      placement={placement}
+      className={className}
+      reservedHeight={reservedHeight}
+    />
   )
 }
 
-function ClientAd({ client, slot, placement, className }) {
+function ClientAd({ client, slot, placement, className, reservedHeight }) {
   const initialized = useRef(false)
 
   useEffect(() => {
@@ -49,12 +63,12 @@ function ClientAd({ client, slot, placement, className }) {
   return (
     <div
       className={`overflow-hidden ${className}`}
-      style={{ minHeight: 90 }}
+      style={{ minHeight: reservedHeight }}
       data-ad-placement={placement}
     >
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', textAlign: 'center' }}
+        style={{ display: 'block', textAlign: 'center', minHeight: reservedHeight }}
         data-ad-client={client}
         data-ad-slot={slot}
         data-ad-layout="in-article"

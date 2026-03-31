@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Suspense } from 'react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { notFound } from 'next/navigation'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
@@ -260,6 +261,92 @@ function HighlightedSummary({ text, highlights }) {
   )
 }
 
+const MS_DAY = 1000 * 60 * 60 * 24
+
+function parseNumeric(value) {
+  if (!value) return 0
+  const digits = String(value).replace(/[^0-9]/g, '')
+  return digits ? Number(digits) : 0
+}
+
+function buildJobIntro(job) {
+  const parts = []
+  const category = (job.category || 'Government').toLowerCase()
+  const jobTitle = job.jobtitle || job.title
+  const agency = job.conductingAuthority || 'a government department'
+  parts.push(`The ${category} ${jobTitle} opportunity is published by ${agency}.`)
+  if (job.location) parts.push(`It focuses on candidates in ${job.location}.`)
+  if (job.totalVacancies) parts.push(`${job.totalVacancies} vacancies are listed.`)
+  if (job.salary) parts.push(`The reported salary is ${job.salary}.`)
+  if (job.selectionProcess) parts.push(`Selection will follow ${job.selectionProcess}.`)
+  if (job.applyLastDate) {
+    const safeDate = new Date(job.applyLastDate)
+    if (!Number.isNaN(safeDate)) {
+      parts.push(`Submit your application by ${safeDate.toLocaleDateString('en-IN')}.`)
+    }
+  }
+  return parts.join(' ')
+}
+
+function buildJobPros(job) {
+  const pros = []
+  if (job.isActive) pros.push('Recruitment is currently active, so the notification can be immediately followed through.')
+  const vacancies = parseNumeric(job.totalVacancies)
+  if (vacancies && vacancies >= 100) {
+    pros.push(`Over ${vacancies} vacancies widen the competition window for this post.`)
+  } else if (vacancies) {
+    pros.push(`${vacancies} vacancies means a more focused competition for determined candidates.`)
+  }
+  if (job.salary) pros.push(`Salary details are available (${job.salary}), so you can plan your expectations.`)
+  if (job.selectionProcess) pros.push(`Selection hinges on ${job.selectionProcess}, helping you strategize preparation.`)
+  if (job.location) pros.push(`The post is centered around ${job.location}, which helps local applicants track domicile requirements.`)
+  return pros
+}
+
+function buildJobCons(job) {
+  const cons = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  if (!job.isActive) cons.push('The notification is flagged inactive; verify whether the recruitment is reopened before applying.')
+  if (job.applyLastDate) {
+    const lastDate = new Date(job.applyLastDate)
+    if (!Number.isNaN(lastDate)) {
+      const diff = Math.round((lastDate - today) / MS_DAY)
+      if (diff >= 0 && diff <= 14) {
+        cons.push(`The deadline is ${diff} day${diff === 1 ? '' : 's'} away, so gather your documents quickly.`)
+      } else if (diff < 0) {
+        cons.push('The listed deadline has passed; confirm whether the authority has extended the window.')
+      }
+    }
+  } else {
+    cons.push('Closing date is not mentioned in this scraped excerpt; check the official PDF for clarity.')
+  }
+  if (!job.salary) cons.push('Salary band is not captured in this table; always verify the pay scale from the source notice.')
+  return cons
+}
+
+function buildJobStateNote(job) {
+  if (!job.location) return ''
+  const segments = job.location.split(',').map(seg => seg.trim()).filter(Boolean)
+  if (!segments.length) return ''
+  const region = segments[segments.length - 1]
+  return `${region} residents should double-check domicile, reservation and posting guidelines before applying.`
+}
+
+function buildJobInsights(job) {
+  const candidates = []
+  const push = (title, value) => {
+    if (typeof value === 'string' && value.trim()) {
+      candidates.push({ title, body: value.trim() })
+    }
+  }
+  push('Exam Preparation Strategy', job.examPreparationStrategy)
+  push('Syllabus Breakdown', job.syllabusBreakdown)
+  push('Selection Process Notes', job.selectionProcess)
+  push('Physical Test Details', job.physicalTestDetails)
+  return candidates
+}
+
 // ============ Async AI Summary (Suspense) ============
 async function AiSummaryBox({ content, title, type, contentHtml }) {
   const { expired, upcoming } = classifyDates(contentHtml || content)
@@ -399,19 +486,18 @@ export default async function JobDetailPage({ params }) {
     job = data?.data
   } catch {}
 
-  if (!job) return (
-    <div className="container mx-auto px-4 py-20 text-center">
-      <div className="text-5xl mb-4">🔍</div>
-      <h1 className="text-2xl font-bold text-gray-700 mb-2">Job Not Found</h1>
-      <Link href="/jobs" className="bg-[#1e3a5f] text-white px-6 py-2 rounded-lg hover:bg-[#153060]">Back to Jobs</Link>
-    </div>
-  )
+  if (!job) return notFound()
 
   const contentHtml = job.scrapedContent?.contentHtml || job.content || ''
   const applyDate = job.applyLastDate ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : 'N/A'
   const postedDate = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : ''
   const plainText = contentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
   const canonical = `${SITE_URL}/jobs/${job.slug}`
+  const jobIntro = buildJobIntro(job)
+  const jobPros = buildJobPros(job)
+  const jobCons = buildJobCons(job)
+  const jobInsights = buildJobInsights(job)
+  const jobStateNote = buildJobStateNote(job)
 
   const breadcrumbSchema = { '@context':'https://schema.org','@type':'BreadcrumbList', itemListElement:[{"@type":"ListItem",position:1,name:'Home',item:SITE_URL},{"@type":"ListItem",position:2,name:'Jobs',item:`${SITE_URL}/jobs`},{"@type":"ListItem",position:3,name:job.title,item:canonical}] }
 
@@ -482,6 +568,16 @@ export default async function JobDetailPage({ params }) {
           </Link>
         </div>
 
+        {jobIntro && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+            <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">What to know before you apply</h2>
+            <p className="text-gray-700 text-sm leading-relaxed">{jobIntro}</p>
+            {jobStateNote && (
+              <p className="text-xs text-gray-500 mt-3 italic">{jobStateNote}</p>
+            )}
+          </div>
+        )}
+
         {/* AI Summary — shimmer while loading, fades in when ready, hidden if all fail */}
         <Suspense fallback={<AiSkeleton />}>
           <AiSummaryBox content={plainText} title={job.title} type="job" contentHtml={contentHtml} />
@@ -491,6 +587,56 @@ export default async function JobDetailPage({ params }) {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="job-content prose max-w-none text-gray-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: contentHtml }} />
         </div>
+
+        {(jobInsights.length > 0 || jobPros.length || jobCons.length) && (
+          <div className="space-y-6 mb-6">
+            {jobInsights.length > 0 && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Detailed insights for this job</h2>
+                <div className="space-y-4">
+                  {jobInsights.map((insight, index) => (
+                    <div key={`${insight.title}-${index}`}>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-2">{insight.title}</h3>
+                      <p className="text-sm text-gray-700 leading-relaxed">{insight.body}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(jobPros.length || jobCons.length) && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div className="grid gap-6 md:grid-cols-2">
+                  {jobPros.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1e3a5f] mb-3">Pros</div>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        {jobPros.map((item, index) => (
+                          <li key={`pro-${index}`} className="flex gap-2">
+                            <span className="text-[#f59e0b] font-semibold">▸</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {jobCons.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1e3a5f] mb-3">Cons</div>
+                      <ul className="space-y-2 text-sm text-gray-700">
+                        {jobCons.map((item, index) => (
+                          <li key={`con-${index}`} className="flex gap-2">
+                            <span className="text-red-500 font-semibold">▸</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <AdsenseUnit placement="detail-inarticle" className="mb-6" />
 

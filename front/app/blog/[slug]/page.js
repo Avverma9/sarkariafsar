@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -42,15 +43,7 @@ export default async function BlogDetailPage({ params }) {
     blog = data?.data
   } catch {}
 
-  if (!blog) {
-    return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <div className="text-5xl mb-4">📝</div>
-        <h1 className="text-2xl font-bold text-gray-700 mb-2">Post Not Found</h1>
-        <Link href="/blog" className="bg-[#1e3a5f] text-white px-6 py-2 rounded-lg hover:bg-[#153060] transition-colors">Back to Blog</Link>
-      </div>
-    )
-  }
+  if (!blog) return notFound()
 
   const date = blog.createdAt ? new Date(blog.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
   const title = blog.title || blog.slug?.replace(/-/g, ' ')
@@ -58,9 +51,24 @@ export default async function BlogDetailPage({ params }) {
   const sections = Array.isArray(blog.sections) ? blog.sections : []
   const hasSections = sections.length > 0
   const readingTime = blog.readingTime || ''
+  const canonical = `${SITE_URL}/blog/${blog.slug || slug}`
+  const articleSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description: blog.excerpt || blog.intro?.slice(0, 155) || `${title} • Sarkari Afsar`,
+    url: canonical,
+    mainEntityOfPage: canonical,
+    image: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=blog`,
+    publisher: { '@type': 'Organization', name: 'Sarkari Afsar', url: SITE_URL },
+    author: blog.author ? { '@type': 'Person', name: blog.author } : { '@type': 'Organization', name: 'Sarkari Afsar', url: SITE_URL },
+  }
+  if (blog.createdAt) articleSchema.datePublished = new Date(blog.createdAt).toISOString()
+  if (blog.updatedAt) articleSchema.dateModified = new Date(blog.updatedAt).toISOString()
 
   return (
     <div className="bg-gray-50 min-h-screen">
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
       <div className="bg-[#1e3a5f] text-white py-10 px-4">
         <div className="container mx-auto max-w-3xl">
           <nav className="text-sm text-blue-300 mb-4">
