@@ -282,15 +282,19 @@ function buildSchemeInsights(scheme) {
 }
 
 // ============ Async AI Summary Box ============
-async function AiSummaryBox({ content, title }) {
-  const { expired, upcoming } = classifyDates(content)
+async function AiSummaryBox({ content, title, isActive }) {
+  const { expired: rawExpired, upcoming } = classifyDates(content)
+  const expired = isActive ? [] : rawExpired
   const today = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' })
   const summary = await generateWithFallback(
     `Summarize this government scheme in 3 sentences. Include eligibility, benefits, key dates and fees.\n\nTitle: ${title}\nToday: ${today}\nContent: ${content.slice(0, 1800)}`,
     250
   )
   if (!summary) return null
-  const highlights = parseHighlights(summary)
+  const rawHighlights = parseHighlights(summary)
+  const highlights = isActive
+    ? rawHighlights.map(h => h.status === 'expired' ? { ...h, status: 'upcoming' } : h)
+    : rawHighlights
   return (
     <div className="ai-summary-enter rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm mb-6 overflow-hidden">
       <div className="px-5 pt-5 pb-1">
@@ -319,19 +323,6 @@ async function AiSummaryBox({ content, title }) {
           <p className="text-xs font-bold text-green-700 mb-2">✨ Latest Updates:</p>
           <div className="flex flex-wrap gap-2">
             {upcoming.map((item, i) => <span key={i} className="text-xs text-green-700 bg-green-100 border border-green-300 px-2.5 py-1 rounded-full font-semibold">📅 {item.text}</span>)}
-          </div>
-        </div>
-      )}
-      {expired.length > 0 && (
-        <div className="mx-5 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-xs font-bold text-red-700 mb-2">❌ These dates have passed:</p>
-          <div className="flex flex-wrap gap-2">
-                {expired.map((item, i) => (
-                  <span key={i} className="text-xs text-red-600 bg-red-100 border border-red-200 px-2.5 py-1 rounded-full flex items-center gap-1.5">
-                    {item.label && <span className="text-red-500 font-semibold">{item.label}:</span>}
-                    <span>{item.text}</span>
-                  </span>
-                ))}
           </div>
         </div>
       )}
@@ -472,7 +463,7 @@ export default async function SchemeDetailPage({ params }) {
 
         {/* AI Summary — shimmer → fade in → hidden if all fail */}
         <Suspense fallback={<AiSkeleton />}>
-          <AiSummaryBox content={aiContent} title={scheme.schemeTitle} />
+          <AiSummaryBox content={aiContent} title={scheme.schemeTitle} isActive={!!scheme.applyLink && (!scheme.schemeLastDate || new Date(scheme.schemeLastDate) >= new Date())} />
         </Suspense>
 
         {scheme.aboutScheme && (

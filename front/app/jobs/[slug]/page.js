@@ -19,6 +19,12 @@ const GEMINI_MODELS = [
   'gemini-1.5-flash',
 ]
 
+// Models that support Google Search grounding (live web fetch)
+const GEMINI_GROUNDED_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash']
+
+// Re-verify each post against the web at most once per 6 hours
+const VERIFY_THROTTLE_MS = 6 * 60 * 60 * 1000
+
 async function generateWithFallback(prompt, maxTokens = 250) {
   for (const apiKey of GEMINI_KEYS) {
     for (const modelName of GEMINI_MODELS) {
@@ -41,6 +47,65 @@ async function generateWithFallback(prompt, maxTokens = 250) {
     }
   }
   return null // All failed—hide summary
+}
+
+// ============ Web Verification (Gemini + Google Search Grounding) ============
+// Uses live search to fetch official dates & apply link. Returns null on failure.
+async function verifyJobDatesFromWeb(job) {
+  if (!GEMINI_KEYS.length) return null
+  const agency = job.conductingAuthority || job.conducting_authority || ''
+  const advt = job.advertisementNumber || job.advertisement_number || ''
+  const prompt = `Search for the latest official information about this Indian government job notification and return ONLY a JSON object (no markdown, no explanation).
+
+Job Title: ${job.title}
+Conducting Authority: ${agency}${advt ? `\nAdvertisement No: ${advt}` : ''}
+
+Return this exact JSON structure:
+{
+  "dates": [
+    { "label": "Fee Last Date", "originalText": "06 April 2026", "verifiedDate": "11 April 2026", "status": "EXTENDED" },
+    { "label": "Last Date to Apply", "originalText": "15 April 2026", "verifiedDate": "15 April 2026", "status": "ACTIVE" }
+  ],
+  "applyLink": "https://official-site.gov.in/apply",
+  "isApplicationOpen": true,
+  "source": "https://official-source-url"
+}
+
+Rules:
+- status must be one of: ACTIVE, CLOSED, EXTENDED, NOT_YET_OPEN
+- originalText must exactly match the date text as scraped from the notification
+- verifiedDate is the CURRENT correct date from official source
+- If a date was extended, set status EXTENDED and put the new date in verifiedDate
+- If application portal is not yet open, set isApplicationOpen: false and applyLink: null
+- Include only dates confirmed from official government sources
+- If you cannot find reliable information, return { "dates": [], "applyLink": null, "isApplicationOpen": null, "source": null }`
+
+  for (const apiKey of GEMINI_KEYS) {
+    for (const modelName of GEMINI_GROUNDED_MODELS) {
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey)
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          tools: [{ googleSearch: {} }],
+          generationConfig: { maxOutputTokens: 700, temperature: 0.1 },
+        })
+        const result = await Promise.race([
+          model.generateContent(prompt),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
+        ])
+        const rawText = result.response.text().trim()
+        if (!rawText) continue
+        const clean = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
+        const jsonMatch = clean.match(/\{[\s\S]*\}/)
+        if (!jsonMatch) continue
+        const parsed = JSON.parse(jsonMatch[0])
+        if (parsed && Array.isArray(parsed.dates)) return parsed
+      } catch {
+        continue
+      }
+    }
+  }
+  return null
 }
 
 // ============ generateMetadata ============
@@ -98,18 +163,21 @@ const DATE_LABEL_KEYWORDS = [
 ]
 
 function getDateLabel(text, idx) {
-  // First: check same line only (most accurate)
-  const lineStart = text.lastIndexOf('\n', idx - 1) + 1
-  const sameLine = text.slice(lineStart, idx)
+  // Use at most 80 chars before the date; the LAST (closest) keyword match wins.
+  // This prevents a keyword from a far-away bullet being attributed to a date
+  // that belongs to a completely different row in stripped HTML.
+  const window = text.slice(Math.max(0, idx - 80), idx)
+  let result = null
+  let lastMatchEnd = -1
   for (const { re, label } of DATE_LABEL_KEYWORDS) {
-    if (re.test(sameLine)) return label
+    const gr = new RegExp(re.source, 'gi')
+    let m
+    while ((m = gr.exec(window)) !== null) {
+      const end = m.index + m[0].length
+      if (end > lastMatchEnd) { lastMatchEnd = end; result = label }
+    }
   }
-  // Fallback: check nearby 50 chars (same sentence/bullet)
-  const nearby = text.slice(Math.max(lineStart, idx - 50), idx)
-  for (const { re, label } of DATE_LABEL_KEYWORDS) {
-    if (re.test(nearby)) return label
-  }
-  return null
+  return result
 }
 
 function extractAllDates(text) {
@@ -138,14 +206,172 @@ function extractAllDates(text) {
 function classifyDates(html) {
   const today = new Date()
   today.setHours(0,0,0,0)
+  // Only surface dates within a relevant window — this filters out DOB dates
+  // like "01 December 2004" or "31 May 2009" that appear in age-limit sections.
+  const minDate = new Date(today.getFullYear() - 1, 0, 1)   // Jan 1 of last year
+  const maxDate = new Date(today.getFullYear() + 2, 11, 31)  // Dec 31 of year+2
   const text = html.replace(/<[^>]+>/g, ' ')
   const all = extractAllDates(text)
   const expired = [], upcoming = []
   for (const d of all) {
+    if (d.date < minDate || d.date > maxDate) continue
     if (d.date < today) expired.push(d)
     else upcoming.push(d)
   }
   return { expired: expired.slice(0, 8), upcoming: upcoming.slice(0, 6) }
+}
+
+// ============ Extension detection ============
+// When an expired date and a LATER upcoming date share the same label
+// (e.g. both labelled "Fee Last Date"), it means the authority extended
+// the deadline. Returns Map<expiredText, upcomingItem>.
+function detectExtensions(expired, upcoming) {
+  const extensionMap = new Map()
+  for (const exp of expired) {
+    if (!exp.label) continue
+    // Only treat as extension when the new date is within 60 days of the old one.
+    // This prevents pairing a far-future date with an old expired date by coincidence.
+    const matches = upcoming
+      .filter(up => {
+        if (up.label !== exp.label) return false
+        if (up.date <= exp.date) return false
+        const diffDays = (up.date - exp.date) / (1000 * 60 * 60 * 24)
+        return diffDays <= 60
+      })
+      .sort((a, b) => a.date - b.date)
+    if (matches.length > 0) extensionMap.set(exp.text, matches[0])
+  }
+  return extensionMap
+}
+
+// Labels that represent start/cutoff dates — never worth badging in content
+const NO_BADGE_LABELS = new Set(['Application Start', 'Date of Birth', 'Age Cutoff Date', 'Notification'])
+
+// Logic:
+//  - expired with LATER same-label upcoming (≤60d gap) → 🔄 Extended to {newDate}
+//  - remaining expired + isActive=true                  → ✅ Active
+//  - remaining expired + recently updated               → 🔄 Updated: {postUpdatedDate}
+//  - remaining expired + stale                          → no badge
+//  - upcoming (not an extension target)                 → ✅ Active
+//  - Application Start / DOB / Age Cutoff / Notification → never badged
+//  Single-pass combined regex prevents double-badge injection.
+function injectDateBadges(html, expired, upcoming, jobMeta = {}) {
+  if (!html) return html
+
+  const { isActive, updatedAt } = jobMeta
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const postUpdatedAt = updatedAt ? new Date(updatedAt) : null
+  const updatedDaysAgo = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
+    ? Math.round((today - postUpdatedAt) / (1000 * 60 * 60 * 24))
+    : Infinity
+  const isRecentlyUpdated = updatedDaysAgo <= 60
+  const formattedUpdatedAt = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
+    ? postUpdatedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : ''
+
+  const extensionMap = detectExtensions(expired, upcoming)
+  // Texts that are extension targets — already referenced in an "Extended to X" badge;
+  // they must NOT receive a separate standalone badge (prevents double-badge).
+  const extensionTargetTexts = new Set([...extensionMap.values()].map(e => e.text))
+
+  const ACTIVE_BADGE =
+    `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
+    `font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;` +
+    `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
+    `white-space:nowrap;line-height:1.4;">✅ Active</span>`
+
+  const UPDATED_BADGE =
+    `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
+    `font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd;` +
+    `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
+    `white-space:nowrap;line-height:1.4;">🔄 Updated: ${formattedUpdatedAt}</span>`
+
+  function extendedBadge(newDateText) {
+    return (
+      `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
+      `font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;` +
+      `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
+      `white-space:nowrap;line-height:1.4;">🔄 Extended to ${newDateText}</span>`
+    )
+  }
+
+  // Build text → badge map
+  const badgeMap = new Map()
+
+  for (const item of expired) {
+    if (NO_BADGE_LABELS.has(item.label)) continue  // skip start/DOB/cutoff dates
+    const ext = extensionMap.get(item.text)
+    if (ext) {
+      badgeMap.set(item.text, extendedBadge(ext.text))
+    } else if (isActive) {
+      badgeMap.set(item.text, ACTIVE_BADGE)
+    } else if (isRecentlyUpdated && formattedUpdatedAt) {
+      badgeMap.set(item.text, UPDATED_BADGE)
+    }
+    // else: stale expired → no badge
+  }
+
+  for (const item of upcoming) {
+    if (extensionTargetTexts.has(item.text)) continue  // already shown in "Extended to X"
+    if (NO_BADGE_LABELS.has(item.label)) continue
+    if (!badgeMap.has(item.text)) {  // don't overwrite an extension badge
+      badgeMap.set(item.text, ACTIVE_BADGE)
+    }
+  }
+
+  if (!badgeMap.size) return html
+
+  // Sort by text length descending so longer patterns match before substrings
+  const sortedTexts = [...badgeMap.keys()].sort((a, b) => b.length - a.length)
+
+  // Single-pass combined regex — JS replace() advances past each match so the
+  // injected badge HTML can never be matched again, eliminating double-badge.
+  const escapedParts = sortedTexts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+  const combinedRe = new RegExp(`(${escapedParts.join('|')})(?![^<>]*>)`, 'g')
+  return html.replace(combinedRe, (match) => match + (badgeMap.get(match) ?? ''))
+}
+
+// ============ Patch contentHtml with verified dates & apply link ============
+const APPLY_LINK_TEXT_RE = /Apply\s*Online|Apply\s*Now|Apply\s*Here|Apply\s*Link|Submit\s*Application/i
+
+function patchContentHtml(html, verifiedData) {
+  if (!html || !verifiedData) return html
+  let result = html
+
+  // 1 — Replace outdated date strings with verified dates
+  for (const d of (verifiedData.dates || [])) {
+    if (!d.originalText || !d.verifiedDate) continue
+    if (d.originalText === d.verifiedDate) continue
+    const esc = d.originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    result = result.replace(new RegExp(esc, 'gi'), d.verifiedDate)
+  }
+
+  // 2 — Patch apply links based on isApplicationOpen + applyLink
+  result = result.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (match, attrs, inner) => {
+    const plainInner = inner.replace(/<[^>]+>/g, '').trim()
+    if (!APPLY_LINK_TEXT_RE.test(plainInner)) return match
+
+    if (verifiedData.isApplicationOpen === false) {
+      return (
+        `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;` +
+        `color:#b45309;background:#fff7ed;border:1px solid #f59e0b;` +
+        `padding:4px 12px;border-radius:6px;font-weight:600;">` +
+        `⚠️ Application link not yet active</span>`
+      )
+    }
+    if (verifiedData.applyLink) {
+      const hasHref = /\bhref\s*=/i.test(attrs)
+      const newAttrs = hasHref
+        ? attrs.replace(/\bhref\s*=\s*(['"])[^'"]*\1/i, `href="${verifiedData.applyLink}"`)
+        : `href="${verifiedData.applyLink}" ${attrs}`
+      return `<a ${newAttrs.trim()}>${inner}</a>`
+    }
+    return match
+  })
+
+  return result
 }
 
 // ============ Highlight parser for summary text ============
@@ -348,20 +574,56 @@ function buildJobInsights(job) {
 }
 
 // ============ Async AI Summary (Suspense) ============
-async function AiSummaryBox({ content, title, type, contentHtml }) {
-  const { expired, upcoming } = classifyDates(contentHtml || content)
+async function AiSummaryBox({ content, title, type, contentHtml, isActive, updatedAt }) {
+  const { expired: rawExpired, upcoming } = classifyDates(contentHtml || content)
+  const expired = isActive ? [] : rawExpired
+  // Detect which upcoming dates are extensions of an expired same-label date
+  const extensionMap = detectExtensions(rawExpired, upcoming)
+  const extensionTargetTexts = new Set([...extensionMap.values()].map(v => v.text))
+
+  // --- Build structured date context for AI ---
+  const todayDate = new Date()
+  todayDate.setHours(0, 0, 0, 0)
+  const todayStr = todayDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+  const postUpdatedAt = updatedAt ? new Date(updatedAt) : null
+  const postUpdatedStr = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
+    ? postUpdatedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
+
+  const dateCtxLines = []
+  dateCtxLines.push(`Today: ${todayStr}`)
+  dateCtxLines.push(`Post Status: ${isActive ? 'ACTIVE' : 'CLOSED/INACTIVE'}`)
+  if (postUpdatedStr) dateCtxLines.push(`Post Last Modified: ${postUpdatedStr}`)
+  for (const e of rawExpired) {
+    const ext = extensionMap.get(e.text)
+    if (ext) {
+      dateCtxLines.push(`- ${e.label || 'Date'}: ${e.text} → EXTENDED to ${ext.text} (still ACTIVE)`)
+    } else {
+      dateCtxLines.push(`- ${e.label || 'Date'}: ${e.text} → CLOSED (date has passed)`)
+    }
+  }
+  for (const u of upcoming) {
+    if (!extensionTargetTexts.has(u.text)) {
+      dateCtxLines.push(`- ${u.label || 'Date'}: ${u.text} → ACTIVE (upcoming)`)
+    }
+  }
+  const dateContext = dateCtxLines.join('\n')
 
   // Call AI with fallback
-  const today = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' })
   const prompt = type === 'scheme'
-    ? `Summarize this government scheme in 3 sentences. Include eligibility, benefits, key dates and fees.\n\nTitle: ${title}\nToday: ${today}\nContent: ${content.slice(0, 1800)}`
-    : `Summarize this government job in 3 sentences. Include key dates, fees, vacancies and eligibility.\n\nTitle: ${title}\nToday: ${today}\nContent: ${content.slice(0, 1800)}`
+    ? `Summarize this government scheme in 3 sentences. Mention eligibility, benefits, and whether key dates are active, closed, or extended.\n\n${dateContext}\n\nTitle: ${title}\nContent: ${content.slice(0, 1500)}`
+    : `Summarize this government job notification in 3 sentences. For each important date (fee date, apply deadline), state clearly whether it is ACTIVE, CLOSED, or EXTENDED based on the date context below. Include vacancies and eligibility.\n\n${dateContext}\n\nTitle: ${title}\nContent: ${content.slice(0, 1500)}`
 
   const summary = await generateWithFallback(prompt, 250)
   // If all API keys failed — hide the section entirely
   if (!summary) return null
 
-  const highlights = parseHighlights(summary)
+  const rawHighlights = parseHighlights(summary)
+  // When job is active, override expired status so the summary text
+  // never shows strikethrough red on dates that are still in-window.
+  const highlights = isActive
+    ? rawHighlights.map(h => h.status === 'expired' ? { ...h, status: 'upcoming' } : h)
+    : rawHighlights
 
   return (
     <div className="ai-summary-enter rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm mb-6 overflow-hidden">
@@ -407,30 +669,17 @@ async function AiSummaryBox({ content, title, type, contentHtml }) {
             <span>✨</span> Latest Update{upcoming.length > 1 ? 's' : ''} in this post:
           </p>
           <div className="flex flex-wrap gap-2">
-            {upcoming.map((item, i) => (
-              <span key={i} className="text-xs text-green-700 bg-green-100 border border-green-300 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
-                <span>📅</span>
-                {item.label && <span className="text-green-600 font-normal">{item.label}:</span>}
-                <span>{item.text}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* EXPIRED DATES section */}
-      {expired.length > 0 && (
-        <div className="mx-5 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-          <p className="text-xs font-bold text-red-700 mb-2 flex items-center gap-1">
-            <span>❌</span> These dates in the post have already passed:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {expired.map((item, i) => (
-              <span key={i} className="text-xs text-red-600 bg-red-50 border border-red-400 px-2.5 py-1 rounded-full font-semibold flex items-center gap-1">
-                {item.label && <span className="text-red-500 font-normal">{item.label}:</span>}
-                <span>{item.text}</span>
-              </span>
-            ))}
+            {upcoming.map((item, i) => {
+              const isExt = [...extensionMap.values()].some(ext => ext.text === item.text)
+              const displayLabel = isExt ? `${item.label || 'Date'} Extended` : item.label
+              return (
+                <span key={i} className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${isExt ? 'text-purple-700 bg-purple-50 border border-purple-300' : 'text-green-700 bg-green-100 border border-green-300'}`}>
+                  <span>{isExt ? '🔄' : '📅'}</span>
+                  {displayLabel && <span className={`font-normal ${isExt ? 'text-purple-600' : 'text-green-600'}`}>{displayLabel}:</span>}
+                  <span>{item.text}</span>
+                </span>
+              )
+            })}
           </div>
         </div>
       )}
@@ -488,10 +737,56 @@ export default async function JobDetailPage({ params }) {
 
   if (!job) return notFound()
 
-  const contentHtml = job.scrapedContent?.contentHtml || job.content || ''
+  let contentHtml = job.scrapedContent?.contentHtml || job.content || ''
+
+  // ── AI Web Verification (Gemini + Google Search, throttled to once per 6 hours) ──
+  const lastVerified = job.aiVerifiedAt ? new Date(job.aiVerifiedAt).getTime() : 0
+  if ((Date.now() - lastVerified) > VERIFY_THROTTLE_MS) {
+    try {
+      const verified = await verifyJobDatesFromWeb(job)
+      if (verified) {
+        const patched = patchContentHtml(contentHtml, verified)
+        if (patched !== contentHtml) {
+          contentHtml = patched
+        }
+        // Find if the apply/last-date was extended — update applyLastDate in DB
+        const applyExt = (verified.dates || []).find(
+          d => /last\s*date|apply/i.test(d.label || '') && d.status === 'EXTENDED'
+        )
+        const newApplyDate = applyExt?.verifiedDate ? parseTextDate(applyExt.verifiedDate) : null
+        const updatePayload = {
+          scrapedContent: {
+            contentHtml: patched ?? contentHtml,
+            contentJson: job.scrapedContent?.contentJson ?? {},
+            extractedAt: job.scrapedContent?.extractedAt ?? new Date().toISOString(),
+          },
+          aiVerifiedAt: new Date().toISOString(),
+          ...(newApplyDate && !Number.isNaN(newApplyDate.getTime()) && {
+            applyLastDate: newApplyDate.toISOString(),
+          }),
+        }
+        // Fire-and-forget: save to DB without blocking the render
+        const internalBase = process.env.INTERNAL_API_URL || API_BASE
+        fetch(`${internalBase}/post/slug/${job.slug}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ data: updatePayload }),
+          cache: 'no-store',
+        }).catch(() => {})
+      }
+    } catch {} // Silently fall through — render with existing contentHtml
+  }
+
   const applyDate = job.applyLastDate ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : 'N/A'
   const postedDate = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : ''
   const plainText = contentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
+  const { expired: expiredInContent, upcoming: upcomingInContent } = classifyDates(contentHtml)
+  const annotatedContentHtml = injectDateBadges(
+    contentHtml,
+    expiredInContent,
+    upcomingInContent,
+    { isActive: job.isActive, updatedAt: job.updatedAt }
+  )
   const canonical = `${SITE_URL}/jobs/${job.slug}`
   const jobIntro = buildJobIntro(job)
   const jobPros = buildJobPros(job)
@@ -580,12 +875,12 @@ export default async function JobDetailPage({ params }) {
 
         {/* AI Summary — shimmer while loading, fades in when ready, hidden if all fail */}
         <Suspense fallback={<AiSkeleton />}>
-          <AiSummaryBox content={plainText} title={job.title} type="job" contentHtml={contentHtml} />
+          <AiSummaryBox content={plainText} title={job.title} type="job" contentHtml={contentHtml} isActive={job.isActive} updatedAt={job.updatedAt} />
         </Suspense>
 
-        {/* Job Content — INSTANT */}
+        {/* Job Content — INSTANT, dates annotated inline */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="job-content prose max-w-none text-gray-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: contentHtml }} />
+          <div className="job-content prose max-w-none text-gray-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: annotatedContentHtml }} />
         </div>
 
         {(jobInsights.length > 0 || jobPros.length || jobCons.length) && (

@@ -168,6 +168,12 @@ const jobPostSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ── AI web-verification timestamp (throttle: 6 hours) ──
+    aiVerifiedAt: {
+      type: Date,
+      default: null,
+    },
+
     // ── Custom Content Fields (SEO / 1000+ word content) ──
     examPreparationStrategy: {
       type: String,
