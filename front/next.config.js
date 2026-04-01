@@ -9,6 +9,15 @@ const nextConfig = {
     maxInactiveAge: 10000,
     pagesBufferLength: 2,
   },
+  async redirects() {
+    return [
+      // 301 redirects — old ?section= query params → canonical section URLs
+      { source: '/jobs', has: [{ type: 'query', key: 'section', value: 'Results' }], destination: '/results', permanent: true },
+      { source: '/jobs', has: [{ type: 'query', key: 'section', value: 'Latest Gov Jobs' }], destination: '/latest-jobs', permanent: true },
+      { source: '/jobs', has: [{ type: 'query', key: 'section', value: 'Recent Admit Cards' }], destination: '/admit-cards', permanent: true },
+      { source: '/jobs', has: [{ type: 'query', key: 'section', value: 'Admission' }], destination: '/admission', permanent: true },
+    ]
+  },
   async headers() {
     return [
       {

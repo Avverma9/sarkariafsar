@@ -12,6 +12,14 @@ export const metadata = {
 
 const SECTIONS = ['Results', 'Latest Gov Jobs', 'Recent Admit Cards', 'Admission']
 
+// Canonical section URL mapping — these are the SEO-friendly clean URLs
+const SECTION_ROUTES = {
+  'Results':            '/results',
+  'Latest Gov Jobs':    '/latest-jobs',
+  'Recent Admit Cards': '/admit-cards',
+  'Admission':          '/admission',
+}
+
 const SECTION_COLORS = {
   'Results':           { bg: 'bg-green-600',  light: 'bg-green-50',  text: 'text-green-700',  border: 'border-green-200',  icon: '📊' },
   'Latest Gov Jobs':   { bg: 'bg-blue-600',   light: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200',   icon: '💼' },
@@ -72,7 +80,7 @@ function SectionTable({ section, jobs, color, total }) {
           <span>{color.icon}</span> {section}
         </h3>
         <Link
-          href={`/jobs?section=${encodeURIComponent(section)}`}
+          href={SECTION_ROUTES[section] || `/jobs?section=${encodeURIComponent(section)}`}
           className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full transition-colors font-medium"
         >
           View All ({total}) →

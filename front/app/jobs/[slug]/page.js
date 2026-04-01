@@ -117,9 +117,19 @@ export async function generateMetadata({ params }) {
     const job = data?.data
     if (!job) return { title: 'Job Not Found - Sarkari Afsar' }
     const canonical = `${SITE_URL}/jobs/${job.slug}`
+    const year = new Date().getFullYear()
+    const lastDateStr = job.applyLastDate
+      ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+      : null
+    const descParts = [`Apply for ${job.title} ${year}.`]
+    if (job.conductingAuthority) descParts.push(`Conducting Authority: ${job.conductingAuthority}.`)
+    if (job.totalVacancies) descParts.push(`Total Vacancies: ${job.totalVacancies}.`)
+    if (job.category) descParts.push(`Category: ${job.category}.`)
+    if (lastDateStr) descParts.push(`Last Date: ${lastDateStr}.`)
+    else descParts.push('Check official site for last date.')
     return {
-      title: `${job.title} 2026 — Sarkari Afsar`,
-      description: `Apply for ${job.title}. Category: ${job.category || 'Government'}. Last date: ${job.applyLastDate ? new Date(job.applyLastDate).toLocaleDateString('en-IN') : 'Check official site'}.`,
+      title: `${job.title} ${year} — Sarkari Afsar`,
+      description: descParts.join(' '),
       alternates: { canonical },
       openGraph: { title: job.title, url: canonical, siteName: 'Sarkari Afsar', images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(job.title)}&type=job`, width: 1200, height: 630 }], locale: 'en_IN', type: 'article' },
       twitter: { card: 'summary_large_image', title: job.title, site: '@sarkariafsar' },
@@ -810,16 +820,42 @@ export default async function JobDetailPage({ params }) {
     '@type': 'JobPosting',
     title: job.jobtitle || job.title,
     description: descParts.join('. '),
-    datePosted: job.createdAt ? new Date(job.createdAt).toISOString() : undefined,
-    validThrough: job.applyLastDate ? new Date(job.applyLastDate).toISOString() : undefined,
+    // datePosted is required — fall back to today if createdAt is missing
+    datePosted: job.createdAt
+      ? new Date(job.createdAt).toISOString()
+      : new Date().toISOString(),
+    // validThrough improves rich result eligibility
+    validThrough: job.applyLastDate
+      ? new Date(job.applyLastDate).toISOString()
+      : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days default
     employmentType: 'FULL_TIME',
     url: canonical,
     identifier: job.advertisementNumber
       ? { '@type': 'PropertyValue', name: 'Advertisement Number', value: job.advertisementNumber }
       : { '@type': 'PropertyValue', name: 'SarkariAfsar', value: job.slug },
-    hiringOrganization: { '@type': 'Organization', name: job.conductingAuthority || 'Government of India' },
-    jobLocation: { '@type': 'Place', address: { '@type': 'PostalAddress', addressCountry: 'IN', addressLocality: job.location || '' } },
-    ...(job.salary && { baseSalary: { '@type': 'MonetaryAmount', currency: 'INR', value: { '@type': 'QuantitativeValue', value: job.salary, unitText: 'MONTH' } } }),
+    hiringOrganization: {
+      '@type': 'Organization',
+      name: job.conductingAuthority || 'Government of India',
+      sameAs: 'https://sarkariafsar.com',
+    },
+    // jobLocation is required — always provide India; add locality when available
+    jobLocation: {
+      '@type': 'Place',
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: 'IN',
+        addressRegion: job.location || 'India',
+        ...(job.location ? { addressLocality: job.location } : {}),
+      },
+    },
+    // baseSalary improves rich result ranking
+    ...(job.salary && {
+      baseSalary: {
+        '@type': 'MonetaryAmount',
+        currency: 'INR',
+        value: { '@type': 'QuantitativeValue', value: job.salary, unitText: 'MONTH' },
+      },
+    }),
   }
 
   return (

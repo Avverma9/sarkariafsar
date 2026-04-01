@@ -5,6 +5,11 @@ export default async function sitemap() {
   const staticPages = [
     { url: `${SITE_URL}`, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/jobs`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
+    // Section-canonical URLs (clean URLs, no query params)
+    { url: `${SITE_URL}/results`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${SITE_URL}/latest-jobs`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${SITE_URL}/admit-cards`, lastModified: new Date(), changeFrequency: 'hourly', priority: 0.9 },
+    { url: `${SITE_URL}/admission`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/yojana`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.8 },
     { url: `${SITE_URL}/blog`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.7 },
     { url: `${SITE_URL}/about`, lastModified: new Date(), changeFrequency: 'yearly', priority: 0.3 },
