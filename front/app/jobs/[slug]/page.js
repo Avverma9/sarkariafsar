@@ -9,7 +9,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 export async function generateMetadata({ params }) {
   const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
+    const res = await fetch(`${API_BASE}/post/slug/${slug}`, { cache: 'no-store' })
     const data = await res.json()
     const job = data?.data
     if (!job) return { title: 'Job Not Found - Sarkari Afsar' }
@@ -879,7 +879,7 @@ export default async function JobDetailPage({ params }) {
   const { slug } = await params
   let job = null
   try {
-    const res  = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
+    const res  = await fetch(`${API_BASE}/post/slug/${slug}`, { cache: 'no-store' })
     const data = await res.json()
     job = data?.data
   } catch {}

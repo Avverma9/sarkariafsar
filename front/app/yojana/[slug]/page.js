@@ -37,7 +37,7 @@ async function generateWithFallback(prompt, maxTokens = 250) {
 export async function generateMetadata({ params }) {
   const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { cache: 'no-store' })
     const data = await res.json()
     const scheme = data?.data
     if (!scheme) return { title: 'Scheme Not Found - Sarkari Afsar' }
@@ -373,7 +373,7 @@ export default async function SchemeDetailPage({ params }) {
   const { slug } = await params
   let scheme = null
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 86400 } })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { cache: 'no-store' })
     const data = await res.json()
     scheme = data?.data
   } catch {}
