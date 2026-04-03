@@ -6,6 +6,16 @@ export const metadata = {
   title: 'About Us | Sarkari Afsar - India\'s Premium Government Job Portal',
   description: 'Discover the story behind Sarkari Afsar. We are India\'s most trusted platform for accurate, lightning-fast updates on government jobs, results, admit cards, and welfare schemes.',
   alternates: { canonical: `${SITE_URL}/about` },
+  openGraph: {
+    title: 'About Sarkari Afsar — India\'s Government Jobs Portal',
+    description: 'India\'s most trusted platform for government jobs, results, admit cards, and welfare schemes.',
+    url: `${SITE_URL}/about`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=About+Sarkari+Afsar&type=about`, width: 1200, height: 630, alt: 'About Sarkari Afsar — India\'s Government Jobs Portal' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'About Sarkari Afsar — India\'s Government Jobs Portal', description: 'India\'s most trusted platform for government jobs, results, admit cards, and welfare schemes.', site: '@sarkariafsar' },
 }
 
 export default function AboutPage() {

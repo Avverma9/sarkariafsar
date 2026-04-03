@@ -42,12 +42,14 @@ export async function generateMetadata({ params }) {
     const scheme = data?.data
     if (!scheme) return { title: 'Scheme Not Found - Sarkari Afsar' }
     const canonical = `${SITE_URL}/yojana/${scheme.slug}`
+    const title = scheme.schemeTitle
+    const description = scheme.aboutScheme?.slice(0, 155) || `${scheme.schemeTitle} details, eligibility, benefits and how to apply.`
     return {
-      title: `${scheme.schemeTitle} — Sarkari Afsar`,
-      description: scheme.aboutScheme?.slice(0, 155) || `${scheme.schemeTitle} details.`,
+      title: `${title} — Sarkari Afsar`,
+      description,
       alternates: { canonical },
-      openGraph: { title: scheme.schemeTitle, url: canonical, siteName: 'Sarkari Afsar', images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(scheme.schemeTitle)}&type=scheme`, width: 1200, height: 630 }], locale: 'en_IN', type: 'article' },
-      twitter: { card: 'summary_large_image', title: scheme.schemeTitle, site: '@sarkariafsar' },
+      openGraph: { title, description, url: canonical, siteName: 'Sarkari Afsar', images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=scheme`, width: 1200, height: 630, alt: title }], locale: 'en_IN', type: 'article' },
+      twitter: { card: 'summary_large_image', title, description, site: '@sarkariafsar' },
     }
   } catch { return { title: 'Scheme Details - Sarkari Afsar' } }
 }

@@ -14,7 +14,7 @@ export async function generateMetadata({ params }) {
     const canonical = `${SITE_URL}/blog/${blog.slug || slug}`
     const title = blog.title || blog.slug?.replace(/-/g, ' ')
     const description = blog.excerpt || blog.intro?.slice(0, 155)
-    return {
+    const meta = {
       title: `${title} - Sarkari Afsar`,
       description,
       alternates: { canonical },
@@ -23,12 +23,15 @@ export async function generateMetadata({ params }) {
         description,
         url: canonical,
         siteName: 'Sarkari Afsar',
-        images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=blog`, width: 1200, height: 630 }],
+        images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=blog`, width: 1200, height: 630, alt: title }],
         locale: 'en_IN',
         type: 'article',
       },
-      twitter: { card: 'summary_large_image', title, site: '@sarkariafsar' },
+      twitter: { card: 'summary_large_image', title, description, site: '@sarkariafsar' },
     }
+    if (blog.createdAt) meta.openGraph.publishedTime = new Date(blog.createdAt).toISOString()
+    if (blog.updatedAt) meta.openGraph.modifiedTime = new Date(blog.updatedAt).toISOString()
+    return meta
   } catch {
     return { title: 'Blog - Sarkari Afsar' }
   }

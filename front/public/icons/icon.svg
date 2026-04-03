@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="80" fill="#1e3a5f"/>
+  <!-- Inner card -->
+  <rect x="40" y="40" width="432" height="432" rx="56" fill="#1d4ed8"/>
+  <!-- "SA" text -->
+  <text
+    x="256"
+    y="310"
+    font-family="'Arial Black', 'Arial', sans-serif"
+    font-size="200"
+    font-weight="900"
+    text-anchor="middle"
+    fill="#ffffff"
+    letter-spacing="-8"
+  >SA</text>
+  <!-- Bottom accent bar -->
+  <rect x="136" y="360" width="240" height="16" rx="8" fill="#f59e0b"/>
+</svg>

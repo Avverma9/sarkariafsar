@@ -9,6 +9,16 @@ export const metadata = {
   title: 'Government Yojana & Schemes 2026 — Sarkari Afsar',
   description: 'Find all central and state government welfare schemes, yojana and benefits for citizens of India at Sarkari Afsar.',
   alternates: { canonical: `${SITE_URL}/yojana` },
+  openGraph: {
+    title: 'Government Yojana & Schemes 2026 — Sarkari Afsar',
+    description: 'Find all central and state government welfare schemes, yojana and benefits for citizens of India.',
+    url: `${SITE_URL}/yojana`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=Government+Yojana+%26+Schemes+2026&type=scheme`, width: 1200, height: 630, alt: 'Government Yojana & Schemes 2026 — Sarkari Afsar' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'Government Yojana & Schemes 2026 — Sarkari Afsar', description: 'Find all central and state government welfare schemes, yojana and benefits for citizens of India.', site: '@sarkariafsar' },
 }
 
 const QUICK_STATES = [

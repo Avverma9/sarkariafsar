@@ -6,6 +6,16 @@ export const metadata = {
   title: 'Privacy Policy | Sarkari Afsar',
   description: 'Comprehensive Privacy Policy for SarkariAfsar.com outlining how we collect, safeguard, and utilize your personal and non-personal data.',
   alternates: { canonical: `${SITE_URL}/privacy-policy` },
+  openGraph: {
+    title: 'Privacy Policy — Sarkari Afsar',
+    description: 'How Sarkari Afsar collects, safeguards, and utilizes your personal and non-personal data.',
+    url: `${SITE_URL}/privacy-policy`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=Privacy+Policy&type=legal`, width: 1200, height: 630, alt: 'Privacy Policy — Sarkari Afsar' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'Privacy Policy — Sarkari Afsar', description: 'How Sarkari Afsar collects, safeguards, and utilizes your personal and non-personal data.', site: '@sarkariafsar' },
 }
 
 export default function PrivacyPolicyPage() {

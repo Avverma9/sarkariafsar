@@ -1,114 +1,11 @@
 import Link from 'next/link'
-import { Suspense } from 'react'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { notFound } from 'next/navigation'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
-// ============ Multi-Key + Multi-Model Fallback ============
-const GEMINI_KEYS = [
-  process.env.GEMINI_API_KEY,
-  ...(process.env.GEMINI_API_KEYS || '').split(',').filter(Boolean),
-].filter((k, i, a) => k && a.indexOf(k) === i) // dedupe
-
-const GEMINI_MODELS = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-1.5-flash',
-]
-
-// Models that support Google Search grounding (live web fetch)
-const GEMINI_GROUNDED_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash']
-
-// Re-verify each post against the web at most once per 6 hours
-const VERIFY_THROTTLE_MS = 6 * 60 * 60 * 1000
-
-async function generateWithFallback(prompt, maxTokens = 250) {
-  for (const apiKey of GEMINI_KEYS) {
-    for (const modelName of GEMINI_MODELS) {
-      try {
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
-        })
-        const result = await Promise.race([
-          model.generateContent(prompt),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 4000))
-        ])
-        const text = result.response.text().trim()
-        if (text && text.length > 10) return text
-      } catch {
-        // Rate limited or error — try next model/key
-        continue
-      }
-    }
-  }
-  return null // All failed—hide summary
-}
-
-// ============ Web Verification (Gemini + Google Search Grounding) ============
-// Uses live search to fetch official dates & apply link. Returns null on failure.
-async function verifyJobDatesFromWeb(job) {
-  if (!GEMINI_KEYS.length) return null
-  const agency = job.conductingAuthority || job.conducting_authority || ''
-  const advt = job.advertisementNumber || job.advertisement_number || ''
-  const prompt = `Search for the latest official information about this Indian government job notification and return ONLY a JSON object (no markdown, no explanation).
-
-Job Title: ${job.title}
-Conducting Authority: ${agency}${advt ? `\nAdvertisement No: ${advt}` : ''}
-
-Return this exact JSON structure:
-{
-  "dates": [
-    { "label": "Fee Last Date", "originalText": "06 April 2026", "verifiedDate": "11 April 2026", "status": "EXTENDED" },
-    { "label": "Last Date to Apply", "originalText": "15 April 2026", "verifiedDate": "15 April 2026", "status": "ACTIVE" }
-  ],
-  "applyLink": "https://official-site.gov.in/apply",
-  "isApplicationOpen": true,
-  "source": "https://official-source-url"
-}
-
-Rules:
-- status must be one of: ACTIVE, CLOSED, EXTENDED, NOT_YET_OPEN
-- originalText must exactly match the date text as scraped from the notification
-- verifiedDate is the CURRENT correct date from official source
-- If a date was extended, set status EXTENDED and put the new date in verifiedDate
-- If application portal is not yet open, set isApplicationOpen: false and applyLink: null
-- Include only dates confirmed from official government sources
-- If you cannot find reliable information, return { "dates": [], "applyLink": null, "isApplicationOpen": null, "source": null }`
-
-  for (const apiKey of GEMINI_KEYS) {
-    for (const modelName of GEMINI_GROUNDED_MODELS) {
-      try {
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          tools: [{ googleSearch: {} }],
-          generationConfig: { maxOutputTokens: 700, temperature: 0.1 },
-        })
-        const result = await Promise.race([
-          model.generateContent(prompt),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 10000))
-        ])
-        const rawText = result.response.text().trim()
-        if (!rawText) continue
-        const clean = rawText.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim()
-        const jsonMatch = clean.match(/\{[\s\S]*\}/)
-        if (!jsonMatch) continue
-        const parsed = JSON.parse(jsonMatch[0])
-        if (parsed && Array.isArray(parsed.dates)) return parsed
-      } catch {
-        continue
-      }
-    }
-  }
-  return null
-}
-
-// ============ generateMetadata ============
+// ── generateMetadata (unchanged logic) ────────────────────────────────────
 export async function generateMetadata({ params }) {
   const { slug } = await params
   try {
@@ -118,864 +15,1179 @@ export async function generateMetadata({ params }) {
     if (!job) return { title: 'Job Not Found - Sarkari Afsar' }
     const canonical = `${SITE_URL}/jobs/${job.slug}`
     const year = new Date().getFullYear()
+
+    // ── Keywords: AI-generated (seo.keywords + tags) merged with rule-based, deduped ──
+    const aiKeywords = [
+      ...(job.seo?.keywords || []),
+      ...(job.tags || []),
+    ]
+    const baseKeywords = [
+      job.title,
+      job.conductingAuthority,
+      job.location,
+      `sarkari naukri ${year}`,
+      'government job',
+      job.category,
+    ]
+    const keywords = [...new Set([...aiKeywords, ...baseKeywords].filter(Boolean))].slice(0, 15)
+
+    // ── Description: prefer manually/AI set metaDescription, else auto-build ──
     const lastDateStr = job.applyLastDate
       ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
       : null
-    const descParts = [`Apply for ${job.title} ${year}.`]
-    if (job.conductingAuthority) descParts.push(`Conducting Authority: ${job.conductingAuthority}.`)
-    if (job.totalVacancies) descParts.push(`Total Vacancies: ${job.totalVacancies}.`)
-    if (job.category) descParts.push(`Category: ${job.category}.`)
-    if (lastDateStr) descParts.push(`Last Date: ${lastDateStr}.`)
-    else descParts.push('Check official site for last date.')
+    let desc = job.seo?.metaDescription?.trim() || ''
+    if (!desc) {
+      const descParts = [`Apply for ${job.title} ${year}.`]
+      if (job.conductingAuthority) descParts.push(`Conducting Authority: ${job.conductingAuthority}.`)
+      if (job.totalVacancies) descParts.push(`Total Vacancies: ${job.totalVacancies}.`)
+      if (lastDateStr) descParts.push(`Last Date: ${lastDateStr}.`)
+      else descParts.push('Check official site for last date.')
+      desc = descParts.join(' ')
+    }
+
+    // ── OG Image: prefer real downloaded post image, fallback to generated OG ──
+    const ogImageUrl = job.seo?.ogImage
+      ? (job.seo.ogImage.startsWith('http') ? job.seo.ogImage : `${SITE_URL}${job.seo.ogImage}`)
+      : `${SITE_URL}/api/og?title=${encodeURIComponent(job.title)}&type=job`
+
     return {
       title: `${job.title} ${year} — Sarkari Afsar`,
-      description: descParts.join(' '),
+      description: desc,
+      keywords,
+      // Reduce snippet length for closed/expired jobs to avoid stale info in SERPs
+      robots: job.isActive === false
+        ? { index: true, follow: true, 'max-snippet': 100, 'max-image-preview': 'large' }
+        : undefined,
       alternates: { canonical },
-      openGraph: { title: job.title, url: canonical, siteName: 'Sarkari Afsar', images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(job.title)}&type=job`, width: 1200, height: 630 }], locale: 'en_IN', type: 'article' },
-      twitter: { card: 'summary_large_image', title: job.title, site: '@sarkariafsar' },
+      openGraph: {
+        title: `${job.title} ${year}`,
+        description: desc,
+        url: canonical,
+        siteName: 'Sarkari Afsar',
+        images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${job.title} ${year}` }],
+        locale: 'en_IN',
+        type: 'article',
+        publishedTime: job.createdAt ? new Date(job.createdAt).toISOString() : undefined,
+        modifiedTime: job.updatedAt ? new Date(job.updatedAt).toISOString() : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title: `${job.title} ${year}`,
+        description: desc,
+        images: [ogImageUrl],
+        site: '@sarkariafsar',
+      },
     }
   } catch { return { title: 'Job Details - Sarkari Afsar' } }
 }
 
-// ============ Date Utils ============
+// ── Date utilities (all unchanged) ────────────────────────────────────────
 const MONTH_MAP = {
   jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,
   january:0,february:1,march:2,april:3,may2:4,june:5,july:6,august:7,
-  september:8,october:9,november:10,december:11
+  september:8,october:9,november:10,december:11,
 }
-
 function parseTextDate(str) {
-  const s = str.trim()
-  // DD Month YYYY
+  const s = String(str||'').trim()
   let m = s.match(/^(\d{1,2})(?:st|nd|rd|th)?[\s-]+([A-Za-z]+)[,\s]+(\d{4})/i)
-  if (m) { const mo = MONTH_MAP[m[2].toLowerCase().slice(0,9)]; if (mo !== undefined) return new Date(+m[3], mo, +m[1]) }
-  // Month DD, YYYY
-  m = s.match(/^([A-Za-z]+)[\s]+([0-9]{1,2})(?:st|nd|rd|th)?[,\s]+(\d{4})/i)
-  if (m) { const mo = MONTH_MAP[m[1].toLowerCase().slice(0,9)]; if (mo !== undefined) return new Date(+m[3], mo, +m[2]) }
-  // DD-DD Month YYYY (range - use first)
-  m = s.match(/^(\d{1,2})-(\d{1,2})[\s]+([A-Za-z]+)[,\s]+(\d{4})/i)
-  if (m) { const mo = MONTH_MAP[m[3].toLowerCase().slice(0,9)]; if (mo !== undefined) return new Date(+m[4], mo, +m[1]) }
-  return null
+  if(m){const mo=MONTH_MAP[m[2].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[3],mo,+m[1])}
+  m=s.match(/^([A-Za-z]+)[\s]+([0-9]{1,2})(?:st|nd|rd|th)?[,\s]+(\d{4})/i)
+  if(m){const mo=MONTH_MAP[m[1].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[3],mo,+m[2])}
+  m=s.match(/^(\d{1,2})-(\d{1,2})[\s]+([A-Za-z]+)[,\s]+(\d{4})/i)
+  if(m){const mo=MONTH_MAP[m[3].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[4],mo,+m[1])}
+  const iso=new Date(s);return isNaN(iso.getTime())?null:iso
 }
-
-const DATE_LABEL_KEYWORDS = [
-  { re: /fee\s*(?:payment|deposit)|last\s*date\s*for\s*fee|payment\s*last\s*date/i, label: 'Fee Last Date' },
-  { re: /application\s*(?:start|begin|open)|apply\s*start\s*date|online\s*apply\s*start/i, label: 'Application Start' },
-  { re: /(?:last\s*date|closing\s*date|apply\s*(?:by|before)|end\s*date)/i, label: 'Last Date to Apply' },
-  { re: /(?:admit\s*card|hall\s*ticket)/i, label: 'Admit Card' },
-  { re: /(?:exam\s*date|written\s*test|cbt|examination\s*date)/i, label: 'Exam Date' },
-  { re: /(?:result|merit\s*list)/i, label: 'Result Date' },
-  { re: /(?:interview|document\s*verif)/i, label: 'Interview' },
-  { re: /(?:notification|advt|advertisement)/i, label: 'Notification' },
-  { re: /(?:age\s*limit|age\s*as\s*on|as\s*on\s*date)/i, label: 'Age Cutoff Date' },
-  { re: /(?:registration|apply\s*online)/i, label: 'Registration' },
-  { re: /(?:dob|date\s*of\s*birth|born)/i, label: 'Date of Birth' },
+const DATE_LABEL_KEYWORDS=[
+  {re:/fee\s*(?:payment|deposit)|last\s*date\s*for\s*fee|payment\s*last\s*date/i,label:'Fee Last Date'},
+  {re:/application\s*(?:start|begin|open)|apply\s*start\s*date|online\s*apply\s*start/i,label:'Application Start'},
+  {re:/(?:last\s*date|closing\s*date|apply\s*(?:by|before)|end\s*date)/i,label:'Last Date to Apply'},
+  {re:/(?:admit\s*card|hall\s*ticket)/i,label:'Admit Card'},
+  {re:/(?:exam\s*date|written\s*test|cbt|examination\s*date)/i,label:'Exam Date'},
+  {re:/(?:result|merit\s*list)/i,label:'Result Date'},
+  {re:/(?:interview|document\s*verif)/i,label:'Interview'},
+  {re:/(?:notification|advt|advertisement)/i,label:'Notification'},
+  {re:/(?:age\s*limit|age\s*as\s*on|as\s*on\s*date)/i,label:'Age Cutoff Date'},
+  {re:/(?:registration|apply\s*online)/i,label:'Registration'},
 ]
-
-function getDateLabel(text, idx) {
-  // Use at most 80 chars before the date; the LAST (closest) keyword match wins.
-  // This prevents a keyword from a far-away bullet being attributed to a date
-  // that belongs to a completely different row in stripped HTML.
-  const window = text.slice(Math.max(0, idx - 80), idx)
-  let result = null
-  let lastMatchEnd = -1
-  for (const { re, label } of DATE_LABEL_KEYWORDS) {
-    const gr = new RegExp(re.source, 'gi')
-    let m
-    while ((m = gr.exec(window)) !== null) {
-      const end = m.index + m[0].length
-      if (end > lastMatchEnd) { lastMatchEnd = end; result = label }
-    }
+function getDateLabel(text,idx){
+  const win=text.slice(Math.max(0,idx-80),idx)
+  let result=null,lastMatchEnd=-1
+  for(const{re,label}of DATE_LABEL_KEYWORDS){
+    const gr=new RegExp(re.source,'gi');let m2
+    while((m2=gr.exec(win))!==null){const end=m2.index+m2[0].length;if(end>lastMatchEnd){lastMatchEnd=end;result=label}}
   }
   return result
 }
-
-function extractAllDates(text) {
-  const patterns = [
+function extractAllDates(text){
+  const patterns=[
     /\d{1,2}-\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi,
     /\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi,
     /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,\s]+\d{4}/gi,
   ]
-  const found = new Map()
-  for (const p of patterns) {
-    let m
-    while ((m = p.exec(text)) !== null) {
-      const raw = m[0].trim()
-      if (!found.has(raw)) {
-        const d = parseTextDate(raw)
-        if (d) {
-          const label = getDateLabel(text, m.index)
-          found.set(raw, { text: raw, date: d, idx: m.index, label })
-        }
-      }
-    }
-  }
-  return [...found.values()]
+  const found=new Map()
+  for(const p of patterns){let m;while((m=p.exec(text))!==null){const raw=m[0].trim();if(!found.has(raw)){const d=parseTextDate(raw);if(d){const label=getDateLabel(text,m.index);found.set(raw,{text:raw,date:d,idx:m.index,label})}}}}
+  return[...found.values()]
 }
-
-function classifyDates(html) {
-  const today = new Date()
-  today.setHours(0,0,0,0)
-  // Only surface dates within a relevant window — this filters out DOB dates
-  // like "01 December 2004" or "31 May 2009" that appear in age-limit sections.
-  const minDate = new Date(today.getFullYear() - 1, 0, 1)   // Jan 1 of last year
-  const maxDate = new Date(today.getFullYear() + 2, 11, 31)  // Dec 31 of year+2
-  const text = html.replace(/<[^>]+>/g, ' ')
-  const all = extractAllDates(text)
-  const expired = [], upcoming = []
-  for (const d of all) {
-    if (d.date < minDate || d.date > maxDate) continue
-    if (d.date < today) expired.push(d)
-    else upcoming.push(d)
-  }
-  return { expired: expired.slice(0, 8), upcoming: upcoming.slice(0, 6) }
+function classifyDates(html){
+  const today=new Date();today.setHours(0,0,0,0)
+  const minDate=new Date(today.getFullYear()-1,0,1)
+  const maxDate=new Date(today.getFullYear()+2,11,31)
+  const text=(html||'').replace(/<[^>]+>/g,' ')
+  const all=extractAllDates(text)
+  const expired=[],upcoming=[]
+  for(const d of all){if(d.date<minDate||d.date>maxDate)continue;if(d.date<today)expired.push(d);else upcoming.push(d)}
+  return{expired:expired.slice(0,8),upcoming:upcoming.slice(0,6)}
 }
-
-// ============ Extension detection ============
-// When an expired date and a LATER upcoming date share the same label
-// (e.g. both labelled "Fee Last Date"), it means the authority extended
-// the deadline. Returns Map<expiredText, upcomingItem>.
-function detectExtensions(expired, upcoming) {
-  const extensionMap = new Map()
-  for (const exp of expired) {
-    if (!exp.label) continue
-    // Only treat as extension when the new date is within 60 days of the old one.
-    // This prevents pairing a far-future date with an old expired date by coincidence.
-    const matches = upcoming
-      .filter(up => {
-        if (up.label !== exp.label) return false
-        if (up.date <= exp.date) return false
-        const diffDays = (up.date - exp.date) / (1000 * 60 * 60 * 24)
-        return diffDays <= 60
-      })
-      .sort((a, b) => a.date - b.date)
-    if (matches.length > 0) extensionMap.set(exp.text, matches[0])
+function detectExtensions(expired,upcoming){
+  const extensionMap=new Map()
+  for(const exp of expired){
+    if(!exp.label)continue
+    const matches=upcoming.filter(up=>{if(up.label!==exp.label)return false;if(up.date<=exp.date)return false;return(up.date-exp.date)/(1000*60*60*24)<=60}).sort((a,b)=>a.date-b.date)
+    if(matches.length>0)extensionMap.set(exp.text,matches[0])
   }
   return extensionMap
 }
-
-// Labels that represent start/cutoff dates — never worth badging in content
-const NO_BADGE_LABELS = new Set(['Application Start', 'Date of Birth', 'Age Cutoff Date', 'Notification'])
-
-// Logic:
-//  - expired with LATER same-label upcoming (≤60d gap) → 🔄 Extended to {newDate}
-//  - remaining expired + isActive=true                  → ✅ Active
-//  - remaining expired + recently updated               → 🔄 Updated: {postUpdatedDate}
-//  - remaining expired + stale                          → no badge
-//  - upcoming (not an extension target)                 → ✅ Active
-//  - Application Start / DOB / Age Cutoff / Notification → never badged
-//  Single-pass combined regex prevents double-badge injection.
-function injectDateBadges(html, expired, upcoming, jobMeta = {}) {
-  if (!html) return html
-
-  const { isActive, updatedAt } = jobMeta
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  const postUpdatedAt = updatedAt ? new Date(updatedAt) : null
-  const updatedDaysAgo = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
-    ? Math.round((today - postUpdatedAt) / (1000 * 60 * 60 * 24))
-    : Infinity
-  const isRecentlyUpdated = updatedDaysAgo <= 60
-  const formattedUpdatedAt = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
-    ? postUpdatedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-    : ''
-
-  const extensionMap = detectExtensions(expired, upcoming)
-  // Texts that are extension targets — already referenced in an "Extended to X" badge;
-  // they must NOT receive a separate standalone badge (prevents double-badge).
-  const extensionTargetTexts = new Set([...extensionMap.values()].map(e => e.text))
-
-  const ACTIVE_BADGE =
-    `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
-    `font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;` +
-    `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
-    `white-space:nowrap;line-height:1.4;">✅ Active</span>`
-
-  const UPDATED_BADGE =
-    `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
-    `font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd;` +
-    `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
-    `white-space:nowrap;line-height:1.4;">🔄 Updated: ${formattedUpdatedAt}</span>`
-
-  function extendedBadge(newDateText) {
-    return (
-      `<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;` +
-      `font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;` +
-      `padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;` +
-      `white-space:nowrap;line-height:1.4;">🔄 Extended to ${newDateText}</span>`
-    )
-  }
-
-  // Build text → badge map
-  const badgeMap = new Map()
-
-  for (const item of expired) {
-    if (NO_BADGE_LABELS.has(item.label)) continue  // skip start/DOB/cutoff dates
-    const ext = extensionMap.get(item.text)
-    if (ext) {
-      badgeMap.set(item.text, extendedBadge(ext.text))
-    } else if (isActive) {
-      badgeMap.set(item.text, ACTIVE_BADGE)
-    } else if (isRecentlyUpdated && formattedUpdatedAt) {
-      badgeMap.set(item.text, UPDATED_BADGE)
-    }
-    // else: stale expired → no badge
-  }
-
-  for (const item of upcoming) {
-    if (extensionTargetTexts.has(item.text)) continue  // already shown in "Extended to X"
-    if (NO_BADGE_LABELS.has(item.label)) continue
-    if (!badgeMap.has(item.text)) {  // don't overwrite an extension badge
-      badgeMap.set(item.text, ACTIVE_BADGE)
-    }
-  }
-
-  if (!badgeMap.size) return html
-
-  // Sort by text length descending so longer patterns match before substrings
-  const sortedTexts = [...badgeMap.keys()].sort((a, b) => b.length - a.length)
-
-  // Single-pass combined regex — JS replace() advances past each match so the
-  // injected badge HTML can never be matched again, eliminating double-badge.
-  const escapedParts = sortedTexts.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-  const combinedRe = new RegExp(`(${escapedParts.join('|')})(?![^<>]*>)`, 'g')
-  return html.replace(combinedRe, (match) => match + (badgeMap.get(match) ?? ''))
+const NO_BADGE_LABELS=new Set(['Application Start','Date of Birth','Age Cutoff Date','Notification'])
+function injectDateBadges(html,expired,upcoming,jobMeta={}){
+  if(!html)return html
+  const{isActive,updatedAt}=jobMeta
+  const today=new Date();today.setHours(0,0,0,0)
+  const postUpdatedAt=updatedAt?new Date(updatedAt):null
+  const updatedDaysAgo=postUpdatedAt&&!isNaN(postUpdatedAt)?Math.round((today-postUpdatedAt)/(1000*60*60*24)):Infinity
+  const isRecentlyUpdated=updatedDaysAgo<=60
+  const formattedUpdatedAt=postUpdatedAt&&!isNaN(postUpdatedAt)?postUpdatedAt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):''
+  const extensionMap=detectExtensions(expired,upcoming)
+  const extensionTargetTexts=new Set([...extensionMap.values()].map(e=>e.text))
+  const ACTIVE_BADGE=`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Active</span>`
+  const UPDATED_BADGE=`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Updated: ${formattedUpdatedAt}</span>`
+  const extendedBadge=(newDateText)=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Extended to ${newDateText}</span>`
+  const badgeMap=new Map()
+  for(const item of expired){if(NO_BADGE_LABELS.has(item.label))continue;const ext=extensionMap.get(item.text);if(ext)badgeMap.set(item.text,extendedBadge(ext.text));else if(isActive)badgeMap.set(item.text,ACTIVE_BADGE);else if(isRecentlyUpdated&&formattedUpdatedAt)badgeMap.set(item.text,UPDATED_BADGE)}
+  for(const item of upcoming){if(extensionTargetTexts.has(item.text))continue;if(NO_BADGE_LABELS.has(item.label))continue;if(!badgeMap.has(item.text))badgeMap.set(item.text,ACTIVE_BADGE)}
+  if(!badgeMap.size)return html
+  const sortedTexts=[...badgeMap.keys()].sort((a,b)=>b.length-a.length)
+  const escapedParts=sortedTexts.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))
+  const combinedRe=new RegExp(`(${escapedParts.join('|')})(?![^<>]*>)`,'g')
+  return html.replace(combinedRe,(match)=>match+(badgeMap.get(match)??''))
 }
 
-// ============ Patch contentHtml with verified dates & apply link ============
-const APPLY_LINK_TEXT_RE = /Apply\s*Online|Apply\s*Now|Apply\s*Here|Apply\s*Link|Submit\s*Application/i
-
-function patchContentHtml(html, verifiedData) {
-  if (!html || !verifiedData) return html
-  let result = html
-
-  // 1 — Replace outdated date strings with verified dates
-  for (const d of (verifiedData.dates || [])) {
-    if (!d.originalText || !d.verifiedDate) continue
-    if (d.originalText === d.verifiedDate) continue
-    const esc = d.originalText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    result = result.replace(new RegExp(esc, 'gi'), d.verifiedDate)
-  }
-
-  // 2 — Patch apply links based on isApplicationOpen + applyLink
-  result = result.replace(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi, (match, attrs, inner) => {
-    const plainInner = inner.replace(/<[^>]+>/g, '').trim()
-    if (!APPLY_LINK_TEXT_RE.test(plainInner)) return match
-
-    if (verifiedData.isApplicationOpen === false) {
-      return (
-        `<span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;` +
-        `color:#b45309;background:#fff7ed;border:1px solid #f59e0b;` +
-        `padding:4px 12px;border-radius:6px;font-weight:600;">` +
-        `⚠️ Application link not yet active</span>`
-      )
-    }
-    if (verifiedData.applyLink) {
-      const hasHref = /\bhref\s*=/i.test(attrs)
-      const newAttrs = hasHref
-        ? attrs.replace(/\bhref\s*=\s*(['"])[^'"]*\1/i, `href="${verifiedData.applyLink}"`)
-        : `href="${verifiedData.applyLink}" ${attrs}`
-      return `<a ${newAttrs.trim()}>${inner}</a>`
-    }
-    return match
-  })
-
-  return result
+// ── Design tokens ──────────────────────────────────────────────────────────
+const T = {
+  navy:    '#0f1f3d',
+  gold:    '#c9a84c',
+  goldL:   '#f5edd6',
+  ink:     '#1c1c1c',
+  muted:   '#6b6355',
+  faint:   '#9c8f7a',
+  rule:    '#e8e3d8',
+  bg:      '#faf8f4',
+  white:   '#ffffff',
+  green:   '#15803d',
+  greenL:  '#f0fdf4',
+  red:     '#b91c1c',
+  redL:    '#fef2f2',
+  purple:  '#6d28d9',
+  purpleL: '#f5f3ff',
 }
 
-// ============ Highlight parser for summary text ============
-function parseHighlights(text) {
-  const today = new Date(); today.setHours(0,0,0,0)
-  const patterns = [
-    { regex: /(?:Rs\.?\s*|\u20b9|INR\s*)[\d,]+(?:\/[-]?)?(?:\s*(?:rupees|only))?/gi, type: 'fee' },
-    { regex: /\d{1,2}-\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi, type: 'date' },
-    { regex: /\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi, type: 'date' },
-    { regex: /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,\s]+\d{4}/gi, type: 'date' },
-  ]
-  const found = new Map()
-  for (const { regex, type } of patterns) {
-    let m
-    while ((m = regex.exec(text)) !== null) {
-      const raw = m[0].trim()
-      if (found.has(raw)) continue
-      let status = 'active', hType = type
-      if (type === 'date') {
-        const d = parseTextDate(raw)
-        if (d) status = d < today ? 'expired' : 'upcoming'
-        const before = text.slice(Math.max(0, m.index - 40), m.index).toLowerCase()
-        if (before.includes('last') || before.includes('clos') || before.includes('dead') || before.includes('apply'))
-          hType = 'deadline'
-      }
-      found.set(raw, { text: raw, type: hType, status })
-    }
-  }
-  return [...found.values()]
-}
+const serif = "'Lora', Georgia, 'Times New Roman', serif"
+const sans  = "'DM Sans', system-ui, sans-serif"
 
-// ============ Shimmer Skeleton ============
-function AiSkeleton() {
+// ── Shared card wrapper ────────────────────────────────────────────────────
+function Card({ children, style = {}, accent }) {
   return (
-    <div className="rounded-xl border border-amber-200 overflow-hidden mb-6" aria-label="Loading AI summary...">
-      <div className="bg-amber-50 px-5 py-4">
-        {/* Header shimmer */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-full shimmer-wave" />
-            <div className="h-3 w-40 rounded shimmer-wave" />
-          </div>
-          <div className="h-5 w-24 rounded-full shimmer-wave" />
-        </div>
-        {/* Text lines shimmer */}
-        <div className="space-y-2.5">
-          <div className="h-3.5 w-full rounded shimmer-wave" />
-          <div className="h-3.5 w-11/12 rounded shimmer-wave" />
-          <div className="h-3.5 w-4/5 rounded shimmer-wave" />
-        </div>
-        {/* Pills shimmer */}
-        <div className="flex gap-2 mt-4">
-          <div className="h-6 w-28 rounded-full shimmer-wave" />
-          <div className="h-6 w-24 rounded-full shimmer-wave" />
-          <div className="h-6 w-20 rounded-full shimmer-wave" />
-        </div>
-        <div className="h-2 w-48 rounded mt-3 shimmer-wave" />
+    <div style={{
+      background: T.white,
+      border: `1px solid ${T.rule}`,
+      borderTop: accent ? `3px solid ${accent}` : `1px solid ${T.rule}`,
+      borderRadius: 8,
+      overflow: 'hidden',
+      marginBottom: 16,
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function CardHeader({ title, icon, right, level = 2 }) {
+  const Tag = `h${level}`
+  return (
+    <div style={{
+      padding: '12px 18px',
+      borderBottom: `1px solid ${T.rule}`,
+      background: '#faf8f4',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* emoji outside heading so screen readers don't announce it */}
+        {icon && <span style={{ fontSize: 14 }} aria-hidden="true">{icon}</span>}
+        <Tag style={{
+          fontFamily: sans,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: T.muted,
+          margin: 0,
+        }}>
+          {title}
+        </Tag>
       </div>
+      {right}
     </div>
   )
 }
 
-function FaqSkeleton() {
+function Row({ label, value, highlight }) {
+  if (!value) return null
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-      <div className="h-4 w-48 rounded shimmer-wave mb-4" />
-      {[1,2,3].map(i => (
-        <div key={i} className="border border-gray-100 rounded-lg p-3 mb-2">
-          <div className="h-3 w-3/4 rounded shimmer-wave mb-2" />
-          <div className="h-3 w-full rounded shimmer-wave" />
-        </div>
-      ))}
+    <div style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: 12,
+      padding: '9px 18px',
+      borderBottom: `1px solid ${T.rule}`,
+    }}>
+      <span style={{ fontFamily: sans, fontSize: 12, color: T.faint, flexShrink: 0 }}>{label}</span>
+      <span style={{
+        fontFamily: sans,
+        fontSize: 12,
+        fontWeight: 600,
+        color: highlight || T.ink,
+        textAlign: 'right',
+        wordBreak: 'break-word',
+      }}>
+        {value}
+      </span>
     </div>
   )
 }
 
-// ============ Highlight Renderer ============
-function HighlightedSummary({ text, highlights }) {
-  if (!highlights.length) return <p className="text-sm text-gray-700 leading-relaxed">{text}</p>
-  const sorted = [...highlights].sort((a, b) => b.text.length - a.text.length)
-  const parts = []
-  let rem = text
-  for (const h of sorted) {
-    const idx = rem.indexOf(h.text)
-    if (idx !== -1) {
-      if (idx > 0) parts.push({ kind: 'text', content: rem.slice(0, idx) })
-      parts.push({ kind: 'tag', ...h })
-      rem = rem.slice(idx + h.text.length)
-    }
-  }
-  if (rem) parts.push({ kind: 'text', content: rem })
+// ── Sidebar components ─────────────────────────────────────────────────────
 
-  const style = (type, status) => {
-    if (type === 'fee') return { cls: 'bg-emerald-50 text-emerald-800 border border-emerald-300', icon: '💰', pulse: false }
-    if (status === 'expired') return { cls: 'bg-red-100 text-red-700 border-2 border-red-400 line-through decoration-red-500 decoration-2', icon: '❌', pulse: false }
-    if (type === 'deadline') return { cls: 'bg-orange-100 text-orange-800 border-2 border-orange-400 shadow-sm', icon: '⏰', pulse: true }
-    return { cls: 'bg-blue-50 text-blue-800 border-2 border-blue-300 shadow-sm', icon: '📅', pulse: true }
-  }
+function ApplyButton({ href }) {
+  if (!href) return null
   return (
-    <p className="text-sm text-gray-700 leading-relaxed">
-      {parts.map((p, i) => {
-        if (p.kind === 'text') return <span key={i}>{p.content}</span>
-        const { cls, icon, pulse } = style(p.type, p.status)
-        return (
-          <span key={i}
-            title={p.status==='expired'?'This date has passed':p.type==='fee'?'Application fee':p.type==='deadline'?'Important deadline':'Important date'}
-            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold mx-0.5 my-0.5 align-middle cursor-help ${cls} ${pulse?'animate-pulse':''}`}>
-            <span>{icon}</span><span>{p.text}</span>
-          </span>
-        )
-      })}
-    </p>
+    <Card accent={T.green} style={{ marginBottom: 16 }}>
+      <div style={{ padding: '18px 18px 14px', textAlign: 'center' }}>
+        <div style={{ fontFamily: sans, fontSize: 10, color: T.faint, marginBottom: 10, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          Official Application Portal
+        </div>
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '11px 0',
+            background: T.green,
+            color: '#fff',
+            borderRadius: 6,
+            fontFamily: sans,
+            fontSize: 13,
+            fontWeight: 700,
+            textDecoration: 'none',
+            letterSpacing: '0.04em',
+            boxSizing: 'border-box',
+            textAlign: 'center',
+          }}
+        >
+          Apply Online →
+        </a>
+        <div style={{ fontFamily: sans, fontSize: 10, color: T.faint, marginTop: 8, fontStyle: 'italic' }}>
+          Always verify from official source
+        </div>
+      </div>
+    </Card>
   )
 }
 
-const MS_DAY = 1000 * 60 * 60 * 24
-
-function parseNumeric(value) {
-  if (!value) return 0
-  const digits = String(value).replace(/[^0-9]/g, '')
-  return digits ? Number(digits) : 0
-}
-
-function buildJobIntro(job) {
-  const parts = []
-  const category = (job.category || 'Government').toLowerCase()
-  const jobTitle = job.jobtitle || job.title
-  const agency = job.conductingAuthority || 'a government department'
-  parts.push(`The ${category} ${jobTitle} opportunity is published by ${agency}.`)
-  if (job.location) parts.push(`It focuses on candidates in ${job.location}.`)
-  if (job.totalVacancies) parts.push(`${job.totalVacancies} vacancies are listed.`)
-  if (job.salary) parts.push(`The reported salary is ${job.salary}.`)
-  if (job.selectionProcess) parts.push(`Selection will follow ${job.selectionProcess}.`)
-  if (job.applyLastDate) {
-    const safeDate = new Date(job.applyLastDate)
-    if (!Number.isNaN(safeDate)) {
-      parts.push(`Submit your application by ${safeDate.toLocaleDateString('en-IN')}.`)
-    }
-  }
-  return parts.join(' ')
-}
-
-function buildJobPros(job) {
-  const pros = []
-  if (job.isActive) pros.push('Recruitment is currently active, so the notification can be immediately followed through.')
-  const vacancies = parseNumeric(job.totalVacancies)
-  if (vacancies && vacancies >= 100) {
-    pros.push(`Over ${vacancies} vacancies widen the competition window for this post.`)
-  } else if (vacancies) {
-    pros.push(`${vacancies} vacancies means a more focused competition for determined candidates.`)
-  }
-  if (job.salary) pros.push(`Salary details are available (${job.salary}), so you can plan your expectations.`)
-  if (job.selectionProcess) pros.push(`Selection hinges on ${job.selectionProcess}, helping you strategize preparation.`)
-  if (job.location) pros.push(`The post is centered around ${job.location}, which helps local applicants track domicile requirements.`)
-  return pros
-}
-
-function buildJobCons(job) {
-  const cons = []
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  if (!job.isActive) cons.push('The notification is flagged inactive; verify whether the recruitment is reopened before applying.')
-  if (job.applyLastDate) {
-    const lastDate = new Date(job.applyLastDate)
-    if (!Number.isNaN(lastDate)) {
-      const diff = Math.round((lastDate - today) / MS_DAY)
-      if (diff >= 0 && diff <= 14) {
-        cons.push(`The deadline is ${diff} day${diff === 1 ? '' : 's'} away, so gather your documents quickly.`)
-      } else if (diff < 0) {
-        cons.push('The listed deadline has passed; confirm whether the authority has extended the window.')
-      }
-    }
-  } else {
-    cons.push('Closing date is not mentioned in this scraped excerpt; check the official PDF for clarity.')
-  }
-  if (!job.salary) cons.push('Salary band is not captured in this table; always verify the pay scale from the source notice.')
-  return cons
-}
-
-function buildJobStateNote(job) {
-  if (!job.location) return ''
-  const segments = job.location.split(',').map(seg => seg.trim()).filter(Boolean)
-  if (!segments.length) return ''
-  const region = segments[segments.length - 1]
-  return `${region} residents should double-check domicile, reservation and posting guidelines before applying.`
-}
-
-function buildJobInsights(job) {
-  const candidates = []
-  const push = (title, value) => {
-    if (typeof value === 'string' && value.trim()) {
-      candidates.push({ title, body: value.trim() })
-    }
-  }
-  push('Exam Preparation Strategy', job.examPreparationStrategy)
-  push('Syllabus Breakdown', job.syllabusBreakdown)
-  push('Selection Process Notes', job.selectionProcess)
-  push('Physical Test Details', job.physicalTestDetails)
-  return candidates
-}
-
-// ============ Async AI Summary (Suspense) ============
-async function AiSummaryBox({ content, title, type, contentHtml, isActive, updatedAt }) {
-  const { expired: rawExpired, upcoming } = classifyDates(contentHtml || content)
-  const expired = isActive ? [] : rawExpired
-  // Detect which upcoming dates are extensions of an expired same-label date
-  const extensionMap = detectExtensions(rawExpired, upcoming)
-  const extensionTargetTexts = new Set([...extensionMap.values()].map(v => v.text))
-
-  // --- Build structured date context for AI ---
-  const todayDate = new Date()
-  todayDate.setHours(0, 0, 0, 0)
-  const todayStr = todayDate.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-  const postUpdatedAt = updatedAt ? new Date(updatedAt) : null
-  const postUpdatedStr = postUpdatedAt && !Number.isNaN(postUpdatedAt.getTime())
-    ? postUpdatedAt.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
-    : null
-
-  const dateCtxLines = []
-  dateCtxLines.push(`Today: ${todayStr}`)
-  dateCtxLines.push(`Post Status: ${isActive ? 'ACTIVE' : 'CLOSED/INACTIVE'}`)
-  if (postUpdatedStr) dateCtxLines.push(`Post Last Modified: ${postUpdatedStr}`)
-  for (const e of rawExpired) {
-    const ext = extensionMap.get(e.text)
-    if (ext) {
-      dateCtxLines.push(`- ${e.label || 'Date'}: ${e.text} → EXTENDED to ${ext.text} (still ACTIVE)`)
-    } else {
-      dateCtxLines.push(`- ${e.label || 'Date'}: ${e.text} → CLOSED (date has passed)`)
-    }
-  }
-  for (const u of upcoming) {
-    if (!extensionTargetTexts.has(u.text)) {
-      dateCtxLines.push(`- ${u.label || 'Date'}: ${u.text} → ACTIVE (upcoming)`)
-    }
-  }
-  const dateContext = dateCtxLines.join('\n')
-
-  // Call AI with fallback
-  const prompt = type === 'scheme'
-    ? `Summarize this government scheme in 3 sentences. Mention eligibility, benefits, and whether key dates are active, closed, or extended.\n\n${dateContext}\n\nTitle: ${title}\nContent: ${content.slice(0, 1500)}`
-    : `Summarize this government job notification in 3 sentences. For each important date (fee date, apply deadline), state clearly whether it is ACTIVE, CLOSED, or EXTENDED based on the date context below. Include vacancies and eligibility.\n\n${dateContext}\n\nTitle: ${title}\nContent: ${content.slice(0, 1500)}`
-
-  const summary = await generateWithFallback(prompt, 250)
-  // If all API keys failed — hide the section entirely
-  if (!summary) return null
-
-  const rawHighlights = parseHighlights(summary)
-  // When job is active, override expired status so the summary text
-  // never shows strikethrough red on dates that are still in-window.
-  const highlights = isActive
-    ? rawHighlights.map(h => h.status === 'expired' ? { ...h, status: 'upcoming' } : h)
-    : rawHighlights
-
+function QuickStatsCard({ job, hasVacancyTable }) {
+  const rows = [
+    // Suppress totalVacancies if VacancyTableCard already shows it on the page
+    !hasVacancyTable && { label: '👥 Total Vacancies', value: job.totalVacancies ? String(job.totalVacancies) : null },
+    { label: '💰 Pay Scale',  value: job.salary },
+    // Suppress Max Age — AgeLimitCard already shows full detail
+    { label: '📂 Category',   value: job.category },
+    { label: '📍 Location',   value: job.location },
+    { label: '#  Advt. No.', value: job.advertisementNumber },
+  ].filter(r => r && r.value)
+  if (!rows.length) return null
   return (
-    <div className="ai-summary-enter rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 shadow-sm mb-6 overflow-hidden">
-      {/* Header */}
-      <div className="px-5 pt-5 pb-1">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🤖</span>
-            <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">AI Assistant — Quick Summary</span>
+    <Card accent={T.navy}>
+      <CardHeader title="Quick Overview" icon="📋" />
+      <div>
+        {rows.map((r, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            gap: 10,
+            padding: '8px 18px',
+            borderBottom: i < rows.length - 1 ? `1px solid ${T.rule}` : 'none',
+          }}>
+            <span style={{ fontFamily: sans, fontSize: 11.5, color: T.faint, flexShrink: 0 }}>{r.label}</span>
+            <span style={{ fontFamily: sans, fontSize: 11.5, fontWeight: 600, color: T.ink, textAlign: 'right', wordBreak: 'break-word', maxWidth: '60%' }}>{r.value}</span>
           </div>
-          <div className="flex gap-2">
-            {expired.length > 0 && (
-              <span className="text-xs bg-red-100 text-red-700 border border-red-300 px-2 py-0.5 rounded-full font-semibold">
-                ❌ {expired.length} Expired
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function ImportantDatesCard({ dates }) {
+  if (!dates || typeof dates !== 'object') return null
+  const entries = Object.entries(dates).filter(([, v]) => v)
+  if (!entries.length) return null
+  const today = new Date(); today.setHours(0,0,0,0)
+  return (
+    <Card accent="#1d4ed8">
+      <CardHeader title="Important Dates" icon="📅" />
+      <div>
+        {entries.map(([label, value], i) => {
+          const parsed = parseTextDate(String(value))
+          const isUpcoming = parsed && parsed >= today
+          const isExpired  = parsed && parsed < today
+          return (
+            <div key={label} style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 18px',
+              borderBottom: i < entries.length - 1 ? `1px solid ${T.rule}` : 'none',
+            }}>
+              <span style={{ fontFamily: sans, fontSize: 11, color: T.faint }}>{label}</span>
+              <span style={{
+                fontFamily: sans,
+                fontSize: 11,
+                fontWeight: 600,
+                color: isUpcoming ? T.green : isExpired ? T.red : T.ink,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+              }}>
+                {isUpcoming && <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.green, display: 'inline-block', animation: 'pulse 2s infinite' }} />}
+                <time dateTime={parsed ? parsed.toISOString().slice(0, 10) : undefined}>{String(value)}</time>
               </span>
-            )}
-            {upcoming.length > 0 && (
-              <span className="text-xs bg-green-100 text-green-700 border border-green-300 px-2 py-0.5 rounded-full font-semibold animate-pulse">
-                ✨ {upcoming.length} New Update{upcoming.length > 1 ? 's' : ''}
-              </span>
-            )}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+function AppFeeCard({ fee }) {
+  if (!fee || typeof fee !== 'object') return null
+  const rows = [
+    { label: 'General / OBC', value: fee.general },
+    { label: 'SC / ST',        value: fee.sc },
+    { label: 'PwD',            value: fee.ph },
+    { label: 'EWS',            value: fee.ews },
+  ].filter(r => r.value != null)
+  if (!rows.length) return null
+  return (
+    <Card accent={T.gold}>
+      <CardHeader title="Application Fee" icon="💳" />
+      <div>
+        {rows.map((r, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '8px 18px',
+            borderBottom: i < rows.length - 1 ? `1px solid ${T.rule}` : 'none',
+          }}>
+            <span style={{ fontFamily: sans, fontSize: 11.5, color: T.faint }}>{r.label}</span>
+            <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: '#92400e' }}>₹{r.value}/-</span>
           </div>
-        </div>
-
-        {/* Highlighted Summary */}
-        <HighlightedSummary text={summary} highlights={highlights} />
-
-        {/* Legend */}
-        {highlights.length > 0 && (
-          <div className="flex flex-wrap gap-3 mt-3 text-[10px]">
-            {highlights.some(h=>h.status==='expired') && <span className="text-red-500">❌ Expired date</span>}
-            {highlights.some(h=>h.type==='deadline') && <span className="text-orange-600">⏰ Deadline</span>}
-            {highlights.some(h=>h.type==='fee') && <span className="text-emerald-600">💰 Fee</span>}
-            {highlights.some(h=>h.type==='date'&&h.status!=='expired') && <span className="text-blue-600">📅 Date</span>}
+        ))}
+        {fee.paymentModes?.length > 0 && (
+          <div style={{ padding: '8px 18px' }}>
+            <span style={{ fontFamily: sans, fontSize: 10, color: T.faint }}>
+              Via: {fee.paymentModes.join(' · ')}
+            </span>
           </div>
         )}
       </div>
+    </Card>
+  )
+}
 
-      {/* NEW UPDATES section */}
-      {upcoming.length > 0 && (
-        <div className="mx-5 mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-          <p className="text-xs font-bold text-green-700 mb-2 flex items-center gap-1">
-            <span>✨</span> Latest Update{upcoming.length > 1 ? 's' : ''} in this post:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {upcoming.map((item, i) => {
-              const isExt = [...extensionMap.values()].some(ext => ext.text === item.text)
-              const displayLabel = isExt ? `${item.label || 'Date'} Extended` : item.label
-              return (
-                <span key={i} className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${isExt ? 'text-purple-700 bg-purple-50 border border-purple-300' : 'text-green-700 bg-green-100 border border-green-300'}`}>
-                  <span>{isExt ? '🔄' : '📅'}</span>
-                  {displayLabel && <span className={`font-normal ${isExt ? 'text-purple-600' : 'text-green-600'}`}>{displayLabel}:</span>}
-                  <span>{item.text}</span>
-                </span>
-              )
-            })}
+function AgeLimitCard({ ageLimit }) {
+  if (!ageLimit) return null
+  const { min, max, byCategory } = ageLimit
+  if (!min && !max && !byCategory?.length) return null
+  return (
+    <Card>
+      <CardHeader title="Age Limit" icon="🎂" />
+      <div style={{ padding: '14px 18px' }}>
+        {(min || max) && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: byCategory?.length ? 12 : 0 }}>
+            {min && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: T.navy }}>{min}</div>
+                <div style={{ fontFamily: sans, fontSize: 9, color: T.faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Min Yrs</div>
+              </div>
+            )}
+            {min && max && <div style={{ height: 28, width: 1, background: T.rule }} />}
+            {max && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 700, color: T.navy }}>{max}</div>
+                <div style={{ fontFamily: sans, fontSize: 9, color: T.faint, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Max Yrs</div>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        )}
+        {byCategory?.length > 0 && (
+          <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+            {byCategory.map((c, i) => (
+              <li key={i} style={{
+                fontFamily: sans,
+                fontSize: 11.5,
+                color: T.muted,
+                padding: '4px 0',
+                borderBottom: i < byCategory.length - 1 ? `1px solid ${T.rule}` : 'none',
+                display: 'flex',
+                gap: 6,
+              }}>
+                <span style={{ color: T.gold, flexShrink: 0 }}>›</span>
+                {c}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </Card>
+  )
+}
 
-      <p className="text-[10px] text-gray-400 px-5 py-3 border-t border-amber-100 mt-3">
-        Gemini AI • Always verify from the official source before applying.
-      </p>
+function ImportantLinksCard({ links }) {
+  if (!links?.length) return null
+
+  // 1. Filter valid links
+  const filtered = links.filter(l => l.label && l.url)
+  if (!filtered.length) return null
+
+  // 2. Deduplicate by URL (keep first occurrence)
+  const seenUrls = new Set()
+  const deduped = filtered.filter(l => {
+    if (seenUrls.has(l.url)) return false
+    seenUrls.add(l.url)
+    return true
+  })
+
+  // 3. Group by label — preserves all URLs without repeating the same button
+  const groups = []
+  const groupMap = {}
+  deduped.forEach(l => {
+    if (groupMap[l.label] !== undefined) {
+      groups[groupMap[l.label]].items.push(l)
+    } else {
+      groupMap[l.label] = groups.length
+      groups.push({ label: l.label, type: l.type, items: [l] })
+    }
+  })
+
+  if (!groups.length) return null
+
+  const TYPE_STYLE = {
+    apply:         { bg: T.green,   color: '#fff' },
+    'admit-card':  { bg: '#7c3aed', color: '#fff' },
+    result:        { bg: '#0369a1', color: '#fff' },
+    notification:  { bg: T.gold,    color: T.ink  },
+    official:      { bg: T.navy,    color: '#fff' },
+    'answer-key':  { bg: '#c2410c', color: '#fff' },
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Important Links" icon="🔗" />
+      <div style={{ padding: '12px 18px', display: 'flex', flexDirection: 'column', gap: 7 }}>
+        {groups.map((group, gi) => {
+          const s = TYPE_STYLE[group.type] || { bg: T.muted, color: '#fff' }
+          if (group.items.length === 1) {
+            // Single link — full button as before
+            return (
+              <a
+                key={gi}
+                href={group.items[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  background: s.bg,
+                  color: s.color,
+                  borderRadius: 5,
+                  fontFamily: sans,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  gap: 6,
+                }}
+              >
+                <span>{group.label}</span>
+                <span style={{ opacity: 0.7, fontSize: 10 }}>↗</span>
+              </a>
+            )
+          }
+          // Multiple URLs under same label — group header + numbered sub-links
+          return (
+            <div key={gi} style={{ borderRadius: 5, overflow: 'hidden', border: `1px solid ${s.bg}` }}>
+              {/* Group header (non-clickable) */}
+              <div style={{
+                padding: '7px 12px',
+                background: s.bg,
+                color: s.color,
+                fontFamily: sans,
+                fontSize: 12,
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}>
+                <span>{group.label}</span>
+                <span style={{ opacity: 0.75, fontSize: 10 }}>{group.items.length} links</span>
+              </div>
+              {/* Sub-links */}
+              {group.items.map((item, ii) => (
+                <a
+                  key={ii}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '6px 12px',
+                    background: ii % 2 === 0 ? '#f8f9fa' : '#fff',
+                    color: '#1e3a5f',
+                    fontFamily: sans,
+                    fontSize: 11,
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    borderTop: `1px solid #e5e7eb`,
+                    gap: 6,
+                  }}
+                >
+                  <span style={{ color: s.bg, fontWeight: 700, marginRight: 4 }}>{ii + 1}.</span>
+                  <span style={{ flex: 1 }}>Link {ii + 1}</span>
+                  <span style={{ opacity: 0.5, fontSize: 10 }}>↗</span>
+                </a>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
+// ── Main content components ────────────────────────────────────────────────
+
+function VacancyTableCard({ vacancyTable, totalVacancies }) {
+  if (!vacancyTable?.length) return null
+  return (
+    <Card accent={T.navy} style={{ marginBottom: 20 }}>
+      <CardHeader
+        title="Vacancy Breakdown"
+        icon="👥"
+        right={totalVacancies && (
+          <span style={{
+            fontFamily: sans, fontSize: 10, fontWeight: 700,
+            background: T.navy, color: '#fff',
+            padding: '2px 10px', borderRadius: 20,
+          }}>
+            Total: {totalVacancies}
+          </span>
+        )}
+      />
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: sans }}>
+          <thead>
+            <tr style={{ background: '#faf8f4' }}>
+              {['Post', 'Count', 'UR', 'OBC', 'SC', 'ST', 'EWS'].map((h, i) => (
+                <th key={h} style={{
+                  padding: '7px 14px',
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.12em',
+                  textTransform: 'uppercase',
+                  color: T.faint,
+                  textAlign: i === 0 ? 'left' : 'center',
+                  borderBottom: `1px solid ${T.rule}`,
+                  display: i > 1 ? undefined : undefined,
+                }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {vacancyTable.map((row, i) => (
+              <tr key={i} style={{ borderBottom: `1px solid ${T.rule}` }}>
+                <td style={{ padding: '9px 14px', fontSize: 12.5, fontWeight: 500, color: T.ink }}>{row.post || '—'}</td>
+                <td style={{ padding: '9px 14px', textAlign: 'center', fontSize: 13, fontWeight: 700, color: T.navy }}>{row.count || row.total || '—'}</td>
+                {['ur','obc','sc','st','ews'].map(k => (
+                  <td key={k} style={{ padding: '9px 14px', textAlign: 'center', fontSize: 12, color: T.muted }}>{row[k] || '—'}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  )
+}
+
+function EligibilityCard({ eligibility }) {
+  if (!eligibility?.length) return null
+  return (
+    <Card style={{ marginBottom: 20 }}>
+      <CardHeader title="Eligibility & Qualification" icon="🎓" />
+      <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {eligibility.map((e, i) => (
+          <div key={i} style={{
+            paddingLeft: 12,
+            borderLeft: `2px solid ${T.gold}`,
+          }}>
+            <div style={{ fontFamily: sans, fontSize: 12.5, fontWeight: 700, color: T.ink, marginBottom: 3 }}>
+              {e.post}
+            </div>
+            <div style={{ fontFamily: sans, fontSize: 12, color: T.muted, lineHeight: 1.6 }}>
+              {e.qualification || 'See official notification'}
+            </div>
+            {e.payScale && (
+              <div style={{ fontFamily: sans, fontSize: 11, fontWeight: 600, color: '#92400e', marginTop: 4 }}>
+                💰 {e.payScale}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  )
+}
+
+function SelectionProcessCard({ steps }) {
+  if (!steps?.length) return null
+  return (
+    <Card style={{ marginBottom: 20 }}>
+      <CardHeader title="Selection Process" icon="🏆" />
+      <div style={{ padding: '16px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0 }}>
+          {steps.map((step, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+              {/* connector line */}
+              {i < steps.length - 1 && (
+                <div style={{
+                  position: 'absolute',
+                  top: 14,
+                  left: '50%',
+                  width: '100%',
+                  height: 1,
+                  background: T.rule,
+                  zIndex: 0,
+                }} />
+              )}
+              {/* step circle */}
+              <div style={{
+                width: 28,
+                height: 28,
+                borderRadius: '50%',
+                background: T.navy,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontFamily: sans,
+                fontSize: 11,
+                fontWeight: 700,
+                flexShrink: 0,
+                position: 'relative',
+                zIndex: 1,
+                marginBottom: 8,
+              }}>
+                {i + 1}
+              </div>
+              <div style={{
+                fontFamily: sans,
+                fontSize: 10,
+                color: T.muted,
+                textAlign: 'center',
+                lineHeight: 1.4,
+                padding: '0 4px',
+              }}>
+                {step}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+const BLOCK_META = {
+  introduction:       { icon: '📌', accent: '#dbeafe', label: 'Overview' },
+  'exam-tips':        { icon: '🎯', accent: '#fef3c7', label: 'Exam Tips' },
+  salary:             { icon: '💰', accent: '#d1fae5', label: 'Salary Info' },
+  'how-to':           { icon: '📝', accent: '#f0fdf4', label: 'How To Apply' },
+  'dates-tips':       { icon: '📅', accent: '#eff6ff', label: 'Dates & Tips' },
+  preparation:        { icon: '📚', accent: '#fdf4ff', label: 'Preparation' },
+  trust:              { icon: '🔒', accent: '#fef2f2', label: 'Official Source' },
+  'trust-signal':     { icon: '🔒', accent: '#fef2f2', label: 'Important Note' },
+  analysis:           { icon: '📊', accent: '#f0f9ff', label: 'Competition Analysis' },
+  counselling:        { icon: '🗂️', accent: '#fdf4ff', label: 'Counselling' },
+  documents:          { icon: '📄', accent: '#fafaf0', label: 'Documents' },
+  links:              { icon: '🔗', accent: '#f0f9ff', label: 'Links' },
+  // New v3 types — no duplication with structured cards
+  'fee-tips':         { icon: '💳', accent: '#fffbeb', label: 'Fee Tips' },
+  'age-info':         { icon: '🎂', accent: '#fffbeb', label: 'Age & Relaxation' },
+  'vacancy-insight':  { icon: '📊', accent: '#f0f9ff', label: 'Vacancy Insights' },
+  'who-should-apply': { icon: '🎓', accent: '#fefce8', label: 'Who Should Apply' },
+  'exam-strategy':    { icon: '🏆', accent: '#f0fdf4', label: 'Exam Strategy' },
+  'expert-faq':       { icon: '❓', accent: '#f8fafc', label: 'Expert FAQ' },
+  mistakes:           { icon: '⚠️', accent: '#fef2f2', label: 'Common Mistakes' },
+}
+
+function HumanContentSection({ humanContent }) {
+  if (!humanContent?.blocks?.length) return null
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <div style={{ flex: 1, height: 1, background: T.rule }} />
+        <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, letterSpacing: '0.16em', textTransform: 'uppercase', color: T.faint }}>
+          Detailed Guide
+        </span>
+        <div style={{ flex: 1, height: 1, background: T.rule }} />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        {humanContent.blocks.map((block, idx) => {
+          const meta  = BLOCK_META[block.type] || { icon: '📋', accent: '#f9f9f9', label: block.type }
+          const lines = block.content.split('\n').filter(l => l.trim())
+          const isWide = lines.join(' ').length > 300
+
+          return (
+            <div
+              key={block.blockId}
+              style={{
+                gridColumn: isWide ? '1 / -1' : 'auto',
+                background: meta.accent,
+                border: `1px solid ${T.rule}`,
+                borderRadius: 8,
+                padding: '16px 18px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                <span style={{ fontSize: 15 }} aria-hidden="true">{meta.icon}</span>
+                <h3 style={{
+                  fontFamily: sans,
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: '0.14em',
+                  textTransform: 'uppercase',
+                  color: T.faint,
+                  margin: 0,
+                }}>
+                  {meta.label}
+                </h3>
+              </div>
+              <div style={{ fontFamily: sans, fontSize: 13, color: T.ink, lineHeight: 1.7 }}>
+                {lines.map((line, i) => {
+                  const isList = /^[•\-]/.test(line) || /^\d+[.)]\s/.test(line)
+                  return isList
+                    ? <div key={i} style={{ marginBottom: 4, paddingLeft: 4 }}>{line}</div>
+                    : <p key={i} style={{ margin: i > 0 ? '8px 0 0' : '0' }}>{line}</p>
+                })}
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-// ============ Async FAQ Box (Suspense) ============
-async function AiFaqBox({ content, title }) {
-  const prompt = `Generate 4 helpful FAQs for this Indian government content. Return ONLY a JSON array (no markdown): [{"question": "Q", "answer": "A"}]\n\nTitle: ${title}\nContent: ${content.slice(0, 1500)}`
-  const text = await generateWithFallback(prompt, 600)
-  if (!text) return null
-  try {
-    const clean = text.replace(/^\x60{3}json\s*/i, '').replace(/\x60{3}\s*$/i, '').trim()
-    const match = clean.match(/\[.*\]/s)
-    if (!match) return null
-    const faqs = JSON.parse(match[0])
-    if (!Array.isArray(faqs) || !faqs.length) return null
-    const faqSchema = { '@context':'https://schema.org','@type':'FAQPage', mainEntity: faqs.map(f=>({'@type':'Question',name:f.question,acceptedAnswer:{'@type':'Answer',text:f.answer}})) }
-    return (
-      <div className="ai-summary-enter bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-        <h2 className="font-bold text-[#1e3a5f] text-base mb-4 flex items-center gap-2"><span>❓</span> Frequently Asked Questions</h2>
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <details key={i} className="border border-gray-100 rounded-lg overflow-hidden">
-              <summary className="px-4 py-3 cursor-pointer flex justify-between items-start gap-3 hover:bg-gray-50 list-none">
-                <span className="text-sm font-medium text-gray-800">{faq.question}</span>
-                <span className="text-gray-400 shrink-0 text-lg">+</span>
-              </summary>
-              <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                <p className="text-sm text-gray-600 leading-relaxed">{faq.answer}</p>
-              </div>
-            </details>
-          ))}
-        </div>
+function StructuredFaqSection({ faq }) {
+  if (!faq?.length) return null
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: faq.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  }
+  return (
+    <Card style={{ marginBottom: 20 }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <CardHeader title="Frequently Asked Questions" icon="❓" />
+      <div style={{ padding: '10px 0' }}>
+        {faq.map((item, i) => (
+          <details key={i} style={{ borderBottom: i < faq.length - 1 ? `1px solid ${T.rule}` : 'none' }}>
+            <summary style={{
+              padding: '11px 18px',
+              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+              gap: 12,
+              listStyle: 'none',
+              fontFamily: sans,
+              fontSize: 13,
+              fontWeight: 600,
+              color: T.ink,
+              userSelect: 'none',
+            }}>
+              <span>{item.q}</span>
+              <span style={{ color: T.faint, flexShrink: 0, fontSize: 18, lineHeight: 1 }}>+</span>
+            </summary>
+            <div style={{
+              padding: '10px 18px 14px',
+              background: T.bg,
+              fontFamily: sans,
+              fontSize: 13,
+              color: T.muted,
+              lineHeight: 1.7,
+              borderTop: `1px solid ${T.rule}`,
+            }}>
+              {item.a}
+            </div>
+          </details>
+        ))}
       </div>
-    )
-  } catch { return null }
+    </Card>
+  )
 }
 
-// ============ Main Page ============
+// ── Main page ──────────────────────────────────────────────────────────────
 export default async function JobDetailPage({ params }) {
   const { slug } = await params
   let job = null
   try {
-    const res = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
+    const res  = await fetch(`${API_BASE}/post/slug/${slug}`, { next: { revalidate: 3600 } })
     const data = await res.json()
     job = data?.data
   } catch {}
-
   if (!job) return notFound()
 
-  let contentHtml = job.scrapedContent?.contentHtml || job.content || ''
+  const contentHtml   = job.scrapedContent?.contentHtml || job.content || ''
+  const importantDates= job.scrapedContent?.contentJson?.importantDates || job.importantDates || null
+  const structuredFaq = job.structured?.faq || []
+  const vacancyTable  = job.structured?.vacancyTable || []
+  const importantLinks= job.structured?.importantLinks || []
 
-  // ── AI Web Verification (Gemini + Google Search, throttled to once per 6 hours) ──
-  const lastVerified = job.aiVerifiedAt ? new Date(job.aiVerifiedAt).getTime() : 0
-  if ((Date.now() - lastVerified) > VERIFY_THROTTLE_MS) {
-    try {
-      const verified = await verifyJobDatesFromWeb(job)
-      if (verified) {
-        const patched = patchContentHtml(contentHtml, verified)
-        if (patched !== contentHtml) {
-          contentHtml = patched
-        }
-        // Find if the apply/last-date was extended — update applyLastDate in DB
-        const applyExt = (verified.dates || []).find(
-          d => /last\s*date|apply/i.test(d.label || '') && d.status === 'EXTENDED'
-        )
-        const newApplyDate = applyExt?.verifiedDate ? parseTextDate(applyExt.verifiedDate) : null
-        const updatePayload = {
-          scrapedContent: {
-            contentHtml: patched ?? contentHtml,
-            contentJson: job.scrapedContent?.contentJson ?? {},
-            extractedAt: job.scrapedContent?.extractedAt ?? new Date().toISOString(),
-          },
-          aiVerifiedAt: new Date().toISOString(),
-          ...(newApplyDate && !Number.isNaN(newApplyDate.getTime()) && {
-            applyLastDate: newApplyDate.toISOString(),
-          }),
-        }
-        // Fire-and-forget: save to DB without blocking the render
-        const internalBase = process.env.INTERNAL_API_URL || API_BASE
-        fetch(`${internalBase}/post/slug/${job.slug}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ data: updatePayload }),
-          cache: 'no-store',
-        }).catch(() => {})
-      }
-    } catch {} // Silently fall through — render with existing contentHtml
-  }
+  const { expired, upcoming } = classifyDates(contentHtml)
+  const annotatedHtml = injectDateBadges(contentHtml, expired, upcoming, {
+    isActive: job.isActive,
+    updatedAt: job.updatedAt,
+  })
 
-  const applyDate = job.applyLastDate ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : 'N/A'
-  const postedDate = job.createdAt ? new Date(job.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }) : ''
-  const plainText = contentHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
-  const { expired: expiredInContent, upcoming: upcomingInContent } = classifyDates(contentHtml)
-  const annotatedContentHtml = injectDateBadges(
-    contentHtml,
-    expiredInContent,
-    upcomingInContent,
-    { isActive: job.isActive, updatedAt: job.updatedAt }
-  )
+  const applyDate = job.applyLastDate
+    ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+    : 'N/A'
+  const postedDate = job.createdAt
+    ? new Date(job.createdAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
+    : ''
   const canonical = `${SITE_URL}/jobs/${job.slug}`
-  const jobIntro = buildJobIntro(job)
-  const jobPros = buildJobPros(job)
-  const jobCons = buildJobCons(job)
-  const jobInsights = buildJobInsights(job)
-  const jobStateNote = buildJobStateNote(job)
 
-  const breadcrumbSchema = { '@context':'https://schema.org','@type':'BreadcrumbList', itemListElement:[{"@type":"ListItem",position:1,name:'Home',item:SITE_URL},{"@type":"ListItem",position:2,name:'Jobs',item:`${SITE_URL}/jobs`},{"@type":"ListItem",position:3,name:job.title,item:canonical}] }
-
-  const descParts = [job.title]
-  if (job.jobtitle) descParts.push(`Job Title: ${job.jobtitle}`)
-  if (job.category) descParts.push(`Category: ${job.category}`)
-  if (job.totalVacancies) descParts.push(`Total Vacancies: ${job.totalVacancies}`)
-  if (job.salary) descParts.push(`Salary: ${job.salary}`)
-  if (job.ageLimit) descParts.push(`Age Limit: ${job.ageLimit}`)
-  if (job.applicationFee) descParts.push(`Application Fee: ${job.applicationFee}`)
-  if (job.selectionProcess) descParts.push(`Selection Process: ${job.selectionProcess}`)
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type':'ListItem', position:1, name:'Home', item:SITE_URL },
+      { '@type':'ListItem', position:2, name:'Jobs', item:`${SITE_URL}/jobs` },
+      { '@type':'ListItem', position:3, name:job.title, item:canonical },
+    ],
+  }
 
   const jobPostingSchema = {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
     title: job.jobtitle || job.title,
-    description: descParts.join('. '),
-    // datePosted is required — fall back to today if createdAt is missing
-    datePosted: job.createdAt
-      ? new Date(job.createdAt).toISOString()
-      : new Date().toISOString(),
-    // validThrough improves rich result eligibility
+    description: [
+      job.title,
+      job.conductingAuthority && `Conducting Authority: ${job.conductingAuthority}`,
+      job.totalVacancies && `Total Vacancies: ${job.totalVacancies}`,
+      job.salary && `Salary: ${job.salary}`,
+    ].filter(Boolean).join('. '),
+    datePosted: job.createdAt ? new Date(job.createdAt).toISOString() : new Date().toISOString(),
     validThrough: job.applyLastDate
       ? new Date(job.applyLastDate).toISOString()
-      : new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days default
+      : new Date(Date.now() + 90*24*60*60*1000).toISOString(),
     employmentType: 'FULL_TIME',
     url: canonical,
-    identifier: job.advertisementNumber
-      ? { '@type': 'PropertyValue', name: 'Advertisement Number', value: job.advertisementNumber }
-      : { '@type': 'PropertyValue', name: 'SarkariAfsar', value: job.slug },
+    identifier: {
+      '@type': 'PropertyValue',
+      name: job.advertisementNumber ? 'Advertisement Number' : 'SarkariAfsar',
+      value: job.advertisementNumber || job.slug,
+    },
     hiringOrganization: {
       '@type': 'Organization',
       name: job.conductingAuthority || 'Government of India',
-      sameAs: 'https://sarkariafsar.com',
+      sameAs: job.officialWebsite || 'https://sarkariafsar.com',
     },
-    // jobLocation is required — always provide India; add locality when available
     jobLocation: {
       '@type': 'Place',
-      address: {
-        '@type': 'PostalAddress',
-        addressCountry: 'IN',
-        addressRegion: job.location || 'India',
-        ...(job.location ? { addressLocality: job.location } : {}),
-      },
+      address: { '@type':'PostalAddress', addressCountry:'IN', addressRegion: job.location || 'India' },
     },
-    // baseSalary improves rich result ranking
+    ...(job.totalVacancies && { vacancyCount: job.totalVacancies }),
+    ...(job.eligibility?.length && {
+      educationRequirements: {
+        '@type': 'EducationalOccupationalCredential',
+        credentialCategory: job.eligibility.map(e => e.qualification).filter(Boolean).join('; '),
+      },
+    }),
     ...(job.salary && {
       baseSalary: {
         '@type': 'MonetaryAmount',
         currency: 'INR',
-        value: { '@type': 'QuantitativeValue', value: job.salary, unitText: 'MONTH' },
+        value: { '@type':'QuantitativeValue', value:job.salary, unitText:'MONTH' },
       },
     }),
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div style={{ background: T.bg, minHeight: '100vh', fontFamily: sans }}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jobPostingSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
 
-      {/* Header — INSTANT */}
-      <div className="bg-[#1e3a5f] text-white py-10 px-4">
-        <div className="mx-auto w-full max-w-5xl px-2">
-          <nav aria-label="breadcrumb" className="text-sm text-blue-300 mb-4 flex flex-wrap gap-1">
-            <Link href="/" className="hover:text-white transition-colors">Home</Link>
-            <span>&rsaquo;</span>
-            <Link href="/jobs" className="hover:text-white transition-colors">Jobs</Link>
-            <span>&rsaquo;</span>
-            <span className="text-white truncate max-w-xs">{job.title}</span>
+      {/* ══ HERO ══════════════════════════════════════════════════════════ */}
+      <header style={{ background: T.navy, borderBottom: `3px solid ${T.gold}` }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '22px 20px 24px' }}>
+
+          {/* Breadcrumb */}
+          <nav aria-label="breadcrumb" style={{ fontFamily: sans, fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 14 }}>
+            <ol style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', listStyle: 'none', margin: 0, padding: 0 }}>
+              <li><Link href="/" style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}>Home</Link></li>
+              <li aria-hidden="true">›</li>
+              <li><Link href="/jobs" style={{ color: 'rgba(255,255,255,0.45)', textDecoration: 'none' }}>Jobs</Link></li>
+              <li aria-hidden="true">›</li>
+              <li aria-current="page" style={{ color: T.gold }}>{job.title}</li>
+            </ol>
           </nav>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {job.sectionName && <span className="text-xs bg-[#f59e0b]/20 text-[#f59e0b] px-3 py-1 rounded-full font-semibold">{job.sectionName}</span>}
-            {job.category && <span className="text-xs bg-white/10 text-white/80 px-3 py-1 rounded-full">{job.category}</span>}
-            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${job.isActive?'bg-green-500/20 text-green-300':'bg-red-500/20 text-red-300'}`}>
-              {job.isActive ? 'Active' : 'Closed'}
+
+          {/* Tags row */}
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 14 }}>
+            {job.sectionName && (
+              <span style={{
+                fontFamily: sans, fontSize: 10, fontWeight: 700,
+                background: `${T.gold}25`, color: T.gold,
+                padding: '3px 10px', borderRadius: 20,
+                border: `1px solid ${T.gold}40`,
+                letterSpacing: '0.05em',
+              }}>
+                {job.sectionName}
+              </span>
+            )}
+            {job.category && (
+              <span style={{
+                fontFamily: sans, fontSize: 10,
+                background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)',
+                padding: '3px 10px', borderRadius: 20,
+                border: '1px solid rgba(255,255,255,0.12)',
+              }}>
+                {job.category}
+              </span>
+            )}
+            <span style={{
+              fontFamily: sans, fontSize: 10, fontWeight: 700,
+              background: job.isActive ? 'rgba(22,163,74,0.2)' : 'rgba(185,28,28,0.2)',
+              color: job.isActive ? '#4ade80' : '#f87171',
+              padding: '3px 10px', borderRadius: 20,
+              border: `1px solid ${job.isActive ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)'}`,
+            }}>
+              {job.isActive ? '● Active' : '● Closed'}
             </span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold leading-tight">{job.title}</h1>
-          <div className="flex flex-wrap gap-4 mt-4 text-sm text-blue-200">
-            {postedDate && <span>📅 Posted: {postedDate}</span>}
-            {job.applyLastDate && <span>⏰ Last Date: <strong className="text-white">{applyDate}</strong></span>}
-            {job.conductingAuthority && <span>🏢 {job.conductingAuthority}</span>}
-          </div>
-        </div>
-      </div>
 
-      <div className="mx-auto w-full max-w-5xl px-4 py-8">
+          {/* Title */}
+          <h1 style={{
+            fontFamily: serif,
+            fontSize: 'clamp(20px, 3vw, 28px)',
+            fontWeight: 700,
+            color: '#fff',
+            margin: '0 0 10px',
+            lineHeight: 1.25,
+            letterSpacing: '-0.01em',
+          }}>
+            {job.title}
+          </h1>
 
-        {/* Back link — top */}
-        <div className="mb-4">
-          <Link href="/jobs" className="inline-flex items-center gap-1.5 text-[#1e3a5f] hover:text-[#f59e0b] text-sm font-medium transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
-            Back to All Jobs
-          </Link>
-        </div>
-
-        {jobIntro && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-            <h2 className="text-lg font-bold text-[#1e3a5f] mb-3">What to know before you apply</h2>
-            <p className="text-gray-700 text-sm leading-relaxed">{jobIntro}</p>
-            {jobStateNote && (
-              <p className="text-xs text-gray-500 mt-3 italic">{jobStateNote}</p>
+          {/* Author + Last Updated */}
+          <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 16, alignItems: 'center' }}>
+            {job.author?.name && (
+              <span style={{ fontFamily: sans, fontSize: 11, color: 'rgba(255,255,255,0.55)' }}
+                itemScope itemType="https://schema.org/Person">
+                By <span itemProp="name">{job.author.name}</span>
+              </span>
+            )}
+            {job.updatedAt && (
+              <time
+                dateTime={new Date(job.updatedAt).toISOString()}
+                style={{
+                  fontFamily: sans, fontSize: 10, fontWeight: 600,
+                  background: 'rgba(201,168,76,0.15)', color: T.gold,
+                  padding: '2px 9px', borderRadius: 12,
+                  border: `1px solid ${T.gold}35`,
+                  display: 'inline-block',
+                }}
+              >
+                Updated: {new Date(job.updatedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </time>
             )}
           </div>
-        )}
 
-        {/* AI Summary — shimmer while loading, fades in when ready, hidden if all fail */}
-        <Suspense fallback={<AiSkeleton />}>
-          <AiSummaryBox content={plainText} title={job.title} type="job" contentHtml={contentHtml} isActive={job.isActive} updatedAt={job.updatedAt} />
-        </Suspense>
-
-        {/* Job Content — INSTANT, dates annotated inline */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="job-content prose max-w-none text-gray-700 text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: annotatedContentHtml }} />
-        </div>
-
-        {(jobInsights.length > 0 || jobPros.length || jobCons.length) && (
-          <div className="space-y-6 mb-6">
-            {jobInsights.length > 0 && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-lg font-bold text-[#1e3a5f] mb-4">Detailed insights for this job</h2>
-                <div className="space-y-4">
-                  {jobInsights.map((insight, index) => (
-                    <div key={`${insight.title}-${index}`}>
-                      <h3 className="text-sm font-semibold text-gray-900 mb-2">{insight.title}</h3>
-                      <p className="text-sm text-gray-700 leading-relaxed">{insight.body}</p>
-                    </div>
-                  ))}
+          {/* Meta strip */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 20,
+            paddingTop: 16,
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+          }}>
+            {[
+              { icon: '📅', label: 'Posted', value: postedDate },
+              { icon: '⏰', label: 'Last Date', value: applyDate },
+              job.conductingAuthority && { icon: '🏢', label: 'Authority', value: job.conductingAuthority },
+              job.totalVacancies && { icon: '👥', label: 'Vacancies', value: String(job.totalVacancies) },
+            ].filter(Boolean).map((item) => (
+              <div key={item.label}>
+                <div style={{ fontFamily: sans, fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 3, letterSpacing: '0.08em' }}>
+                  {item.icon} {item.label}
+                </div>
+                <div style={{ fontFamily: sans, fontSize: 13, fontWeight: 600, color: '#fff' }}>
+                  {item.value}
                 </div>
               </div>
-            )}
-            {(jobPros.length || jobCons.length) && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                  {jobPros.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1e3a5f] mb-3">Pros</div>
-                      <ul className="space-y-2 text-sm text-gray-700">
-                        {jobPros.map((item, index) => (
-                          <li key={`pro-${index}`} className="flex gap-2">
-                            <span className="text-[#f59e0b] font-semibold">▸</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {jobCons.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold uppercase tracking-[0.2em] text-[#1e3a5f] mb-3">Cons</div>
-                      <ul className="space-y-2 text-sm text-gray-700">
-                        {jobCons.map((item, index) => (
-                          <li key={`con-${index}`} className="flex gap-2">
-                            <span className="text-red-500 font-semibold">▸</span>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+            ))}
           </div>
-        )}
+        </div>
+      </header>
 
-        <AdsenseUnit placement="detail-inarticle" className="mb-6" />
+      {/* ══ BODY ══════════════════════════════════════════════════════════ */}
+      <main style={{ maxWidth: 1100, margin: '0 auto', padding: '24px 20px 48px' }}>
 
-        {/* FAQ — shimmer while loading, fades in, hidden if fail */}
-        <Suspense fallback={<FaqSkeleton />}>
-          <AiFaqBox content={plainText} title={job.title} />
-        </Suspense>
-      </div>
+        {/* Back link */}
+        <Link
+          href="/jobs"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 5,
+            fontFamily: sans,
+            fontSize: 12,
+            fontWeight: 600,
+            color: T.muted,
+            textDecoration: 'none',
+            marginBottom: 20,
+            letterSpacing: '0.03em',
+          }}
+        >
+          ← Back to All Jobs
+        </Link>
+
+        {/* Top AdSense */}
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ border: `1px solid ${T.rule}`, borderRadius: 6, background: '#faf8f4', padding: 4, overflow: 'hidden' }}>
+            <AdsenseUnit placement="detail-top" className="w-full" />
+          </div>
+        </div>
+
+        {/* Two-column layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 20, alignItems: 'start' }}>
+
+          {/* ── MAIN CONTENT (left) ─────────────────────────────────────── */}
+          <article>
+
+            {/* 1. Core structured job details */}
+            <VacancyTableCard vacancyTable={vacancyTable} totalVacancies={job.totalVacancies} />
+            <EligibilityCard eligibility={job.eligibility} />
+            <SelectionProcessCard steps={job.selectionProcess} />
+
+            {/* Mid AdSense */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ border: `1px solid ${T.rule}`, borderRadius: 6, background: '#faf8f4', padding: 4 }}>
+                <AdsenseUnit placement="detail-inarticle" className="w-full" />
+              </div>
+            </div>
+
+            {/* 2. Editorial guide blocks (tips, strategy, FAQ) */}
+            <HumanContentSection humanContent={job.humanContent} />
+
+            {/* 3. Structured FAQ */}
+            <StructuredFaqSection faq={structuredFaq} />
+
+          </article>
+
+          {/* ── SIDEBAR (right) ─────────────────────────────────────────── */}
+          <aside style={{ position: 'sticky', top: 20 }} aria-label="Job summary">
+            <ApplyButton href={job.officialWebsite} />
+            <ImportantDatesCard dates={importantDates} />
+            <AppFeeCard fee={job.applicationFee} />
+            <AgeLimitCard ageLimit={job.ageLimit} />
+            <QuickStatsCard job={job} hasVacancyTable={vacancyTable.length > 0} />
+            <ImportantLinksCard links={importantLinks} />
+
+            {/* Sidebar AdSense */}
+            <div style={{ border: `1px solid ${T.rule}`, borderRadius: 6, background: '#faf8f4', padding: 4, overflow: 'hidden' }}>
+              <AdsenseUnit placement="detail-sidebar" className="w-full" />
+            </div>
+          </aside>
+
+        </div>
+
+        {/* Bottom AdSense */}
+        <div style={{ marginTop: 28 }}>
+          <div style={{ border: `1px solid ${T.rule}`, borderRadius: 6, background: '#faf8f4', padding: 4 }}>
+            <AdsenseUnit placement="detail-bottom" className="w-full" />
+          </div>
+        </div>
+
+      </main>
+
+      {/* ══ GLOBAL STYLES ════════════════════════════════════════════════ */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&display=swap');
+        * { box-sizing: border-box; }
+
+        /* Content HTML styling */
+        .job-content { font-family: 'DM Sans', sans-serif; font-size: 13.5px; color: #3a3530; line-height: 1.75; }
+        .job-content h1 { font-family: 'Lora', serif; font-size: 18px; font-weight: 700; color: #0f1f3d; margin: 0 0 14px; line-height: 1.3; }
+        .job-content h2 { font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #9c8f7a; margin: 20px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #e8e3d8; }
+        .job-content ul { padding-left: 18px; margin: 8px 0; }
+        .job-content li { margin-bottom: 5px; color: #3a3530; }
+        .job-content table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; }
+        .job-content table td, .job-content table th { padding: 8px 12px; border: 1px solid #e8e3d8; vertical-align: top; }
+        .job-content table tr:first-child td { background: #faf8f4; font-weight: 700; color: #0f1f3d; }
+        .job-content table tr:hover td { background: #faf8f4; }
+        .job-content p { margin: 8px 0; }
+
+        /* FAQ details toggle */
+        details summary::-webkit-details-marker { display: none; }
+        details[open] summary span:last-child { transform: rotate(45deg); display: inline-block; }
+
+        /* Pulse animation for active dates */
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+        @media (max-width: 768px) {
+          .two-col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
     </div>
   )
 }

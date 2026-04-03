@@ -1,6 +1,7 @@
 import './globals.css'
 import Link from 'next/link'
 import Script from 'next/script'
+import SwRegister from './components/SwRegister'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID || ''
@@ -35,6 +36,17 @@ export const metadata = {
     images: [`${SITE_URL}/api/og?title=Sarkari+Afsar`],
   },
   alternates: { canonical: SITE_URL },
+  manifest: '/manifest.json',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1e3a5f' },
+    { media: '(prefers-color-scheme: dark)',  color: '#1e3a5f' },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Sarkari Afsar',
+  },
+  formatDetection: { telephone: false },
   other: {
     'google-adsense-account': ADSENSE_CLIENT || 'ca-pub-5390089359360512',
   },
@@ -209,6 +221,7 @@ export default function RootLayout({ children }) {
           {children}
         </main>
         <Footer />
+        <SwRegister />
       </body>
     </html>
   )

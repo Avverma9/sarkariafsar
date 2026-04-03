@@ -19,11 +19,14 @@ export async function generateMetadata({ searchParams }) {
     alternates: { canonical },
     openGraph: {
       title: 'Sarkari Results 2026 — Sarkari Afsar',
+      description: 'Check latest Sarkari Results 2026. Government exam results, merit lists and cut-off marks.',
       url: canonical,
       siteName: 'Sarkari Afsar',
+      images: [{ url: `${SITE_URL}/api/og?title=Sarkari+Results+2026&type=results`, width: 1200, height: 630, alt: 'Sarkari Results 2026 — Sarkari Afsar' }],
       locale: 'en_IN',
       type: 'website',
     },
+    twitter: { card: 'summary_large_image', title: 'Sarkari Results 2026 — Sarkari Afsar', description: 'Check latest Sarkari Results 2026. Government exam results, merit lists and cut-off marks.', site: '@sarkariafsar' },
     robots: { index: true, follow: true },
   }
 }

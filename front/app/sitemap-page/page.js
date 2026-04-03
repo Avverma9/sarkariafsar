@@ -1,8 +1,12 @@
 import Link from 'next/link'
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
+
 export const metadata = {
   title: 'Sitemap - Sarkari Afsar',
   description: 'Complete sitemap of SarkariAfsar.com - All pages and sections.',
+  alternates: { canonical: `${SITE_URL}/sitemap-page` },
+  robots: { index: false, follow: true },
 }
 
 export default function SitemapPage() {

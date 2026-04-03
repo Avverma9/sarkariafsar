@@ -6,6 +6,16 @@ export const metadata = {
   title: 'Disclaimer | Sarkari Afsar - Important Legal Information',
   description: 'Read the official disclaimer for SarkariAfsar.com. Understand our policies regarding content accuracy, non-affiliation with government bodies, and limitation of liability.',
   alternates: { canonical: `${SITE_URL}/disclaimer` },
+  openGraph: {
+    title: 'Disclaimer — Sarkari Afsar',
+    description: 'Official disclaimer for SarkariAfsar.com — content accuracy, non-affiliation with government bodies, and limitation of liability.',
+    url: `${SITE_URL}/disclaimer`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=Disclaimer&type=legal`, width: 1200, height: 630, alt: 'Disclaimer — Sarkari Afsar' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'Disclaimer — Sarkari Afsar', description: 'Official disclaimer for SarkariAfsar.com regarding content accuracy and limitation of liability.', site: '@sarkariafsar' },
 }
 
 export default function DisclaimerPage() {

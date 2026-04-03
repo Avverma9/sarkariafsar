@@ -18,6 +18,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve uploaded OG images publicly at /og/ and /uploads/
+const path = require('path');
+app.use('/og', express.static(path.join(__dirname, 'uploads', 'og')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // API routes
 app.use('/api', routes);

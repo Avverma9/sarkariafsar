@@ -19,11 +19,14 @@ export async function generateMetadata({ searchParams }) {
     alternates: { canonical },
     openGraph: {
       title: 'Sarkari Admission 2026 — Sarkari Afsar',
+      description: 'Latest government college admissions 2026 — university entrance exams, state and central admission notifications.',
       url: canonical,
       siteName: 'Sarkari Afsar',
+      images: [{ url: `${SITE_URL}/api/og?title=Sarkari+Admission+2026&type=admission`, width: 1200, height: 630, alt: 'Sarkari Admission 2026 — Sarkari Afsar' }],
       locale: 'en_IN',
       type: 'website',
     },
+    twitter: { card: 'summary_large_image', title: 'Sarkari Admission 2026 — Sarkari Afsar', description: 'Latest government college admissions 2026 — university entrance exams and state notifications.', site: '@sarkariafsar' },
     robots: { index: true, follow: true },
   }
 }

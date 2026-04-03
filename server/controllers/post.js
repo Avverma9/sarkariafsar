@@ -3,6 +3,8 @@ const JobPost = require("../models/post");
 const { postData } = require("../bulk-post");
 const { applyNoIndexFlag } = require("../utils/thinContentCheck");
 
+
+
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
 const normalizeString = (value) => (typeof value === "string" ? value.trim() : value);
@@ -201,6 +203,7 @@ exports.getJobPostBySlug = async (req,res) => {
     if (!slug?.trim()) return res.status(400).json({ success:false,message:"Slug required"});
     const doc = await JobPost.findOne({ slug: generateSlug(slug) });
     if (!doc) return res.status(404).json({ success:false,message:"Not found"});
+
     res.status(200).json({ success:true,data:doc });
   } catch(e){return handleMongooseError(e,res,"Get by slug error:");}
 };

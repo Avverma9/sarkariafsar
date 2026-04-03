@@ -19,11 +19,14 @@ export async function generateMetadata({ searchParams }) {
     alternates: { canonical },
     openGraph: {
       title: 'Latest Sarkari Naukri 2026 — Sarkari Afsar',
+      description: 'Latest government job notifications 2026 — eligibility, vacancies and last dates from central and state boards.',
       url: canonical,
       siteName: 'Sarkari Afsar',
+      images: [{ url: `${SITE_URL}/api/og?title=Latest+Sarkari+Naukri+2026&type=jobs`, width: 1200, height: 630, alt: 'Latest Sarkari Naukri 2026 — Sarkari Afsar' }],
       locale: 'en_IN',
       type: 'website',
     },
+    twitter: { card: 'summary_large_image', title: 'Latest Sarkari Naukri 2026 — Sarkari Afsar', description: 'Latest government job notifications 2026 — eligibility, vacancies and last dates.', site: '@sarkariafsar' },
     robots: { index: true, follow: true },
   }
 }

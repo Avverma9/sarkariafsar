@@ -1,278 +1,175 @@
-const mongoose = require("mongoose");
-const { Schema } = mongoose;
+const mongoose = require('mongoose');
 
-const SourceInfoSchema = new Schema(
-  {
-    sourceSiteName: { type: String, default: "" },
-    sourceSectionName: { type: String, default: "" },
-    sourceSectionUrl: { type: String, default: "" },
+const jobPostSchema = new mongoose.Schema({
+  slug: { type: String, required: true, unique: true },
+  dedupeKey: { type: String, unique: true },
+  titleSignature: { type: String },
+  version: { type: Number, default: 1 },
+
+  title: { type: String, required: true },
+  shortTitle: { type: String },
+  jobtitle: { type: String },
+  summary: { type: String },
+
+  sectionName: { type: String },
+  sectionCanonicalUrl: { type: String },
+  category: { type: String },
+  subCategory: { type: String },
+  schemaType: { type: String, default: 'Article' },
+  pageType: { type: String },
+  language: { type: String, default: 'hi' },
+  status: { type: String, default: 'active' },
+  isActive: { type: Boolean, default: true },
+  noIndex: { type: Boolean, default: false },
+  isFeatured: { type: Boolean, default: false },
+
+  conductingAuthority: { type: String },
+  conductingAuthorityFull: { type: String },
+  advertisementNumber: { type: String },
+  location: { type: String },
+  state: { type: String },
+  officialWebsite: { type: String },
+
+  dates: {
+    applyStart: { type: Date },
+    regLastDate: { type: Date },
+    feeLastDate: { type: Date },
+    correctionDate: { type: Date },
+    applyEnd: { type: Date },
+    examDate: { type: Date },
+    examDatePGT: { type: Date },
+    examDatePGTEnd: { type: Date },
+    examDateTGT: { type: Date },
+    examDateTGTEnd: { type: Date },
+    admitCard: { type: Date, default: null },
+    result: { type: Date, default: null },
+    lastUpdated: { type: Date }
   },
-  { _id: false }
-);
 
-const ScrapedContentSchema = new Schema(
-  {
-    contentHtml: { type: String, default: "" },
-    contentJson: { type: Schema.Types.Mixed, default: {} },
-    extractedAt: { type: Date, default: Date.now },
+  applyLastDate: { type: Date },
+  examDate: { type: Date },
+
+  totalVacancies: { type: Number },
+  vacancySummary: {
+    tgt: { men: Number, women: Number, total: Number },
+    pgt: { men: Number, women: Number, total: Number },
+    grand: Number
   },
-  { _id: false }
-);
 
-const jobPostSchema = new mongoose.Schema(
-  {
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      index: true,
-    },
-
-    dedupeKey: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    jobtitle: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    slug: {
-      type: String,
-      required: true,
-      trim: true,
-      unique: true,
-      index: true,
-    },
-
-    sourceUrl: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    sectionName: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    sectionCanonicalUrl: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    category: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    language: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    advertisement_number: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    advertisementNumber: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    conducting_authority: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    conductingAuthority: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    disclaimer: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    tags: {
-      type: [String],
-      default: [],
-    },
-
-    status: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    applyLastDate: {
-      type: Date,
-      default: null,
-      index: true,
-    },
-
-    isActive: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
-
-    scrapedMeta: {
-      type: SourceInfoSchema,
-      default: () => ({}),
-    },
-
-    scrapedContent: {
-      type: ScrapedContentSchema,
-      default: () => ({}),
-    },
-
-    htmlSnapshot: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    titleSignature: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    lastPatchedAt: {
-      type: Date,
-      default: null,
-    },
-
-    // ── AI web-verification timestamp (throttle: 6 hours) ──
-    aiVerifiedAt: {
-      type: Date,
-      default: null,
-    },
-
-    // ── Custom Content Fields (SEO / 1000+ word content) ──
-    examPreparationStrategy: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    syllabusBreakdown: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    physicalTestDetails: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    selectionProcess: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    ageLimit: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    applicationFee: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    salary: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    location: {
-      type: String,
-      default: "",
-      trim: true,
-      index: true,
-    },
-
-    totalVacancies: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    wordCount: {
-      type: Number,
-      default: 0,
-    },
-
-    // ── Author / YMYL fields ──
-    authorName: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    authorProfileUrl: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    authorBio: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-
-    // ── Auto noIndex for thin content ──
-    noIndex: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
+  ageLimit: {
+    min: { type: Number },
+    max: { type: Number, default: null },
+    asOn: { type: Date },
+    relaxation: { type: Boolean },
+    note: { type: String }
   },
-  {
-    timestamps: true,
-    minimize: false,
-    collection: "scrapper_posts",
-  }
-);
 
-jobPostSchema.index({ sectionCanonicalUrl: 1, createdAt: -1 });
-jobPostSchema.index({ isActive: 1, createdAt: -1 });
-jobPostSchema.index({ sourceUrl: 1 }, { sparse: true });
-jobPostSchema.index({ htmlSnapshot: 1 }, { sparse: true });
-jobPostSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
+  applicationFee: {
+    general: Number,
+    obc: Number,
+    ews: Number,
+    sc: Number,
+    st: Number,
+    ph: Number,
+    currency: { type: String, default: 'INR' },
+    paymentModes: [String]
+  },
 
-module.exports =
-  mongoose.models.JobPost || mongoose.model("JobPost", jobPostSchema);
+  selectionProcess: [String],
+
+  eligibility: [{
+    post: String,
+    qualification: String,
+    payScale: String
+  }],
+
+  salary: { type: String, default: null },
+
+  thumbnail: { type: String, default: null },
+
+  seo: {
+    metaTitle: String,
+    metaDescription: String,
+    canonicalUrl: String,
+    ogTitle: String,
+    ogDescription: String,
+    ogImage: String,
+    keywords: [String],
+    focusKeyword: String
+  },
+
+  author: {
+    name: String,
+    bio: String,
+    profileUrl: String
+  },
+
+  tags: [String],
+
+  structured: {
+    vacancyTable: [{
+      post: String,
+      gender: String,
+      count: Number,
+      ur: Number,
+      obc: Number,
+      sc: Number,
+      st: Number,
+      ews: Number,
+      total: Number,
+      qualification: String,
+      payScale: String
+    }],
+    faq: [{
+      q: String,
+      a: String
+    }],
+    importantLinks: [{
+      label: String,
+      url: String,
+      type: { type: String }
+    }],
+    howToCheck: [String]
+  },
+
+  scrapedContent: {
+    contentHtml: String,
+    contentJson: { type: mongoose.Schema.Types.Mixed },
+    extractedAt: { type: Date }
+  },
+  sourceUrl: String,
+  scrapedMeta: {
+    sourceSiteName: String,
+    sourceSectionName: String,
+    sourceSectionUrl: String
+  },
+
+  humanContent: {
+    templateId: { type: String },
+    templateVersion: { type: Number },
+    seed: { type: String },
+    blocks: [{
+      blockId: { type: String },
+      type: { type: String },
+      content: { type: String }
+    }],
+    wordCount: { type: Number, default: 0 },
+    generatedAt: { type: Date }
+  },
+
+  wordCount: { type: Number, default: 0 },
+  readingTimeMin: { type: Number, default: 0 },
+  completenessScore: { type: Number, default: 0 },
+
+  disclaimer: { type: String },
+  htmlSnapshot: { type: String },
+  lastPatchedAt: { type: Date },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+}, {
+  timestamps: true 
+});
+
+const JobPost = mongoose.model('JobPost', jobPostSchema);
+
+module.exports = JobPost;

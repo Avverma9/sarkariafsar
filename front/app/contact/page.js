@@ -7,6 +7,16 @@ export const metadata = {
   title: 'Contact Us | Sarkari Afsar - 24/7 Support for Job Seekers',
   description: 'Get in touch with the Sarkari Afsar support team. We are here to help you with queries regarding government jobs, admit cards, exam results, and welfare schemes.',
   alternates: { canonical: `${SITE_URL}/contact` },
+  openGraph: {
+    title: 'Contact Sarkari Afsar — 24/7 Support',
+    description: 'Get in touch with the Sarkari Afsar team for queries on government jobs, admit cards, exam results, and welfare schemes.',
+    url: `${SITE_URL}/contact`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=Contact+Sarkari+Afsar&type=contact`, width: 1200, height: 630, alt: 'Contact Sarkari Afsar — 24/7 Support for Job Seekers' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'Contact Sarkari Afsar — 24/7 Support', description: 'Get in touch for queries on government jobs, admit cards, exam results, and welfare schemes.', site: '@sarkariafsar' },
 }
 
 export default function ContactPage() {

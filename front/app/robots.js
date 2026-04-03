@@ -6,11 +6,7 @@ export default function robots() {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/search', '/admin'],
-      },
-      {
-        userAgent: 'Googlebot',
-        allow: '/',
+        // /search is crawlable but declared noindex in page metadata
         disallow: ['/api/', '/admin'],
       },
     ],

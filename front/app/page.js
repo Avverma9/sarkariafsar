@@ -8,7 +8,22 @@ export const metadata = {
   title: 'Sarkari Afsar — Sarkari Naukri & Government Yojana Portal 2026',
   description: 'Latest Sarkari Jobs, Government Schemes, Exam Results, Admit Cards 2026. Find all government job notifications and yojana updates at Sarkari Afsar.',
   alternates: { canonical: SITE_URL },
-  openGraph: { url: SITE_URL },
+  openGraph: {
+    type: 'website',
+    url: SITE_URL,
+    siteName: 'Sarkari Afsar',
+    title: 'Sarkari Afsar — Sarkari Naukri & Government Yojana Portal 2026',
+    description: 'Latest Sarkari Jobs, Government Schemes, Exam Results, Admit Cards 2026. Find all government job notifications and yojana updates at Sarkari Afsar.',
+    images: [{ url: `${SITE_URL}/api/og?title=Sarkari+Afsar`, width: 1200, height: 630, alt: 'Sarkari Afsar — India\'s Government Jobs Portal' }],
+    locale: 'en_IN',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    site: '@sarkariafsar',
+    title: 'Sarkari Afsar — Sarkari Naukri & Government Yojana Portal',
+    description: 'Latest Sarkari Jobs, Government Schemes, Exam Results & Admit Cards 2026.',
+    images: [`${SITE_URL}/api/og?title=Sarkari+Afsar`],
+  },
 }
 
 // Fetch jobs by section
@@ -195,8 +210,42 @@ export default async function HomePage() {
     { name: 'Admission', jobs: admissionJobs, color: SECTION_COLORS['Admission'] },
   ]
 
+  // ── JSON-LD: WebPage + ItemList (top jobs across all sections) ──
+  const allTopJobs = [...resultsJobs, ...govJobs, ...admitCards, ...admissionJobs].slice(0, 10)
+  const webPageSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Sarkari Afsar — Sarkari Naukri & Government Yojana Portal 2026',
+    description: 'Latest Sarkari Jobs, Government Schemes, Exam Results, Admit Cards 2026.',
+    url: SITE_URL,
+    inLanguage: 'en-IN',
+    dateModified: new Date().toISOString().split('T')[0],
+    breadcrumb: {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: SITE_URL },
+      ],
+    },
+  }
+  const itemListSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    name: 'Latest Sarkari Jobs 2026',
+    description: 'Latest government job notifications, results and admit cards in India 2026',
+    url: `${SITE_URL}/jobs`,
+    numberOfItems: allTopJobs.length,
+    itemListElement: allTopJobs.map((job, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: job.title,
+      url: `${SITE_URL}/jobs/${job.slug}`,
+    })),
+  }
+
   return (
     <div className="bg-gray-50 min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-[#1e3a5f] via-[#1e4a7f] to-[#153060] text-white py-14 px-4">
         <div className="container mx-auto max-w-4xl text-center">

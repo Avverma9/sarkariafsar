@@ -9,6 +9,16 @@ export const metadata = {
   title: 'Sarkari Afsar Blog — Government Jobs Tips & Guides 2026',
   description: 'Read expert tips, guides and updates on government jobs, exam preparation, results and schemes at Sarkari Afsar Blog.',
   alternates: { canonical: `${SITE_URL}/blog` },
+  openGraph: {
+    title: 'Sarkari Afsar Blog — Government Jobs Tips & Guides 2026',
+    description: 'Expert tips, guides and updates on government jobs, exam preparation, results and schemes.',
+    url: `${SITE_URL}/blog`,
+    siteName: 'Sarkari Afsar',
+    images: [{ url: `${SITE_URL}/api/og?title=Sarkari+Afsar+Blog&type=blog`, width: 1200, height: 630, alt: 'Sarkari Afsar Blog — Government Jobs Tips & Guides' }],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: { card: 'summary_large_image', title: 'Sarkari Afsar Blog — Government Jobs Tips & Guides 2026', description: 'Expert tips, guides and updates on government jobs, exam preparation, results and schemes.', site: '@sarkariafsar' },
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────

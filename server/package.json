@@ -10,11 +10,14 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.13.6",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "html-to-json": "^0.6.0",
+    "html-to-json-parser": "^2.0.1",
     "ioredis": "^5.10.1",
     "mongoose": "^9.3.2",
     "node-cron": "^4.2.1",

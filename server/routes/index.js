@@ -31,6 +31,7 @@ router.use('/blog', require('./blog'));
 router.use('/schemes', require('./schemes'));
 router.use('/search', require('./search'));
 router.use('/stats', require('./stats'));
+router.use('/content-template', require('./contentTemplate'));
 router.use('/scrapper', require('./scrapperCron'));
 router.use('/scrapper', require('../scrapper/fetchSection').router);
 router.use('/scrapper', require('../scrapper/fetchAllBySection').router);
