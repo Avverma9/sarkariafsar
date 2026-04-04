@@ -1,22 +1,14 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
-// ── Shard IDs ─────────────────────────────────────────────────────────────────
-// Next.js generates /sitemap/0, /sitemap/1 ... and a sitemap index at /sitemap.xml
-// 0 = static pages  |  1 = jobs  |  2 = yojana  |  3 = blog
-export async function generateSitemaps() {
-  return [{ id: 0 }, { id: 1 }, { id: 2 }, { id: 3 }]
-}
-
-// ── Shard router ──────────────────────────────────────────────────────────────
-export default async function sitemap({ id }) {
-  switch (id) {
-    case 0: return staticPages()
-    case 1: return jobsPages()
-    case 2: return yojanaPages()
-    case 3: return blogPages()
-    default: return []
-  }
+// ── Single /sitemap.xml with all URLs ─────────────────────────────────────────
+export default async function sitemap() {
+  const [jobs, yojana, blog] = await Promise.all([
+    jobsPages(),
+    yojanaPages(),
+    blogPages(),
+  ])
+  return [...staticPages(), ...jobs, ...yojana, ...blog]
 }
 
 // ── Static pages ──────────────────────────────────────────────────────────────
