@@ -201,13 +201,15 @@ function Footer() {
 export default function RootLayout({ children }) {
   return (
     <html lang="en-IN">
-      <head>        {/* Google Fonts — preconnect first to avoid render-blocking, then stylesheet */}
+      <head>
+        {/* Google Fonts — preconnect first to avoid render-blocking, then stylesheet */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700;900&family=Roboto+Slab:wght@400;500&display=swap"
-        />        {/* JSON-LD Structured Data */}
+        />
+        {/* JSON-LD Structured Data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
       </head>
