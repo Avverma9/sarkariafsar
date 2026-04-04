@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }) {
     ? `${SITE_URL}/${SECTION_SLUG}?page=${page}`
     : `${SITE_URL}/${SECTION_SLUG}`
   return {
-    title: `Sarkari Admission 2026 — Government College Admissions | Sarkari Afsar`,
+    title: `Sarkari Admission 2026 — Government College Admissions — Sarkari Afsar`,
     description: 'Latest Sarkari Admission 2026. Government college admissions, university entrance exams, state and central admission notifications at Sarkari Afsar.',
     alternates: { canonical },
     openGraph: {
@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }) {
       type: 'website',
     },
     twitter: { card: 'summary_large_image', title: 'Sarkari Admission 2026 — Sarkari Afsar', description: 'Latest government college admissions 2026 — university entrance exams and state notifications.', site: '@sarkariafsar' },
-    robots: { index: true, follow: true },
+    robots: page > 1 ? { index: false, follow: true } : { index: true, follow: true },
   }
 }
 

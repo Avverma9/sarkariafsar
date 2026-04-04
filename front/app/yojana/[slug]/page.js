@@ -37,21 +37,32 @@ async function generateWithFallback(prompt, maxTokens = 250) {
 export async function generateMetadata({ params }) {
   const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { cache: 'no-store' })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 7200 } })
     const data = await res.json()
     const scheme = data?.data
-    if (!scheme) return { title: 'Scheme Not Found - Sarkari Afsar' }
+    if (!scheme) return { title: 'Scheme Not Found — Sarkari Afsar' }
     const canonical = `${SITE_URL}/yojana/${scheme.slug}`
     const title = scheme.schemeTitle
     const description = scheme.aboutScheme?.slice(0, 155) || `${scheme.schemeTitle} details, eligibility, benefits and how to apply.`
+    const keywords = [...new Set([
+      title,
+      scheme.state,
+      scheme.category,
+      ...(scheme.tags || []),
+      'sarkari yojana', 'government scheme', 'sarkari afsar',
+    ].filter(Boolean))].slice(0, 15)
     return {
       title: `${title} — Sarkari Afsar`,
       description,
-      alternates: { canonical },
+      keywords,
+      alternates: {
+        canonical,
+        languages: { 'en-IN': canonical, 'x-default': canonical },
+      },
       openGraph: { title, description, url: canonical, siteName: 'Sarkari Afsar', images: [{ url: `${SITE_URL}/api/og?title=${encodeURIComponent(title)}&type=scheme`, width: 1200, height: 630, alt: title }], locale: 'en_IN', type: 'article' },
       twitter: { card: 'summary_large_image', title, description, site: '@sarkariafsar' },
     }
-  } catch { return { title: 'Scheme Details - Sarkari Afsar' } }
+  } catch { return { title: 'Scheme Details — Sarkari Afsar' } }
 }
 
 // ============ Date Utils ============
@@ -373,7 +384,7 @@ export default async function SchemeDetailPage({ params }) {
   const { slug } = await params
   let scheme = null
   try {
-    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { cache: 'no-store' })
+    const res = await fetch(`${API_BASE}/schemes/slug/${slug}`, { next: { revalidate: 7200 } })
     const data = await res.json()
     scheme = data?.data
   } catch {}

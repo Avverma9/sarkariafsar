@@ -3,7 +3,7 @@ import Link from 'next/link'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export const metadata = {
-  title: 'Disclaimer | Sarkari Afsar - Important Legal Information',
+  title: 'Disclaimer — Sarkari Afsar',
   description: 'Read the official disclaimer for SarkariAfsar.com. Understand our policies regarding content accuracy, non-affiliation with government bodies, and limitation of liability.',
   alternates: { canonical: `${SITE_URL}/disclaimer` },
   openGraph: {

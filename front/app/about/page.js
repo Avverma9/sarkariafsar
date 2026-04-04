@@ -3,7 +3,7 @@ import Link from 'next/link'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export const metadata = {
-  title: 'About Us | Sarkari Afsar - India\'s Premium Government Job Portal',
+  title: 'About Us — Sarkari Afsar',
   description: 'Discover the story behind Sarkari Afsar. We are India\'s most trusted platform for accurate, lightning-fast updates on government jobs, results, admit cards, and welfare schemes.',
   alternates: { canonical: `${SITE_URL}/about` },
   openGraph: {

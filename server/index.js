@@ -12,6 +12,8 @@ const mongoUri =
 // Routes
 const routes = require('./routes'); // agar routes folder same level par hai
 const { startSectionScrapeCron } = require('./utils/sectionScrapeCron');
+const { startBlogCron } = require('./utils/aiCrons/blogCron');
+const { startSchemeCron } = require('./utils/aiCrons/schemeCron');
 
 // Middleware
 app.use(cors());
@@ -51,6 +53,8 @@ mongoose
   .then(() => {
     console.log('MongoDB connected successfully');
     startSectionScrapeCron();
+    startBlogCron();
+    startSchemeCron();
 
     app.listen(port, () => {
       console.log(`Server running on http://localhost:${port}`);

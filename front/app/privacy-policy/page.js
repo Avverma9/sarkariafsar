@@ -3,7 +3,7 @@ import Link from 'next/link'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export const metadata = {
-  title: 'Privacy Policy | Sarkari Afsar',
+  title: 'Privacy Policy — Sarkari Afsar',
   description: 'Comprehensive Privacy Policy for SarkariAfsar.com outlining how we collect, safeguard, and utilize your personal and non-personal data.',
   alternates: { canonical: `${SITE_URL}/privacy-policy` },
   openGraph: {

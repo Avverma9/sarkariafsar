@@ -7,7 +7,7 @@ export default function robots() {
         userAgent: '*',
         allow: '/',
         // /search is crawlable but declared noindex in page metadata
-        disallow: ['/api/', '/admin'],
+        disallow: ['/api/', '/admin', '/search'],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,

@@ -385,10 +385,13 @@ exports.getPostMeta = async (req, res) => {
   } catch (e) { return handleMongooseError(e, res, "Post meta error:"); }
 };
 
-// ─── Sitemap endpoint — only slug + updatedAt (lightweight) ───
+// ─── Sitemap endpoint — only slug + updatedAt, excludes thin/noIndex posts ───
 exports.getSitemapPosts = async (req, res) => {
   try {
-    const docs = await JobPost.find({ status: { $ne: 'draft' } }, "slug updatedAt").lean();
+    const docs = await JobPost.find(
+      { status: { $ne: 'draft' }, noIndex: { $ne: true } },
+      "slug updatedAt"
+    ).lean();
     res.status(200).json({ success: true, data: docs });
   } catch (e) { return handleMongooseError(e, res, "Sitemap posts error:"); }
 };

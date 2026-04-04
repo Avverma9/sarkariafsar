@@ -4,7 +4,7 @@ import ContactForm from './ContactForm'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export const metadata = {
-  title: 'Contact Us | Sarkari Afsar - 24/7 Support for Job Seekers',
+  title: 'Contact Us — Sarkari Afsar',
   description: 'Get in touch with the Sarkari Afsar support team. We are here to help you with queries regarding government jobs, admit cards, exam results, and welfare schemes.',
   alternates: { canonical: `${SITE_URL}/contact` },
   openGraph: {

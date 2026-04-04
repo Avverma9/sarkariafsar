@@ -256,7 +256,6 @@ export default async function BlogPage({ searchParams }) {
 
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Slab:wght@400;500&display=swap');
 
   .bp-page { min-height:100vh; background:#f7f5f0; font-family:'Roboto',sans-serif; }
 

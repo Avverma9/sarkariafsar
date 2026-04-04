@@ -8,15 +8,6 @@ const RESERVED_HEIGHTS = {
 }
 const DEFAULT_HEIGHT = 220
 
-/**
- * AdsenseUnit - Google AdSense Ad Component
- * Client-only rendering to prevent hydration mismatch
- *
- * Placement Strategy:
- * - 'home-below-stats'  : Home page, below stats bar
- * - 'listing-infeed'   : Jobs/Yojana listing, after 6th item
- * - 'detail-inarticle' : Job/Scheme detail, after content
- */
 export default function AdsenseUnit({ placement, className = '' }) {
   const [mounted, setMounted] = useState(false)
   const reservedHeight = RESERVED_HEIGHTS[placement] || DEFAULT_HEIGHT
@@ -25,7 +16,6 @@ export default function AdsenseUnit({ placement, className = '' }) {
     setMounted(true)
   }, [])
 
-  // Never render on server — prevents hydration mismatch
   if (!mounted) {
     return <div className={`${className}`} style={{ minHeight: reservedHeight }} aria-hidden="true" />
   }
@@ -45,23 +35,37 @@ export default function AdsenseUnit({ placement, className = '' }) {
 }
 
 function ClientAd({ client, slot, placement, className, reservedHeight }) {
+  const containerRef = useRef(null)
   const initialized = useRef(false)
 
   useEffect(() => {
     if (initialized.current) return
-    initialized.current = true
-    try {
-      if (typeof window !== 'undefined') {
-        window.adsbygoogle = window.adsbygoogle || []
-        window.adsbygoogle.push({})
-      }
-    } catch (e) {
-      // silent
-    }
+    const el = containerRef.current
+    if (!el) return
+
+    // Only push ad when element is within 200px of viewport
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !initialized.current) {
+          initialized.current = true
+          observer.disconnect()
+          try {
+            window.adsbygoogle = window.adsbygoogle || []
+            window.adsbygoogle.push({})
+          } catch (e) {
+            // silent
+          }
+        }
+      },
+      { rootMargin: '200px' }
+    )
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [])
 
   return (
     <div
+      ref={containerRef}
       className={`overflow-hidden ${className}`}
       style={{ minHeight: reservedHeight }}
       data-ad-placement={placement}

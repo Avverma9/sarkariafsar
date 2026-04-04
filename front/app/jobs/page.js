@@ -694,7 +694,6 @@ export default async function JobsPage({ searchParams }) {
       </div>
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap');
         * { box-sizing: border-box; }
         tr.group:hover { background: #faf8f4 !important; }
         @media (max-width: 768px) {

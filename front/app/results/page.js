@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }) {
     ? `${SITE_URL}/${SECTION_SLUG}?page=${page}`
     : `${SITE_URL}/${SECTION_SLUG}`
   return {
-    title: `Sarkari Results 2026 — Latest Government Exam Results | Sarkari Afsar`,
+    title: `Sarkari Results 2026 — Latest Government Exam Results — Sarkari Afsar`,
     description: 'Check latest Sarkari Results 2026. Government exam results, merit lists, cut-off marks for all central and state recruitment boards at Sarkari Afsar.',
     alternates: { canonical },
     openGraph: {
@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }) {
       type: 'website',
     },
     twitter: { card: 'summary_large_image', title: 'Sarkari Results 2026 — Sarkari Afsar', description: 'Check latest Sarkari Results 2026. Government exam results, merit lists and cut-off marks.', site: '@sarkariafsar' },
-    robots: { index: true, follow: true },
+    robots: page > 1 ? { index: false, follow: true } : { index: true, follow: true },
   }
 }
 

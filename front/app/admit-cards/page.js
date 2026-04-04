@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }) {
     ? `${SITE_URL}/${SECTION_SLUG}?page=${page}`
     : `${SITE_URL}/${SECTION_SLUG}`
   return {
-    title: `Sarkari Admit Card 2026 — Download Hall Ticket | Sarkari Afsar`,
+    title: `Sarkari Admit Card 2026 — Download Hall Ticket — Sarkari Afsar`,
     description: 'Download Sarkari Admit Card 2026. Hall tickets for government exams — UPSC, SSC, Railways, Banking, State PSC and more at Sarkari Afsar.',
     alternates: { canonical },
     openGraph: {
@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }) {
       type: 'website',
     },
     twitter: { card: 'summary_large_image', title: 'Sarkari Admit Card 2026 — Sarkari Afsar', description: 'Download Sarkari Admit Card 2026. Hall tickets for UPSC, SSC, Railways, Banking and State PSC.', site: '@sarkariafsar' },
-    robots: { index: true, follow: true },
+    robots: page > 1 ? { index: false, follow: true } : { index: true, follow: true },
   }
 }
 

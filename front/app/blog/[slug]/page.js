@@ -7,17 +7,26 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 export async function generateMetadata({ params }) {
   const { slug } = await params
   try {
-    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { cache: 'no-store' })
+    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { next: { revalidate: 3600 } })
     const data = await res.json()
     const blog = data?.data
-    if (!blog) return { title: 'Blog - Sarkari Afsar' }
+    if (!blog) return { title: 'Blog — Sarkari Afsar' }
     const canonical = `${SITE_URL}/blog/${blog.slug || slug}`
     const title = blog.title || blog.slug?.replace(/-/g, ' ')
-    const description = blog.excerpt || blog.intro?.slice(0, 155)
+    const description = blog.excerpt || blog.intro?.slice(0, 155) || `${title} — Sarkari Afsar`
+    const keywords = [...new Set([
+      ...(blog.tags || []),
+      blog.category,
+      'sarkari naukri', 'government jobs', 'sarkari afsar',
+    ].filter(Boolean))].slice(0, 15)
     const meta = {
-      title: `${title} - Sarkari Afsar`,
+      title: `${title} — Sarkari Afsar`,
       description,
-      alternates: { canonical },
+      keywords,
+      alternates: {
+        canonical,
+        languages: { 'en-IN': canonical, 'x-default': canonical },
+      },
       openGraph: {
         title,
         description,
@@ -33,7 +42,7 @@ export async function generateMetadata({ params }) {
     if (blog.updatedAt) meta.openGraph.modifiedTime = new Date(blog.updatedAt).toISOString()
     return meta
   } catch {
-    return { title: 'Blog - Sarkari Afsar' }
+    return { title: 'Blog — Sarkari Afsar' }
   }
 }
 
@@ -41,7 +50,7 @@ export default async function BlogDetailPage({ params }) {
   const { slug } = await params
   let blog = null
   try {
-    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { cache: 'no-store' })
+    const res = await fetch(`${API_BASE}/blog/slug/${slug}`, { next: { revalidate: 3600 } })
     const data = await res.json()
     blog = data?.data
   } catch {}
@@ -69,6 +78,17 @@ export default async function BlogDetailPage({ params }) {
   if (blog.createdAt) articleSchema.datePublished = new Date(blog.createdAt).toISOString()
   if (blog.updatedAt) articleSchema.dateModified = new Date(blog.updatedAt).toISOString()
 
+  // Fetch related posts (same category, exclude current slug)
+  let relatedPosts = []
+  try {
+    const relQuery = blog.category
+      ? `category=${encodeURIComponent(blog.category)}&limit=4`
+      : `limit=4`
+    const relRes = await fetch(`${API_BASE}/blog?${relQuery}`, { next: { revalidate: 3600 } })
+    const relData = await relRes.json()
+    relatedPosts = (relData?.data || []).filter(p => p.slug !== slug).slice(0, 3)
+  } catch {}
+
   return (
     <div className="bg-gray-50 min-h-screen">
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
@@ -87,7 +107,10 @@ export default async function BlogDetailPage({ params }) {
           {blog.tags?.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-3">
               {blog.tags.map(tag => (
-                <span key={tag} className="text-xs bg-white/10 text-blue-200 px-2 py-0.5 rounded-full">{tag}</span>
+                <Link key={tag} href={`/blog?search=${encodeURIComponent(tag)}`}
+                  className="text-xs bg-white/10 text-blue-200 hover:bg-white/20 px-2 py-0.5 rounded-full transition-colors">
+                  #{tag}
+                </Link>
               ))}
             </div>
           )}
@@ -141,6 +164,30 @@ export default async function BlogDetailPage({ params }) {
             </div>
           )}
         </div>
+
+        {relatedPosts.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-base font-bold text-[#1e3a5f] mb-4">Related Articles</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {relatedPosts.map(post => {
+                const postTitle = post.title || post.slug?.replace(/-/g, ' ')
+                const postDate = post.createdAt
+                  ? new Date(post.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : ''
+                return (
+                  <Link key={post.slug} href={`/blog/${post.slug}`}
+                    className="block bg-white rounded-xl border border-gray-100 shadow-sm p-4 hover:border-[#1e3a5f] hover:shadow-md transition-all">
+                    {post.category && (
+                      <span className="text-xs font-medium text-[#1d4ed8] bg-blue-50 px-2 py-0.5 rounded-full">{post.category}</span>
+                    )}
+                    <p className="mt-2 text-sm font-semibold text-[#1e3a5f] leading-snug line-clamp-2 capitalize">{postTitle}</p>
+                    {postDate && <p className="mt-2 text-xs text-gray-400">{postDate}</p>}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="mt-6">
           <Link href="/blog" className="inline-flex items-center gap-1.5 text-[#1e3a5f] hover:text-[#f59e0b] text-sm font-medium transition-colors">

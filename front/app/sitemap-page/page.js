@@ -3,7 +3,7 @@ import Link from 'next/link'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 
 export const metadata = {
-  title: 'Sitemap - Sarkari Afsar',
+  title: 'Sitemap — Sarkari Afsar',
   description: 'Complete sitemap of SarkariAfsar.com - All pages and sections.',
   alternates: { canonical: `${SITE_URL}/sitemap-page` },
   robots: { index: false, follow: true },
@@ -15,11 +15,10 @@ export default function SitemapPage() {
       title: '💼 Government Jobs',
       links: [
         { name: 'All Jobs', href: '/jobs' },
-        { name: 'Results', href: '/jobs?section=Results' },
-        { name: 'Admit Card', href: '/jobs?section=Admit+Card' },
-        { name: 'Recruitment', href: '/jobs?section=Recruitment' },
-        { name: 'Answer Key', href: '/jobs?section=Answer+Key' },
-        { name: 'Syllabus', href: '/jobs?section=Syllabus' },
+        { name: 'Results', href: '/results' },
+        { name: 'Latest Gov Jobs', href: '/latest-jobs' },
+        { name: 'Admit Cards', href: '/admit-cards' },
+        { name: 'Admission', href: '/admission' },
       ]
     },
     {

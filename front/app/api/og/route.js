@@ -33,7 +33,7 @@ export async function GET(request) {
             {typeLabel}
           </div>
           <div style={{ display: 'flex', fontSize: 48, fontWeight: 700, lineHeight: 1.2, color: 'white' }}>
-            {title.slice(0, 80)}
+            {title.length > 80 ? title.slice(0, title.lastIndexOf(' ', 80)) || title.slice(0, 80) : title}
           </div>
         </div>
         <div style={{ display: 'flex', fontSize: 18, color: 'rgba(255,255,255,0.6)' }}>

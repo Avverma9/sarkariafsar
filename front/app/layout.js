@@ -11,7 +11,7 @@ export const metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: 'Sarkari Afsar — Sarkari Naukri & Government Yojana Portal 2026',
-    template: '%s | Sarkari Afsar',
+    template: '%s — Sarkari Afsar',
   },
   description: 'Latest Sarkari Jobs, Government Schemes, Results, Admit Cards 2026. Find all government job notifications, yojana updates and exam results at Sarkari Afsar.',
   keywords: 'sarkari naukri, government jobs 2026, sarkari yojana, results, admit card, India, sarkari afsar',
@@ -35,12 +35,14 @@ export const metadata = {
     description: 'Latest Sarkari Jobs, Government Schemes, Results & Admit Cards 2026.',
     images: [`${SITE_URL}/api/og?title=Sarkari+Afsar`],
   },
-  alternates: { canonical: SITE_URL },
+  alternates: {
+    canonical: SITE_URL,
+    languages: {
+      'en-IN': SITE_URL,
+      'x-default': SITE_URL,
+    },
+  },
   manifest: '/manifest.json',
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#1e3a5f' },
-    { media: '(prefers-color-scheme: dark)',  color: '#1e3a5f' },
-  ],
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
@@ -50,6 +52,13 @@ export const metadata = {
   other: {
     'google-adsense-account': ADSENSE_CLIENT || 'ca-pub-5390089359360512',
   },
+}
+
+export const viewport = {
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#1e3a5f' },
+    { media: '(prefers-color-scheme: dark)',  color: '#1e3a5f' },
+  ],
 }
 
 // JSON-LD for WebSite + SiteLinksSearchBox
@@ -106,14 +115,14 @@ function Header() {
             </Link>
           </nav>
           <div className="md:hidden flex items-center gap-3">
-            <Link href="/search" className="p-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <Link href="/search" className="p-2" aria-label="Search">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </Link>
             <details className="relative">
-              <summary className="list-none cursor-pointer p-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <summary className="list-none cursor-pointer p-2" aria-label="Open menu">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
               </summary>
@@ -191,28 +200,33 @@ function Footer() {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <head>
-        {/* JSON-LD Structured Data */}
+    <html lang="en-IN">
+      <head>        {/* Google Fonts — preconnect first to avoid render-blocking, then stylesheet */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;800&family=Nunito:wght@400;500;600;700;800&family=Lora:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700;900&family=Roboto+Slab:wght@400;500&display=swap"
+        />        {/* JSON-LD Structured Data */}
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
       </head>
       <body className="min-h-screen flex flex-col">
-        {/* Google AdSense — afterInteractive prevents hydration mismatch with JSON-LD in <head> */}
+        {/* Google AdSense — lazyOnload: loads during browser idle, reduces TBT */}
         {ADSENSE_CLIENT && (
           <Script
             id="adsense-script"
             src={`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${ADSENSE_CLIENT}`}
-            strategy="afterInteractive"
+            strategy="lazyOnload"
             crossOrigin="anonymous"
           />
         )}
-        {/* GA4 */}
+        {/* GA4 — lazyOnload: non-critical, load after page is fully idle */}
         {GA4_ID && (
           <>
-            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="afterInteractive" />
-            <Script id="ga4-init" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA4_ID}');`}
+            <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`} strategy="lazyOnload" />
+            <Script id="ga4-init" strategy="lazyOnload">
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA4_ID}',{send_page_view:true});`}
             </Script>
           </>
         )}

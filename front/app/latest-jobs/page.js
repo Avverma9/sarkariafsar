@@ -14,7 +14,7 @@ export async function generateMetadata({ searchParams }) {
     ? `${SITE_URL}/${SECTION_SLUG}?page=${page}`
     : `${SITE_URL}/${SECTION_SLUG}`
   return {
-    title: `Latest Sarkari Naukri 2026 — Government Jobs | Sarkari Afsar`,
+    title: `Latest Sarkari Naukri 2026 — Government Jobs — Sarkari Afsar`,
     description: 'Latest Sarkari Naukri 2026 — Apply online for latest government job notifications from central and state recruitment boards. Check eligibility, vacancies and last dates.',
     alternates: { canonical },
     openGraph: {
@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }) {
       type: 'website',
     },
     twitter: { card: 'summary_large_image', title: 'Latest Sarkari Naukri 2026 — Sarkari Afsar', description: 'Latest government job notifications 2026 — eligibility, vacancies and last dates.', site: '@sarkariafsar' },
-    robots: { index: true, follow: true },
+    robots: page > 1 ? { index: false, follow: true } : { index: true, follow: true },
   }
 }
 
