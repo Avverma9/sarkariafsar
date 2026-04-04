@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const jobPostController = require("../controllers/post");
+const filterController  = require("../controllers/filter");
 const { cacheMiddleware } = require("../utils/cache");
 
 router.post("/add", jobPostController.addJobPost);
@@ -16,6 +17,8 @@ router.get("/section-list/:sectionCanonicalUrl", cacheMiddleware(120), jobPostCo
 // SEO endpoints
 router.get("/sitemap", cacheMiddleware(3600), jobPostController.getSitemapPosts);
 router.get("/meta/:slug", cacheMiddleware(600), jobPostController.getPostMeta);
+router.get("/states",  cacheMiddleware(3600), filterController.getAllStates);
+router.get("/filter",  filterController.filterPost); // not cached — params vary per request
 
 router.put("/id/:id", jobPostController.updateJobPost);
 router.put("/slug/:slug", jobPostController.updateJobPostBySlug);

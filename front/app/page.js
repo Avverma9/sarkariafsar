@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
+import StateFilterSection from '@/components/jobs/StateFilterSectionClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -526,7 +527,15 @@ export default async function HomePage() {
           {/* 2×2 grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }} className="home-grid">
             {sections.slice(0, 2).map(({ name, jobs, meta }) => (
-              <SectionBlock key={name} name={name} jobs={jobs} meta={meta} />
+              <StateFilterSection
+                key={name}
+                sectionName={name}
+                initialJobs={jobs}
+                meta={meta}
+                viewAllHref={meta.route || `/jobs?section=${encodeURIComponent(name)}`}
+                limit={10}
+                variant="home"
+              />
             ))}
           </div>
 
@@ -537,7 +546,15 @@ export default async function HomePage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }} className="home-grid">
             {sections.slice(2).map(({ name, jobs, meta }) => (
-              <SectionBlock key={name} name={name} jobs={jobs} meta={meta} />
+              <StateFilterSection
+                key={name}
+                sectionName={name}
+                initialJobs={jobs}
+                meta={meta}
+                viewAllHref={meta.route || `/jobs?section=${encodeURIComponent(name)}`}
+                limit={10}
+                variant="home"
+              />
             ))}
           </div>
         </section>

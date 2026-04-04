@@ -1,5 +1,7 @@
-﻿import Link from 'next/link'
+﻿import { Fragment } from 'react'
+import Link from 'next/link'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
+import StateFilterSection from '@/components/jobs/StateFilterSectionClient'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -436,8 +438,16 @@ export default async function JobsPage({ searchParams }) {
            className="grid-cols-1 lg:grid-cols-2"
       >
         {sections.map((s, i) => (
-          <>
-            <SectionCard key={s.name} section={s.name} jobs={s.jobs} meta={s.meta} total={s.total} />
+          <Fragment key={s.name}>
+            <StateFilterSection
+              sectionName={s.name}
+              initialJobs={s.jobs}
+              meta={s.meta}
+              viewAllHref={SECTION_ROUTES[s.name] || `/jobs?section=${encodeURIComponent(s.name)}`}
+              total={s.total}
+              limit={20}
+              variant="jobs"
+            />
 
             {/* AdSense after 2nd section — full width */}
             {i === 1 && (
@@ -445,7 +455,7 @@ export default async function JobsPage({ searchParams }) {
                 <AdSlot placement="jobs-mid-page" />
               </div>
             )}
-          </>
+          </Fragment>
         ))}
       </div>
     </>)

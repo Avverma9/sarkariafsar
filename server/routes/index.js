@@ -24,6 +24,13 @@ router.post('/cache/flush-pattern', async (req, res) => {
   } catch (e) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Redis status endpoint (helpful for health checks)
+router.get('/cache/status', (req, res) => {
+  try {
+    return res.status(200).json({ success: true, redisReady: isRedisReady() });
+  } catch (e) { return res.status(500).json({ success: false, message: e.message }); }
+});
+
 // Routes
 router.use('/postsection', require('./postsection'));
 router.use('/post', require('./post'));
