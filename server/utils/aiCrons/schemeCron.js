@@ -18,6 +18,7 @@ const { generateText } = require('../gemini');
 
 const TARGET_PER_STATE = 50;
 const DAILY_BATCH = 10;
+let isSchemeCronRunning = false;
 
 // All Indian states + UTs
 const ALL_STATES = [
@@ -38,6 +39,45 @@ function generateSlug(text) {
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-')
     .slice(0, 90);
+}
+
+function normalizeText(value) {
+  return String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function extractJsonPayload(raw) {
+  const cleaned = String(raw || '').replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+
+  const objectStart = cleaned.indexOf('{');
+  const objectEnd = cleaned.lastIndexOf('}');
+  if (objectStart !== -1 && objectEnd > objectStart) {
+    const objCandidate = cleaned.slice(objectStart, objectEnd + 1);
+    const parsedObject = JSON.parse(objCandidate);
+    if (parsedObject && parsedObject.exhausted === true) {
+      return parsedObject;
+    }
+  }
+
+  const arrayStart = cleaned.indexOf('[');
+  const arrayEnd = cleaned.lastIndexOf(']');
+  if (arrayStart === -1 || arrayEnd === -1 || arrayEnd <= arrayStart) {
+    throw new Error('Gemini returned invalid JSON payload');
+  }
+
+  return JSON.parse(cleaned.slice(arrayStart, arrayEnd + 1));
+}
+
+async function generateUniqueSchemeSlug(base) {
+  const root = generateSlug(base) || `scheme-${Date.now()}`;
+  let slug = root;
+  let suffix = 1;
+
+  while (await GovScheme.findOne({ slug }, { _id: 1 }).lean()) {
+    slug = `${root}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
 }
 
 /**
@@ -88,14 +128,12 @@ Requirements:
 - Year context: ${year}`;
 
   const raw = await generateText(prompt);
-  const jsonStr = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  const parsed = extractJsonPayload(raw);
 
-  // Check if AI says exhausted
-  if (jsonStr.includes('"exhausted"') && jsonStr.includes('true')) {
+  if (!Array.isArray(parsed) && parsed && parsed.exhausted === true) {
     return null; // signal: no more unique schemes for this state
   }
 
-  const parsed = JSON.parse(jsonStr);
   if (!Array.isArray(parsed)) throw new Error('Gemini returned non-array');
   return parsed;
 }
@@ -104,6 +142,14 @@ Requirements:
  * Main cron task.
  */
 async function runSchemeCron() {
+  if (isSchemeCronRunning) {
+    console.log('[SchemeCron] Skipping run — previous run still in progress');
+    return { skipped: true, reason: 'already-running' };
+  }
+
+  isSchemeCronRunning = true;
+
+  try {
   // 1. Get current counts for all states
   const counts = await GovScheme.aggregate([
     { $match: { state: { $in: ALL_STATES } } },
@@ -120,15 +166,17 @@ async function runSchemeCron() {
 
   if (!statesNeedingWork.length) {
     console.log(`[SchemeCron] All ${ALL_STATES.length} states have ${TARGET_PER_STATE}+ schemes — nothing to do.`);
-    return;
+    return { skipped: false, created: 0, target: DAILY_BATCH, statesEvaluated: 0 };
   }
 
   console.log(`[SchemeCron] ${statesNeedingWork.length} states need more schemes. Starting batch of ${DAILY_BATCH}...`);
 
   let totalCreated = 0;
+  let statesEvaluated = 0;
 
   for (const { state, count } of statesNeedingWork) {
     if (totalCreated >= DAILY_BATCH) break;
+    statesEvaluated++;
 
     const needed = TARGET_PER_STATE - count;
     const batchSize = Math.min(needed, DAILY_BATCH - totalCreated, 5); // max 5 per state per run
@@ -137,6 +185,7 @@ async function runSchemeCron() {
 
     // 3. Fetch all existing titles for this state
     const existingTitles = await getExistingTitles(state);
+    const existingTitleSet = new Set(existingTitles.map(t => normalizeText(t)).filter(Boolean));
 
     let attempts = 0;
     let stateCreated = 0;
@@ -158,17 +207,22 @@ async function runSchemeCron() {
         for (const s of schemes) {
           if (stateCreated >= batchSize || totalCreated >= DAILY_BATCH) break;
 
-          const slug = generateSlug(`${s.schemeTitle} ${state}`);
-
-          // Double-check slug uniqueness in DB
-          const exists = await GovScheme.findOne({ slug });
-          if (exists) {
-            console.log(`[SchemeCron] Slug exists: ${slug} — skipping`);
+          const schemeTitle = String((s && s.schemeTitle) || '').trim();
+          if (!schemeTitle) {
+            console.log('[SchemeCron] Missing schemeTitle in AI payload — skipping item');
             continue;
           }
 
+          const normalizedTitle = normalizeText(schemeTitle);
+          if (existingTitleSet.has(normalizedTitle)) {
+            console.log(`[SchemeCron] Duplicate title for ${state}: ${schemeTitle} — skipping`);
+            continue;
+          }
+
+          const slug = await generateUniqueSchemeSlug(`${schemeTitle} ${state}`);
+
           await GovScheme.create({
-            schemeTitle: s.schemeTitle,
+            schemeTitle,
             schemetype: s.schemetype || 'Social Welfare',
             state,
             aboutScheme: s.aboutScheme || '',
@@ -184,10 +238,11 @@ async function runSchemeCron() {
           });
 
           // Track new title so next retry batch doesn't duplicate within same run
-          existingTitles.push(s.schemeTitle);
+          existingTitles.push(schemeTitle);
+          existingTitleSet.add(normalizedTitle);
           stateCreated++;
           totalCreated++;
-          console.log(`[SchemeCron] ✓ (${totalCreated}/${DAILY_BATCH}) ${s.schemeTitle} [${state}]`);
+          console.log(`[SchemeCron] ✓ (${totalCreated}/${DAILY_BATCH}) ${schemeTitle} [${state}]`);
 
           await new Promise(r => setTimeout(r, 2000));
         }
@@ -204,14 +259,22 @@ async function runSchemeCron() {
   }
 
   console.log(`[SchemeCron] Done — ${totalCreated} schemes created today.`);
+  return {
+    skipped: false,
+    created: totalCreated,
+    target: DAILY_BATCH,
+    statesEvaluated,
+  };
+  } finally {
+    isSchemeCronRunning = false;
+  }
 }
 
 /**
  * Schedule scheme cron at 08:00 AM IST every day.
  */
 function startSchemeCron() {
-  // 08:00 IST = 02:30 UTC
-  cron.schedule('30 2 * * *', async () => {
+  cron.schedule('0 8 * * *', async () => {
     console.log('[SchemeCron] Starting daily scheme generation...');
     try {
       await runSchemeCron();

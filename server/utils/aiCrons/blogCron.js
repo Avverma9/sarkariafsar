@@ -8,6 +8,9 @@ const cron = require('node-cron');
 const Blog = require('../../models/blog');
 const { generateText } = require('../gemini');
 
+const DAILY_BLOG_TARGET = 5;
+let isBlogCronRunning = false;
+
 // ── Topics pool — shuffled each run so we don't repeat ────────────────────
 const BLOG_TOPICS = [
   'How to prepare for UPSC CSE 2026',
@@ -55,6 +58,41 @@ function generateSlug(text) {
     .slice(0, 80);
 }
 
+function extractJsonObject(raw) {
+  const cleaned = String(raw || '').replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+  const first = cleaned.indexOf('{');
+  const last = cleaned.lastIndexOf('}');
+  if (first === -1 || last === -1 || last <= first) {
+    throw new Error('Invalid JSON response from Gemini');
+  }
+  return cleaned.slice(first, last + 1);
+}
+
+function normalizeSections(sections) {
+  if (!Array.isArray(sections)) return [];
+  return sections
+    .filter(s => s && typeof s === 'object')
+    .map((s, idx) => ({
+      heading: String(s.heading || `Section ${idx + 1}`).trim(),
+      paragraphs: Array.isArray(s.paragraphs) ? s.paragraphs.map(p => String(p || '').trim()).filter(Boolean) : [],
+      bullets: Array.isArray(s.bullets) ? s.bullets.map(b => String(b || '').trim()).filter(Boolean) : [],
+    }))
+    .filter(s => s.heading && s.paragraphs.length);
+}
+
+async function generateUniqueBlogSlug(base) {
+  const root = generateSlug(base) || `blog-${Date.now()}`;
+  let slug = root;
+  let suffix = 1;
+
+  while (await Blog.findOne({ slug }, { _id: 1 }).lean()) {
+    slug = `${root}-${suffix}`;
+    suffix += 1;
+  }
+
+  return slug;
+}
+
 /**
  * Generates one blog post object using Gemini AI.
  */
@@ -85,26 +123,31 @@ Requirements:
 - Do NOT include any website links or ads`;
 
   const raw = await generateText(prompt);
+  const parsed = JSON.parse(extractJsonObject(raw));
 
-  // Strip possible markdown code fences
-  const jsonStr = raw.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
-  const parsed = JSON.parse(jsonStr);
+  const title = String(parsed.title || topic).trim();
+  const intro = String(parsed.intro || '').trim() || `This guide covers ${topic} for ${year} aspirants.`;
+  const excerpt = String(parsed.excerpt || '').trim() || `Complete guide on ${topic} with updated ${year} strategy.`;
+  const sections = normalizeSections(parsed.sections);
+  const slug = await generateUniqueBlogSlug(title || topic);
 
-  const slug = generateSlug(parsed.title || topic);
+  if (!sections.length) {
+    throw new Error('Gemini returned invalid sections payload');
+  }
 
   return {
     slug,
-    title: parsed.title || topic,
+    title,
     category: parsed.category || 'Career Guide',
-    tags: Array.isArray(parsed.tags) ? parsed.tags : [],
-    excerpt: parsed.excerpt || '',
-    intro: parsed.intro || '',
-    sections: Array.isArray(parsed.sections) ? parsed.sections : [],
+    tags: Array.isArray(parsed.tags) ? parsed.tags.map(t => String(t || '').trim()).filter(Boolean).slice(0, 8) : [],
+    excerpt,
+    intro,
+    sections,
     readingTime: parsed.readingTime || '5 min read',
     author: 'Sarkari Afsar Editorial Team',
     authorBio: 'Expert team covering government jobs, exams and schemes in India.',
     publishedAt: new Date(),
-    wordCount: Math.round((parsed.intro + JSON.stringify(parsed.sections)).split(' ').length),
+    wordCount: Math.round((intro + JSON.stringify(sections)).split(' ').length),
   };
 }
 
@@ -112,34 +155,41 @@ Requirements:
  * Main cron task: generate 5 blogs per day.
  */
 async function runBlogCron() {
+  if (isBlogCronRunning) {
+    console.log('[BlogCron] Skipping run — previous run still in progress');
+    return { skipped: true, reason: 'already-running' };
+  }
+
+  isBlogCronRunning = true;
+
   const topics = shuffleArray(BLOG_TOPICS);
   let created = 0;
   let tried = 0;
 
-  for (const topic of topics) {
-    if (created >= 5) break;
-    tried++;
-    try {
-      const blogData = await generateOneBlog(topic);
+  try {
+    for (const topic of topics) {
+      if (created >= DAILY_BLOG_TARGET) break;
+      tried++;
 
-      // Skip if slug already exists
-      const exists = await Blog.findOne({ slug: blogData.slug });
-      if (exists) {
-        console.log(`[BlogCron] Slug exists, skipping: ${blogData.slug}`);
-        continue;
+      try {
+        const blogData = await generateOneBlog(topic);
+
+        await Blog.create(blogData);
+        created++;
+        console.log(`[BlogCron] Created (${created}/${DAILY_BLOG_TARGET}): ${blogData.title}`);
+
+        await new Promise(r => setTimeout(r, 3000));
+      } catch (err) {
+        console.error(`[BlogCron] Failed topic "${topic}": ${err.message}`);
       }
-
-      await Blog.create(blogData);
-      created++;
-      console.log(`[BlogCron] Created (${created}/5): ${blogData.title}`);
-
-      // Small delay between requests to avoid rate-limiting
-      await new Promise(r => setTimeout(r, 3000));
-    } catch (err) {
-      console.error(`[BlogCron] Failed topic "${topic}": ${err.message}`);
     }
+
+    const summary = { skipped: false, created, tried, target: DAILY_BLOG_TARGET };
+    console.log(`[BlogCron] Done — ${created} blogs created (tried ${tried} topics)`);
+    return summary;
+  } finally {
+    isBlogCronRunning = false;
   }
-  console.log(`[BlogCron] Done — ${created} blogs created (tried ${tried} topics)`);
 }
 
 /**
@@ -147,10 +197,14 @@ async function runBlogCron() {
  * Call startBlogCron() once at server startup.
  */
 function startBlogCron() {
-  // 07:00 IST = 01:30 UTC
-  cron.schedule('30 1 * * *', async () => {
+  cron.schedule('0 7 * * *', async () => {
     console.log('[BlogCron] Starting daily blog generation...');
-    await runBlogCron();
+
+    try {
+      await runBlogCron();
+    } catch (err) {
+      console.error('[BlogCron] Fatal error:', err.message);
+    }
   }, { timezone: 'Asia/Kolkata' });
 
   console.log('[BlogCron] Scheduled — runs daily at 07:00 AM IST');

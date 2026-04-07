@@ -603,6 +603,69 @@ function extractPostLinksFromSectionPage(html, currentSectionUrl) {
   );
 }
 
+function isLikelyLatestGovJobTitle(title = "") {
+  const text = cleanText(title).toLowerCase();
+  if (!text) return false;
+
+  const includePatterns = [
+    "recruitment",
+    "online form",
+    "vacancy",
+    "notification",
+    "new post",
+    "apply online",
+  ];
+
+  const excludePatterns = [
+    "admit card",
+    "result",
+    "answer key",
+    "syllabus",
+    "admission",
+  ];
+
+  if (excludePatterns.some((pattern) => text.includes(pattern))) return false;
+  return includePatterns.some((pattern) => text.includes(pattern));
+}
+
+function extractPostLinksFromHomepageForLatestJobs(html) {
+  const $ = cheerio.load(html);
+  const posts = [];
+
+  $("a[href]").each((_, anchor) => {
+    const href = absoluteUrl($(anchor).attr("href"));
+    const title = cleanText($(anchor).text());
+
+    if (!href || !title) return;
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(href);
+    } catch {
+      return;
+    }
+
+    if (parsedUrl.hostname !== "sarkariresult.com.cm") return;
+    if (parsedUrl.search || parsedUrl.hash) return;
+
+    const pathname = parsedUrl.pathname.replace(/^\/+|\/+$/g, "");
+    if (!isValidPostPath(pathname)) return;
+    if (!isValidPostTitle(title)) return;
+    if (!isLikelyLatestGovJobTitle(title)) return;
+    if (!isSupportedPostYear({ title, sourceUrl: parsedUrl.toString() })) return;
+
+    posts.push({
+      title,
+      sourceUrl: parsedUrl.toString(),
+    });
+  });
+
+  return posts.filter(
+    (post, index, array) =>
+      array.findIndex((candidate) => candidate.sourceUrl === post.sourceUrl) === index
+  );
+}
+
 async function scrapePostsBySectionCanonicalUrl(canonicalUrl, options = {}) {
   const limit = Math.max(Number.parseInt(options.limit || "0", 10) || 0, 0);
   const { jobSection, liveSections } = await resolveSectionsByCanonicalUrl(canonicalUrl);
@@ -616,6 +679,21 @@ async function scrapePostsBySectionCanonicalUrl(canonicalUrl, options = {}) {
       sourceSectionUrl: liveSection.sectionUrl,
     }));
     extractedPostLinks.push(...links);
+  }
+
+  if (jobSection.canonicalUrl === "latest-gov-jobs") {
+    try {
+      const homepageHtml = await fetchHtml(BASE_URL);
+      const homepageLinks = extractPostLinksFromHomepageForLatestJobs(homepageHtml).map((post) => ({
+        ...post,
+        sourceSectionName: "Homepage Fallback",
+        sourceSectionUrl: BASE_URL,
+      }));
+      extractedPostLinks.push(...homepageLinks);
+      console.log("[DEBUG] Homepage fallback links added:", homepageLinks.length);
+    } catch (error) {
+      console.error("[DEBUG] Homepage fallback scrape failed:", cleanText(error.message));
+    }
   }
 
   const dedupedPostLinks = extractedPostLinks.filter(
