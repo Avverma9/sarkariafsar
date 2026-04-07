@@ -106,6 +106,14 @@ const govSchemeSchema = new mongoose.Schema({
   timestamps: true,
 });
 
+govSchemeSchema.index(
+  { schemeTitle: 1, state: 1 },
+  {
+    unique: true,
+    collation: { locale: "en", strength: 2 },
+  }
+);
+
 const GovScheme = mongoose.models.GovScheme || mongoose.model("GovScheme", govSchemeSchema, "gov_schemes");
 
 module.exports = GovScheme;

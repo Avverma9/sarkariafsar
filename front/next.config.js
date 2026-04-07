@@ -56,6 +56,9 @@ const nextConfig = {
       {
         source: '/(.*)',
         headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
           // ── Framing / clickjacking ──────────────────────────────────────
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
 
@@ -107,27 +110,35 @@ const nextConfig = {
       {
         source: '/static/(.*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
       {
         source: '/_next/static/(.*)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
       // ── Fonts ────────────────────────────────────────────────────────────
       {
         source: '/(.*)\\.(woff|woff2|ttf|otf)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
       // ── Images ──────────────────────────────────────────────────────────
       {
         source: '/(.*)\\.(jpg|jpeg|png|webp|avif|svg|ico|gif)',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
+          { key: 'Pragma', value: 'no-cache' },
+          { key: 'Expires', value: '0' },
         ],
       },
     ];

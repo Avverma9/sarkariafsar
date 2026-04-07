@@ -1,15 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const blogController = require('../controllers/blog');
-const { cacheMiddleware } = require('../utils/cache');
+
+const noStore = (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+};
 
 // CREATE
 router.post('/add', blogController.addBlog);
 
 // READ
-router.get('/', cacheMiddleware(60), blogController.getAllBlogs);
-router.get('/id/:id', cacheMiddleware(120), blogController.getBlogById);
-router.get('/slug/:slug', cacheMiddleware(120), blogController.getBlogBySlug);
+router.get('/', noStore, blogController.getAllBlogs);
+router.get('/id/:id', noStore, blogController.getBlogById);
+router.get('/slug/:slug', noStore, blogController.getBlogBySlug);
 
 // UPDATE
 router.put('/id/:id', blogController.updateBlog);

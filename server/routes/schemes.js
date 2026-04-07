@@ -1,20 +1,27 @@
 const express = require("express");
 const router = express.Router();
 const schemeController = require("../controllers/schemes");
-const { cacheMiddleware } = require("../utils/cache");
+
+const noStore = (req, res, next) => {
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  next();
+};
 
 // CREATE
 router.post("/add", schemeController.addGovScheme);
 
 // READ
-router.get("/", cacheMiddleware(60), schemeController.getAllGovSchemes);
+router.get("/", noStore, schemeController.getAllGovSchemes);
 // Sitemap endpoint
-router.get("/sitemap", cacheMiddleware(3600), schemeController.getSitemapSchemes);
+router.get("/sitemap", noStore, schemeController.getSitemapSchemes);
 // extra helper endpoints
-router.get("/getSchemeStateNameOnly", cacheMiddleware(300), schemeController.getGovSchemeStateNameOnly);
-router.get("/getSchemeByState", cacheMiddleware(120), schemeController.getGovSchemeByState);
-router.get("/slug/:slug", cacheMiddleware(120), schemeController.getGovSchemeBySlug);
-router.get("/:id", cacheMiddleware(120), schemeController.getGovSchemeById);
+router.get("/getSchemeStateNameOnly", noStore, schemeController.getGovSchemeStateNameOnly);
+router.get("/getSchemeTitlesByState", noStore, schemeController.getGovSchemeTitlesByState);
+router.get("/getSchemeByState", noStore, schemeController.getGovSchemeByState);
+router.get("/slug/:slug", noStore, schemeController.getGovSchemeBySlug);
+router.get("/:id", noStore, schemeController.getGovSchemeById);
 
 // UPDATE
 router.put("/:id", schemeController.updateGovScheme);

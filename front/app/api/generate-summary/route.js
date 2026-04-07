@@ -1,22 +1,9 @@
 ﻿import { GoogleGenAI } from '@google/genai'
-import { getCachedSummary, setCachedSummary } from '@/utils/jobSummary'
 
 export async function POST(req) {
   try {
     const body = await req.json()
     const post = body.post || body
-    const slug = post.slug || ''
-
-    // ── Cache hit: return stored summary if < 24h old ──────────────────
-    if (slug) {
-      const cached = getCachedSummary(slug)
-      if (cached) {
-        return new Response(
-          JSON.stringify({ summary: cached, cached: true }),
-          { status: 200, headers: { 'Content-Type': 'application/json' } }
-        )
-      }
-    }
 
     const title     = post.title || ''
     const authority = post.conductingAuthority || ''
@@ -78,8 +65,6 @@ Return ONLY the summary paragraphs, no headings.`
             errors.push({ model, keyIndex: i, status: 'no-summary' })
             continue
           }
-          // ── Cache the fresh summary for 24h ──────────────────────────
-          if (slug) setCachedSummary(slug, summary)
           return new Response(
             JSON.stringify({ summary }),
             { status: 200, headers: { 'Content-Type': 'application/json' } }

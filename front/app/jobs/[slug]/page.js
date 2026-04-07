@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
-import AiSummaryBox from '@/components/AiSummaryBox'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -414,8 +413,7 @@ function AgeLimitCard({ ageLimit }) {
     <Module title="Age Limit" icon="🎂" accent={C.saffron}>
       {(min || max) && (
         <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: 0, padding: '16px 14px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, padding: '16px 14px',
           borderBottom: byCategory?.length ? `1px solid ${C.border}` : 'none',
         }}>
           {min && (
@@ -778,7 +776,7 @@ function StructuredFaqSection({ faq }) {
   if (!faq?.length) return null
   const faqSchema = {
     '@context': 'https://schema.org', '@type': 'FAQPage',
-    mainEntity: faq.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+    mainEntity: faq.map(f => ({ '@type':'ListItem', position:1, name:f.q, acceptedAnswer: { '@type':'Answer', text:f.a } })),
   }
   return (
     <div style={{ marginBottom: 20 }}>
@@ -1169,15 +1167,6 @@ export default async function JobDetailPage({ params }) {
         <Link href="/jobs" className="sa-back">
           ← All Jobs
         </Link>
-
-        {/* AI Summary */}
-        <AiSummaryBox post={{
-          slug: job.slug, title: job.title,
-          conductingAuthority: job.conductingAuthority,
-          totalVacancies: job.totalVacancies, salary: job.salary,
-          applyLastDate: job.applyLastDate, category: job.category,
-          location: job.location, sectionName: job.sectionName,
-        }} />
 
         {/* Top Ad */}
         <div className="sa-ad-wrap" style={{ marginBottom:20 }}>

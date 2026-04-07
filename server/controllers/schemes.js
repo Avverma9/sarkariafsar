@@ -9,6 +9,41 @@ const normalizeString = (value) => {
   return value.trim();
 };
 
+const normalizeDuplicateValue = (value) => {
+  if (typeof value !== "string") return "";
+  return value.trim().replace(/\s+/g, " ").toLowerCase();
+};
+
+const escapeRegExp = (value = "") => String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+async function hasDuplicateScheme({ schemeTitle = "", state = "", excludeId = null }) {
+  const normalizedTitle = normalizeDuplicateValue(schemeTitle);
+  const normalizedState = normalizeDuplicateValue(state);
+
+  if (!normalizedTitle) return false;
+
+  const query = {
+    schemeTitle: { $regex: `^${escapeRegExp(String(schemeTitle || "").trim())}$`, $options: "i" },
+    state: { $regex: `^${escapeRegExp(String(state || "").trim())}$`, $options: "i" },
+  };
+
+  if (excludeId) {
+    query._id = { $ne: excludeId };
+  }
+
+  const existing = await GovScheme.findOne(query).select("_id").lean();
+  return Boolean(existing);
+}
+
+async function findSchemeByTitleState({ schemeTitle = "", state = "" }) {
+  if (!String(schemeTitle || "").trim()) return null;
+
+  return GovScheme.findOne({
+    schemeTitle: { $regex: `^${escapeRegExp(String(schemeTitle || "").trim())}$`, $options: "i" },
+    state: { $regex: `^${escapeRegExp(String(state || "").trim())}$`, $options: "i" },
+  });
+}
+
 const normalizeStringArray = (arr = []) => {
   if (!Array.isArray(arr)) return [];
   return arr
@@ -167,12 +202,35 @@ exports.addGovScheme = async (req, res) => {
         }
       }
 
-      const createdDocs = await GovScheme.insertMany(sanitizedDocs, { ordered: true });
+      const createdDocs = [];
+      const patchedDocs = [];
+
+      for (const item of sanitizedDocs) {
+        const existing = await findSchemeByTitleState({
+          schemeTitle: item.schemeTitle,
+          state: item.state,
+        });
+
+        if (existing) {
+          Object.assign(existing, {
+            ...item,
+            createdAt: existing.createdAt,
+          });
+          const saved = await existing.save();
+          patchedDocs.push(saved);
+        } else {
+          const created = await GovScheme.create(item);
+          createdDocs.push(created);
+        }
+      }
 
       return res.status(201).json({
         success: true,
-        message: `${createdDocs.length} schemes created successfully`,
-        data: createdDocs,
+        message: `${createdDocs.length} schemes created, ${patchedDocs.length} schemes patched successfully`,
+        data: {
+          created: createdDocs,
+          patched: patchedDocs,
+        },
       });
     }
 
@@ -183,6 +241,25 @@ exports.addGovScheme = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: validationError,
+      });
+    }
+
+    const existing = await findSchemeByTitleState({
+      schemeTitle: sanitizedData.schemeTitle,
+      state: sanitizedData.state,
+    });
+
+    if (existing) {
+      Object.assign(existing, {
+        ...sanitizedData,
+        createdAt: existing.createdAt,
+      });
+      const patched = await existing.save();
+
+      return res.status(200).json({
+        success: true,
+        message: "Scheme already existed and was patched successfully",
+        data: patched,
       });
     }
 
@@ -347,6 +424,7 @@ exports.getGovSchemeBySlug = async (req, res) => {
     return handleMongooseError(error, res, "Get gov scheme by slug error:");
   }
 };
+
 // UPDATE
 exports.updateGovScheme = async (req, res) => {
   try {
@@ -370,17 +448,28 @@ exports.updateGovScheme = async (req, res) => {
 
     const sanitizedData = sanitizeGovSchemeData(data);
 
-    const updatedDoc = await GovScheme.findByIdAndUpdate(id, sanitizedData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updatedDoc) {
+    const currentDoc = await GovScheme.findById(id).lean();
+    if (!currentDoc) {
       return res.status(404).json({
         success: false,
         message: "Scheme not found",
       });
     }
+
+    const nextTitle = "schemeTitle" in sanitizedData ? sanitizedData.schemeTitle : currentDoc.schemeTitle;
+    const nextState = "state" in sanitizedData ? sanitizedData.state : currentDoc.state;
+
+    if (await hasDuplicateScheme({ schemeTitle: nextTitle, state: nextState, excludeId: id })) {
+      return res.status(409).json({
+        success: false,
+        message: `Scheme already exists: ${nextTitle} (${nextState || "Unknown"})`,
+      });
+    }
+
+    const updatedDoc = await GovScheme.findByIdAndUpdate(id, sanitizedData, {
+      new: true,
+      runValidators: true,
+    });
 
     return res.status(200).json({
       success: true,
@@ -527,5 +616,41 @@ exports.getSitemapSchemes = async (req, res) => {
     res.status(200).json({ success: true, data: docs });
   } catch (error) {
     return handleMongooseError(error, res, 'Sitemap schemes error:');
+  }
+};
+
+// GET all schemes grouped by state with title array
+exports.getGovSchemeTitlesByState = async (req, res) => {
+  try {
+    const docs = await GovScheme.find({}, 'schemeTitle state').lean();
+    const grouped = new Map();
+
+    for (const doc of docs) {
+      const state = String(doc.state || '').trim() || 'Unknown';
+      const title = String(doc.schemeTitle || '').trim();
+
+      if (!grouped.has(state)) {
+        grouped.set(state, []);
+      }
+
+      if (title) {
+        grouped.get(state).push(title);
+      }
+    }
+
+    const data = Array.from(grouped.entries())
+      .map(([state, schemes]) => ({
+        state,
+        schemes: Array.from(new Set(schemes)).sort((a, b) => a.localeCompare(b)),
+      }))
+      .sort((a, b) => a.state.localeCompare(b.state));
+
+    return res.status(200).json({
+      success: true,
+      message: 'Scheme titles grouped by state fetched successfully',
+      data,
+    });
+  } catch (error) {
+    return handleMongooseError(error, res, 'Get scheme titles by state error:');
   }
 };

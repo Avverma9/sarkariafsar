@@ -1,7 +1,6 @@
 import './globals.css'
 import Link from 'next/link'
 import Script from 'next/script'
-import SwRegister from './components/SwRegister'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID || ''
@@ -237,7 +236,6 @@ export default function RootLayout({ children }) {
           {children}
         </main>
         <Footer />
-        <SwRegister />
       </body>
     </html>
   )
