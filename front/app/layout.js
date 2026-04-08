@@ -229,6 +229,13 @@ export default function RootLayout({ children }) {
             __html: `(function(s){s.dataset.zone='10675651',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
           }}
         />
+        {/* Adsterra Banner Zone 10847771 */}
+        <Script
+          id="adsterra-banner-10847771"
+          src="https://5gvci.com/act/files/tag.min.js?z=10847771"
+          data-cfasync="false"
+          strategy="lazyOnload"
+        />
         {/* Google AdSense — lazyOnload: loads during browser idle, reduces TBT */}
         {ADSENSE_CLIENT && (
           <Script
