@@ -213,6 +213,22 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* Adsterra Popunder — afterInteractive: high-CPM pop ad */}
+        <Script
+          id="adsterra-popunder"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `(function(s){s.dataset.zone='10847705',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
+          }}
+        />
+        {/* Adsterra Vignette Banner — lazyOnload: loads after page idle, no UI/UX impact */}
+        <Script
+          id="adsterra-vignette"
+          strategy="lazyOnload"
+          dangerouslySetInnerHTML={{
+            __html: `(function(s){s.dataset.zone='10675651',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
+          }}
+        />
         {/* Google AdSense — lazyOnload: loads during browser idle, reduces TBT */}
         {ADSENSE_CLIENT && (
           <Script

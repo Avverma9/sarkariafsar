@@ -136,9 +136,9 @@ function injectDateBadges(html,expired,upcoming,jobMeta={}){
   return html.replace(combinedRe,(match)=>match+(badgeMap.get(match)??''))
 }
 
-// ── Design System ──────────────────────────────────────────────────────────
+// ── Design Tokens ────────────────────────────────────────────────────────────
 const C = {
-  bg:       '#F4F1EC',
+  bg:       '#F5F3EE',
   surface:  '#FFFFFF',
   navy:     '#0D1B2A',
   navyD:    '#060D14',
@@ -155,312 +155,334 @@ const C = {
   ink:      '#1A1A1A',
   sub:      '#5C5C5C',
   muted:    '#8C8C8C',
-  border:   '#DDD8CF',
+  border:   '#E0DBD2',
   borderD:  '#C8C2B6',
+  divider:  '#EDEAE4',
 }
-const heading = "'Playfair Display', 'Georgia', serif"
-const body    = "'Nunito', 'Segoe UI', sans-serif"
+// ── Font: Roboto (user-specified) ─────────────────────────────────────────────
+const heading = "'Roboto Slab', Georgia, serif"
+const body    = "'Roboto', 'Segoe UI', sans-serif"
 
-// ── Section Header ─────────────────────────────────────────────────────────
-function SectionLabel({ children, icon, color = C.navy }) {
+// ── Section Header ────────────────────────────────────────────────────────────
+function SectionHeader({ icon, title, accent = C.saffron, action }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 8,
-      marginBottom: 12,
-    }}>
-      <div style={{
-        width: 4, height: 20, background: color, borderRadius: 2, flexShrink: 0,
-      }} />
-      {icon && <span style={{ fontSize: 14 }} aria-hidden>{icon}</span>}
-      <span style={{
-        fontFamily: body, fontSize: 10, fontWeight: 800,
-        letterSpacing: '0.18em', textTransform: 'uppercase', color: C.sub,
-      }}>
-        {children}
-      </span>
+    <div className="flex items-center justify-between mb-3.5">
+      <div className="flex items-center gap-2.5">
+        <div className="w-9 h-9 rounded-xl flex items-center justify-center text-lg flex-shrink-0"
+          style={{ background: accent + '18' }}>
+          {icon}
+        </div>
+        <span className="text-base font-bold tracking-tight" style={{ fontFamily: heading, color: C.navy }}>
+          {title}
+        </span>
+      </div>
+      {action}
     </div>
   )
 }
 
-// ── Tabular Data Block ─────────────────────────────────────────────────────
-function DataTable({ rows, borderColor = C.border }) {
-  const valid = rows.filter(r => r && r.value != null && r.value !== '')
-  if (!valid.length) return null
+// ── Card wrapper ──────────────────────────────────────────────────────────────
+function Card({ children, accent = C.saffron, style = {} }) {
   return (
-    <table style={{
-      width: '100%', borderCollapse: 'collapse',
-      tableLayout: 'fixed',
-    }}>
-      <tbody>
-        {valid.map((row, i) => (
-          <tr key={i} style={{
-            background: i % 2 === 0 ? C.surface : C.bg,
-          }}>
-            <td style={{
-              fontFamily: body, fontSize: 12, color: C.muted, fontWeight: 600,
-              padding: '9px 14px', width: '40%',
-              borderBottom: `1px solid ${borderColor}`,
-              verticalAlign: 'middle',
-            }}>
-              {row.label}
-            </td>
-            <td style={{
-              fontFamily: body, fontSize: 12.5, color: row.color || C.ink, fontWeight: 700,
-              padding: '9px 14px',
-              borderBottom: `1px solid ${borderColor}`,
-              verticalAlign: 'middle',
-              wordBreak: 'break-word',
-            }}>
-              {row.badge
-                ? <span style={{
-                    display: 'inline-block',
-                    background: row.badge.bg, color: row.badge.fg,
-                    padding: '2px 10px', borderRadius: 4,
-                    fontSize: 11, fontWeight: 800,
-                  }}>{row.value}</span>
-                : row.value}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
-
-// ── Module Box (reusable panel) ────────────────────────────────────────────
-function Module({ title, icon, accent = C.navy, children, style = {}, topLine = true }) {
-  return (
-    <div style={{
-      background: C.surface,
-      borderRadius: 10,
-      border: `1px solid ${C.border}`,
-      borderTop: topLine ? `3px solid ${accent}` : `1px solid ${C.border}`,
-      overflow: 'hidden',
-      marginBottom: 16,
-      ...style,
-    }}>
-      {title && (
-        <div style={{
-          padding: '10px 16px',
-          borderBottom: `1px solid ${C.border}`,
-          background: C.bg,
-          display: 'flex', alignItems: 'center', gap: 8,
-        }}>
-          {icon && <span style={{ fontSize: 13 }} aria-hidden>{icon}</span>}
-          <span style={{
-            fontFamily: body, fontSize: 10, fontWeight: 800,
-            letterSpacing: '0.15em', textTransform: 'uppercase', color: C.sub,
-          }}>
-            {title}
-          </span>
-        </div>
-      )}
+    <div className="rounded-xl"
+      style={{ background: C.surface, border: `1px solid ${C.border}`, borderTop: `3px solid ${accent}`, ...style }}>
       {children}
     </div>
   )
 }
 
-// ── Apply Button ───────────────────────────────────────────────────────────
+// ── Divider ───────────────────────────────────────────────────────────────────
+function Divider({ label }) {
+  return (
+    <div className="flex items-center gap-3.5 my-7">
+      <div className="flex-1 h-px" style={{ background: C.border }} />
+      {label && (
+        <span className="text-xs font-extrabold tracking-widest uppercase whitespace-nowrap" style={{ fontFamily: body, color: C.muted }}>
+          {label}
+        </span>
+      )}
+      <div className="flex-1 h-px" style={{ background: C.border }} />
+    </div>
+  )
+}
+
+// ── Apply Button ──────────────────────────────────────────────────────────────
 function ApplyButton({ href }) {
   if (!href) return null
   return (
-    <div style={{ marginBottom: 16 }}>
+    <div className="mb-6">
       <a href={href} target="_blank" rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2.5 w-full py-4 px-6 rounded-xl text-white no-underline"
         style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-          width: '100%', padding: '14px 20px',
           background: `linear-gradient(135deg, ${C.green} 0%, #0E5C37 100%)`,
-          color: '#fff', borderRadius: 10,
-          fontFamily: body, fontSize: 14, fontWeight: 800,
-          textDecoration: 'none', letterSpacing: '0.04em',
-          boxShadow: `0 4px 16px ${C.green}55`,
-          transition: 'transform 0.15s',
-        }}
-      >
-        <span style={{ fontSize: 18 }}>📝</span>
+          fontFamily: body, fontSize: 15, fontWeight: 800,
+          letterSpacing: '0.03em', boxShadow: `0 6px 24px ${C.green}40`,
+        }}>
+        <span className="text-xl">📝</span>
         Apply Online Now →
       </a>
-      <p style={{
-        fontFamily: body, fontSize: 10, color: C.muted,
-        textAlign: 'center', margin: '6px 0 0', fontStyle: 'italic',
-      }}>
+      <p className="text-center mt-1.5 italic" style={{ fontFamily: body, fontSize: 10.5, color: C.muted }}>
         Always verify from official source before applying
       </p>
     </div>
   )
 }
 
-// ── Quick Stats Sidebar Card ───────────────────────────────────────────────
-function QuickStatsCard({ job, hasVacancyTable }) {
-  const rows = [
-    !hasVacancyTable && job.totalVacancies && { label: '👥 Vacancies', value: String(job.totalVacancies) },
-    job.salary && { label: '💰 Pay Scale', value: job.salary },
-    job.category && { label: '📂 Category', value: job.category },
-    job.location && { label: '📍 Location', value: job.location },
-    job.advertisementNumber && { label: '📄 Advt. No.', value: job.advertisementNumber },
+// ── Overview Strip ────────────────────────────────────────────────────────────
+function OverviewStrip({ job }) {
+  const items = [
+    job.conductingAuthority && { icon: '🏢', label: 'Authority', value: job.conductingAuthority },
+    job.totalVacancies      && { icon: '👥', label: 'Vacancies', value: String(job.totalVacancies) },
+    job.category            && { icon: '📂', label: 'Category',  value: job.category },
+    job.location            && { icon: '📍', label: 'Location',  value: job.location },
+    job.salary              && { icon: '💰', label: 'Pay Scale', value: job.salary },
+    job.advertisementNumber && { icon: '📄', label: 'Advt. No.', value: job.advertisementNumber },
   ].filter(Boolean)
-  if (!rows.length) return null
+  if (!items.length) return null
   return (
-    <Module title="Quick Overview" icon="📋" accent={C.navy}>
-      <DataTable rows={rows} />
-    </Module>
-  )
-}
-
-// ── Important Dates Card ───────────────────────────────────────────────────
-function ImportantDatesCard({ dates }) {
-  if (!dates || typeof dates !== 'object') return null
-  const entries = Object.entries(dates).filter(([, v]) => v)
-  if (!entries.length) return null
-  const today = new Date(); today.setHours(0,0,0,0)
-  return (
-    <Module title="Important Dates" icon="📅" accent={C.blue}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <tbody>
-          {entries.map(([label, value], i) => {
-            const parsed = parseTextDate(String(value))
-            const isUpcoming = parsed && parsed >= today
-            const isExpired  = parsed && parsed < today
-            return (
-              <tr key={label} style={{ background: i % 2 === 0 ? C.surface : C.bg }}>
-                <td style={{
-                  fontFamily: body, fontSize: 11, color: C.muted, fontWeight: 600,
-                  padding: '9px 14px', width: '48%',
-                  borderBottom: `1px solid ${C.border}`,
-                  verticalAlign: 'middle',
-                }}>
-                  {label}
-                </td>
-                <td style={{
-                  fontFamily: body, fontSize: 11, fontWeight: 700,
-                  color: isUpcoming ? C.green : isExpired ? C.red : C.ink,
-                  padding: '9px 14px',
-                  borderBottom: `1px solid ${C.border}`,
-                  verticalAlign: 'middle',
-                }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    {isUpcoming && (
-                      <span style={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        background: C.green, display: 'inline-block',
-                        flexShrink: 0,
-                      }} />
-                    )}
-                    <time dateTime={parsed ? parsed.toISOString().slice(0,10) : undefined}>
-                      {String(value)}
-                    </time>
-                  </span>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-    </Module>
-  )
-}
-
-// ── Application Fee Card ───────────────────────────────────────────────────
-function AppFeeCard({ fee }) {
-  if (!fee || typeof fee !== 'object') return null
-  const rows = [
-    { label: 'General / OBC', value: fee.general },
-    { label: 'SC / ST',       value: fee.sc },
-    { label: 'PwD / EWS',     value: fee.ph || fee.ews },
-  ].filter(r => r.value != null)
-  if (!rows.length) return null
-  return (
-    <Module title="Application Fee" icon="💳" accent={C.gold}>
-      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
-        <tbody>
-          {rows.map((r, i) => (
-            <tr key={i} style={{ background: i % 2 === 0 ? C.surface : C.bg }}>
-              <td style={{
-                fontFamily: body, fontSize: 11.5, color: C.muted, fontWeight: 600,
-                padding: '9px 14px', width: '55%',
-                borderBottom: `1px solid ${C.border}`,
-              }}>
-                {r.label}
-              </td>
-              <td style={{
-                fontFamily: body, fontSize: 13, fontWeight: 800, color: '#7A4F00',
-                padding: '9px 14px',
-                borderBottom: `1px solid ${C.border}`,
-              }}>
-                ₹{r.value}/-
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {fee.paymentModes?.length > 0 && (
-        <div style={{ padding: '8px 14px', background: C.goldL }}>
-          <span style={{ fontFamily: body, fontSize: 10, color: C.sub }}>
-            Mode: {fee.paymentModes.join(' · ')}
-          </span>
+    <div className="grid gap-px rounded-xl overflow-hidden mb-6"
+      style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', background: C.border, border: `1px solid ${C.border}` }}>
+      {items.map((item, i) => (
+        <div key={i} className="flex items-start gap-2.5 p-3.5" style={{ background: C.surface }}>
+          <span className="text-lg leading-none mt-0.5">{item.icon}</span>
+          <div>
+            <div className="font-bold uppercase tracking-widest mb-1" style={{ fontFamily: body, fontSize: 9.5, color: C.muted, letterSpacing: '0.12em' }}>
+              {item.label}
+            </div>
+            <div className="font-bold leading-tight" style={{ fontFamily: body, fontSize: 13, color: C.ink }}>
+              {item.value}
+            </div>
+          </div>
         </div>
-      )}
-    </Module>
+      ))}
+    </div>
   )
 }
 
-// ── Age Limit Card ─────────────────────────────────────────────────────────
-function AgeLimitCard({ ageLimit }) {
+// ── Important Dates + Fee — side by side ─────────────────────────────────────
+function DatesFeeRow({ dates, fee }) {
+  const hasDates = dates && Object.entries(dates).filter(([, v]) => v).length > 0
+  const hasFee   = fee && typeof fee === 'object' && [fee.general, fee.sc, fee.ph || fee.ews].some(Boolean)
+  if (!hasDates && !hasFee) return null
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  return (
+    <div className="dates-fee-row mb-6">
+      {hasDates && (
+        <Card accent={C.blue}>
+          <div className="px-4 pt-3.5">
+            <SectionHeader icon="📅" title="Important Dates" accent={C.blue} />
+          </div>
+          <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              {Object.entries(dates).filter(([, v]) => v).map(([label, value], i) => {
+                const parsed    = parseTextDate(String(value))
+                const isUpcoming = parsed && parsed >= today
+                const isExpired  = parsed && parsed < today
+                return (
+                  <tr key={label} style={{ background: i % 2 === 0 ? C.surface : C.bg }}>
+                    <td className="font-semibold align-middle" style={{ fontFamily: body, fontSize: 11.5, color: C.sub, padding: '10px 18px', borderBottom: `1px solid ${C.divider}`, width: '52%' }}>
+                      {label}
+                    </td>
+                    <td className="align-middle font-bold" style={{ fontFamily: body, fontSize: 12, color: isUpcoming ? C.green : isExpired ? C.red : C.ink, padding: '10px 18px', borderBottom: `1px solid ${C.divider}` }}>
+                      <span className="flex items-center gap-1.5">
+                        {isUpcoming && <span className="w-2 h-2 rounded-full flex-shrink-0 inline-block" style={{ background: C.green }} />}
+                        <time dateTime={parsed ? parsed.toISOString().slice(0, 10) : undefined}>{String(value)}</time>
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </Card>
+      )}
+      {hasFee && (
+        <Card accent={C.gold}>
+          <div className="px-4 pt-3.5">
+            <SectionHeader icon="💳" title="Application Fee" accent={C.gold} />
+          </div>
+          <table className="w-full" style={{ borderCollapse: 'collapse' }}>
+            <tbody>
+              {[
+                { label: 'General / OBC', value: fee.general },
+                { label: 'SC / ST',       value: fee.sc },
+                { label: 'PwD / EWS',     value: fee.ph || fee.ews },
+              ].filter(r => r.value != null).map((r, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? C.surface : C.bg }}>
+                  <td className="font-semibold align-middle" style={{ fontFamily: body, fontSize: 12, color: C.sub, padding: '11px 18px', borderBottom: `1px solid ${C.divider}`, width: '55%' }}>
+                    {r.label}
+                  </td>
+                  <td className="font-extrabold align-middle" style={{ fontFamily: body, fontSize: 15, color: '#7A4F00', padding: '11px 18px', borderBottom: `1px solid ${C.divider}` }}>
+                    ₹{r.value}/-
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {fee.paymentModes?.length > 0 && (
+            <div className="px-4 py-2 pb-3" style={{ background: C.goldL }}>
+              <span className="font-semibold" style={{ fontFamily: body, fontSize: 10.5, color: '#7A4F00' }}>
+                💳 Mode: {fee.paymentModes.join(' · ')}
+              </span>
+            </div>
+          )}
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ── Age Limit ─────────────────────────────────────────────────────────────────
+function AgeLimitSection({ ageLimit }) {
   if (!ageLimit) return null
   const { min, max, byCategory } = ageLimit
   if (!min && !max && !byCategory?.length) return null
   return (
-    <Module title="Age Limit" icon="🎂" accent={C.saffron}>
-      {(min || max) && (
-        <div style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0, padding: '16px 14px',
-          borderBottom: byCategory?.length ? `1px solid ${C.border}` : 'none',
-        }}>
-          {min && (
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontFamily: heading, fontSize: 28, fontWeight: 700, color: C.navy, lineHeight: 1 }}>{min}</div>
-              <div style={{ fontFamily: body, fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>Min Years</div>
-            </div>
-          )}
-          {min && max && (
-            <div style={{ width: 1, height: 40, background: C.border, margin: '0 8px' }} />
-          )}
-          {max && (
-            <div style={{ textAlign: 'center', flex: 1 }}>
-              <div style={{ fontFamily: heading, fontSize: 28, fontWeight: 700, color: C.saffron, lineHeight: 1 }}>{max}</div>
-              <div style={{ fontFamily: body, fontSize: 9, color: C.muted, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 4 }}>Max Years</div>
-            </div>
-          )}
-        </div>
-      )}
-      {byCategory?.length > 0 && (
-        <div style={{ padding: '10px 14px' }}>
-          {byCategory.map((c, i) => (
-            <div key={i} style={{
-              display: 'flex', gap: 8, alignItems: 'flex-start',
-              fontFamily: body, fontSize: 11.5, color: C.sub,
-              padding: '5px 0',
-              borderBottom: i < byCategory.length - 1 ? `1px dashed ${C.border}` : 'none',
-            }}>
-              <span style={{ color: C.saffron, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>▸</span>
-              {c}
-            </div>
-          ))}
-        </div>
-      )}
-    </Module>
+    <div className="mb-6">
+      <SectionHeader icon="🎂" title="Age Limit" accent={C.saffron} />
+      <Card accent={C.saffron}>
+        {(min || max) && (
+          <div className="flex items-center gap-0 px-6 py-5" style={{ borderBottom: byCategory?.length ? `1px solid ${C.divider}` : 'none' }}>
+            {min && (
+              <div className="text-center flex-1">
+                <div className="font-bold leading-none" style={{ fontFamily: heading, fontSize: 36, color: C.navy }}>{min}</div>
+                <div className="font-bold uppercase tracking-widest mt-1.5" style={{ fontFamily: body, fontSize: 9, color: C.muted, letterSpacing: '0.12em' }}>Min Age</div>
+              </div>
+            )}
+            {min && max && <div className="h-12 w-px" style={{ background: C.border }} />}
+            {max && (
+              <div className="text-center flex-1">
+                <div className="font-bold leading-none" style={{ fontFamily: heading, fontSize: 36, color: C.saffron }}>{max}</div>
+                <div className="font-bold uppercase tracking-widest mt-1.5" style={{ fontFamily: body, fontSize: 9, color: C.muted, letterSpacing: '0.12em' }}>Max Age</div>
+              </div>
+            )}
+          </div>
+        )}
+        {byCategory?.length > 0 && (
+          <div className="p-5">
+            {byCategory.map((c, i) => (
+              <div key={i} className="flex gap-2.5 items-start py-1.5" style={{ fontFamily: body, fontSize: 13, color: C.sub, lineHeight: 1.6, borderBottom: i < byCategory.length - 1 ? `1px dashed ${C.border}` : 'none' }}>
+                <span className="font-bold flex-shrink-0 mt-0.5" style={{ color: C.saffron }}>▸</span>
+                <span>{c}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+    </div>
   )
 }
 
-// ── Important Links Card ───────────────────────────────────────────────────
-function ImportantLinksCard({ links }) {
+// ── Vacancy Table ─────────────────────────────────────────────────────────────
+function VacancySection({ vacancyTable, totalVacancies }) {
+  if (!vacancyTable?.length) return null
+  const headers = ['Post Name', 'Total', 'UR', 'OBC', 'SC', 'ST', 'EWS']
+  return (
+    <div className="mb-6">
+      <SectionHeader icon="👥" title="Vacancy Breakdown" accent={C.navy} />
+      <Card accent={C.navy} style={{ overflow: 'hidden' }}>
+        {totalVacancies && (
+          <div className="flex items-center justify-between px-5 py-2.5" style={{ background: C.navy }}>
+            <span className="font-semibold" style={{ fontFamily: body, fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>Total Sanctioned Posts</span>
+            <span className="font-bold text-white" style={{ fontFamily: heading, fontSize: 22 }}>{totalVacancies}</span>
+          </div>
+        )}
+        <div className="overflow-x-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+          <table className="w-full" style={{ borderCollapse: 'collapse', fontFamily: body, minWidth: 520 }}>
+            <thead>
+              <tr style={{ background: C.bg }}>
+                {headers.map((h, i) => (
+                  <th key={h} className="whitespace-nowrap font-extrabold uppercase tracking-widest" style={{ padding: '10px 14px', fontSize: 9.5, color: C.sub, textAlign: i === 0 ? 'left' : 'center', borderBottom: `2px solid ${C.borderD}`, letterSpacing: '0.14em' }}>
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {vacancyTable.map((row, i) => (
+                <tr key={i} style={{ borderBottom: `1px solid ${C.divider}`, background: i % 2 === 0 ? C.surface : C.bg }}>
+                  <td className="font-semibold" style={{ padding: '11px 14px', fontSize: 13.5, color: C.ink }}>{row.post || '—'}</td>
+                  <td style={{ padding: '11px 14px', textAlign: 'center' }}>
+                    <span className="inline-block font-extrabold text-white rounded" style={{ background: C.navy, padding: '2px 12px', fontSize: 13 }}>
+                      {row.count || row.total || '—'}
+                    </span>
+                  </td>
+                  {['ur','obc','sc','st','ews'].map(k => (
+                    <td key={k} className="font-semibold" style={{ padding: '11px 14px', textAlign: 'center', fontSize: 13, color: C.sub }}>
+                      {row[k] || '—'}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Eligibility ───────────────────────────────────────────────────────────────
+function EligibilitySection({ eligibility }) {
+  if (!eligibility?.length) return null
+  return (
+    <div className="mb-6">
+      <SectionHeader icon="🎓" title="Eligibility & Qualification" accent={C.blue} />
+      <div className="flex flex-col gap-2.5">
+        {eligibility.map((e, i) => (
+          <div key={i} className="rounded-xl overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="flex items-center gap-3 px-4 py-2.5" style={{ background: C.blueL, borderBottom: `1px solid ${C.border}` }}>
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-white font-extrabold" style={{ background: C.blue, fontFamily: body, fontSize: 12 }}>{i + 1}</div>
+              <span className="font-bold" style={{ fontFamily: body, fontSize: 13.5, color: C.navy }}>{e.post}</span>
+              {e.payScale && (
+                <span className="ml-auto font-bold whitespace-nowrap rounded" style={{ fontFamily: body, fontSize: 11.5, color: '#7A4F00', background: C.goldL, padding: '3px 12px' }}>
+                  💰 {e.payScale}
+                </span>
+              )}
+            </div>
+            <div className="px-4 py-3.5" style={{ fontFamily: body, fontSize: 13, color: C.sub, lineHeight: 1.75 }}>
+              {e.qualification || 'Refer to official notification for qualification details.'}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Selection Process ─────────────────────────────────────────────────────────
+function SelectionProcessSection({ steps }) {
+  if (!steps?.length) return null
+  return (
+    <div className="mb-6">
+      <SectionHeader icon="🏆" title="Selection Process" accent={C.saffron} />
+      <Card accent={C.saffron} style={{ padding: '20px 18px', overflowX: 'auto' }}>
+        <div className="flex items-start overflow-x-auto" style={{ minWidth: steps.length * 100, gap: 0 }}>
+          {steps.map((step, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center relative">
+              {i < steps.length - 1 && (
+                <div className="absolute top-4.5 left-1/2 h-0.5 w-full z-0" style={{ background: `linear-gradient(90deg, ${C.saffron}, ${C.gold})` }} />
+              )}
+              <div className="w-9 h-9 rounded-full flex items-center justify-center font-extrabold text-white relative z-10 flex-shrink-0 mb-2.5" style={{ background: `linear-gradient(135deg, ${C.saffron}, ${C.gold})`, fontFamily: body, fontSize: 14, boxShadow: `0 3px 10px ${C.saffron}44` }}>
+                {i + 1}
+              </div>
+              <div className="font-semibold text-center px-1.5" style={{ fontFamily: body, fontSize: 11, color: C.sub, lineHeight: 1.45 }}>{step}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  )
+}
+
+// ── Important Links ───────────────────────────────────────────────────────────
+function ImportantLinksSection({ links }) {
   if (!links?.length) return null
   const filtered = links.filter(l => l.label && l.url)
   if (!filtered.length) return null
   const seenUrls = new Set()
   const deduped = filtered.filter(l => { if (seenUrls.has(l.url)) return false; seenUrls.add(l.url); return true })
-  const groups = []
-  const groupMap = {}
+  const groups = []; const groupMap = {}
   deduped.forEach(l => {
     if (groupMap[l.label] !== undefined) groups[groupMap[l.label]].items.push(l)
     else { groupMap[l.label] = groups.length; groups.push({ label: l.label, type: l.type, items: [l] }) }
@@ -476,352 +498,55 @@ function ImportantLinksCard({ links }) {
   }
   const defaultCfg = { bg: C.sub, fg: '#fff', icon: '🔗' }
   return (
-    <Module title="Important Links" icon="🔗" accent={C.saffron}>
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="mb-6">
+      <SectionHeader icon="🔗" title="Important Links" accent={C.saffron} />
+      <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
         {groups.map((group, gi) => {
           const cfg = TYPE_CONFIG[group.type] || defaultCfg
           if (group.items.length === 1) {
             return (
               <a key={gi} href={group.items[0].url} target="_blank" rel="noopener noreferrer"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 10,
-                  padding: '9px 12px',
-                  background: cfg.bg, color: cfg.fg,
-                  borderRadius: 7, fontFamily: body,
-                  fontSize: 12, fontWeight: 700,
-                  textDecoration: 'none',
-                  transition: 'opacity 0.15s',
-                }}
-              >
-                <span style={{ fontSize: 14, flexShrink: 0 }}>{cfg.icon}</span>
-                <span style={{ flex: 1 }}>{group.label}</span>
-                <span style={{ opacity: 0.6, fontSize: 11 }}>↗</span>
+                className="flex items-center gap-3 no-underline rounded-xl"
+                style={{ padding: '12px 16px', background: cfg.bg, color: cfg.fg, fontFamily: body, fontSize: 13, fontWeight: 700 }}>
+                <span className="text-lg flex-shrink-0">{cfg.icon}</span>
+                <span className="flex-1">{group.label}</span>
+                <span style={{ opacity: 0.6, fontSize: 12 }}>↗</span>
               </a>
             )
           }
           return (
-            <div key={gi} style={{ borderRadius: 7, overflow: 'hidden', border: `2px solid ${cfg.bg}` }}>
-              <div style={{
-                padding: '8px 12px', background: cfg.bg, color: cfg.fg,
-                fontFamily: body, fontSize: 12, fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: 8,
-              }}>
-                <span style={{ fontSize: 13 }}>{cfg.icon}</span>
-                <span style={{ flex: 1 }}>{group.label}</span>
-                <span style={{
-                  fontFamily: body, fontSize: 9, fontWeight: 700,
-                  background: 'rgba(255,255,255,0.25)',
-                  padding: '1px 6px', borderRadius: 10,
-                }}>{group.items.length} Links</span>
+            <div key={gi} className="rounded-xl overflow-hidden" style={{ border: `2px solid ${cfg.bg}` }}>
+              <div className="flex items-center gap-2 px-3.5 py-2.5 font-bold" style={{ background: cfg.bg, color: cfg.fg, fontFamily: body, fontSize: 13 }}>
+                <span className="text-base">{cfg.icon}</span>
+                <span className="flex-1">{group.label}</span>
+                <span className="font-bold rounded-full" style={{ fontFamily: body, fontSize: 9, fontWeight: 700, background: 'rgba(255,255,255,0.25)', padding: '1px 6px' }}>
+                  {group.items.length} Links
+                </span>
               </div>
               {group.items.map((item, ii) => (
                 <a key={ii} href={item.url} target="_blank" rel="noopener noreferrer"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '7px 12px',
-                    background: ii % 2 === 0 ? '#F8F9FA' : '#FFF',
-                    color: C.blue, fontFamily: body, fontSize: 11.5,
-                    fontWeight: 600, textDecoration: 'none',
-                    borderTop: `1px solid ${C.border}`,
-                  }}
-                >
-                  <span style={{
-                    width: 18, height: 18, borderRadius: '50%',
-                    background: cfg.bg, color: cfg.fg,
-                    fontFamily: body, fontSize: 9, fontWeight: 800,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}>{ii + 1}</span>
-                  <span style={{ flex: 1 }}>Link {ii + 1}</span>
-                  <span style={{ color: C.muted, fontSize: 10 }}>↗</span>
+                  className="flex items-center gap-2 no-underline font-semibold"
+                  style={{ padding: '8px 14px', background: ii % 2 === 0 ? '#F8F9FA' : '#FFF', color: C.blue, fontFamily: body, fontSize: 12, borderTop: `1px solid ${C.border}` }}>
+                  <span className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 font-extrabold" style={{ background: cfg.bg, color: cfg.fg, fontFamily: body, fontSize: 10 }}>{ii + 1}</span>
+                  <span className="flex-1">Link {ii + 1}</span>
+                  <span className="text-xs" style={{ color: C.muted }}>↗</span>
                 </a>
               ))}
             </div>
           )
         })}
       </div>
-    </Module>
-  )
-}
-
-// ── Vacancy Table ──────────────────────────────────────────────────────────
-function VacancyTableCard({ vacancyTable, totalVacancies }) {
-  if (!vacancyTable?.length) return null
-  const headers = ['Post Name', 'Total', 'UR', 'OBC', 'SC', 'ST', 'EWS']
-  const keys    = [null, null, 'ur', 'obc', 'sc', 'st', 'ews']
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <SectionLabel icon="👥" color={C.navy}>Vacancy Breakdown</SectionLabel>
-      <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, borderTop: `3px solid ${C.navy}`, overflow: 'hidden' }}>
-        {totalVacancies && (
-          <div style={{
-            padding: '8px 16px', background: C.navy,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          }}>
-            <span style={{ fontFamily: body, fontSize: 11, color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>Total Sanctioned Posts</span>
-            <span style={{
-              fontFamily: heading, fontSize: 20, fontWeight: 700, color: '#fff',
-            }}>{totalVacancies}</span>
-          </div>
-        )}
-        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: body, minWidth: 480 }}>
-            <thead>
-              <tr style={{ background: '#F0EDE8' }}>
-                {headers.map((h, i) => (
-                  <th key={h} style={{
-                    padding: '9px 12px',
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.14em',
-                    textTransform: 'uppercase', color: C.sub,
-                    textAlign: i === 0 ? 'left' : 'center',
-                    borderBottom: `2px solid ${C.borderD}`,
-                    whiteSpace: 'nowrap',
-                  }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {vacancyTable.map((row, i) => (
-                <tr key={i} style={{
-                  background: i % 2 === 0 ? C.surface : C.bg,
-                  borderBottom: `1px solid ${C.border}`,
-                }}>
-                  <td style={{ padding: '10px 12px', fontSize: 13, fontWeight: 600, color: C.ink }}>{row.post || '—'}</td>
-                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                    <span style={{
-                      display: 'inline-block',
-                      background: C.navy, color: '#fff',
-                      padding: '2px 10px', borderRadius: 4,
-                      fontSize: 13, fontWeight: 800,
-                    }}>
-                      {row.count || row.total || '—'}
-                    </span>
-                  </td>
-                  {['ur','obc','sc','st','ews'].map(k => (
-                    <td key={k} style={{ padding: '10px 12px', textAlign: 'center', fontSize: 12.5, fontWeight: 600, color: C.sub }}>
-                      {row[k] || '—'}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   )
 }
 
-// ── Eligibility Card ───────────────────────────────────────────────────────
-function EligibilityCard({ eligibility }) {
-  if (!eligibility?.length) return null
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <SectionLabel icon="🎓" color={C.blue}>Eligibility & Qualification</SectionLabel>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {eligibility.map((e, i) => (
-          <div key={i} style={{
-            background: C.surface, borderRadius: 10,
-            border: `1px solid ${C.border}`,
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '10px 16px',
-              background: C.blueL, borderBottom: `1px solid ${C.border}`,
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <div style={{
-                width: 28, height: 28, borderRadius: '50%',
-                background: C.blue, color: '#fff',
-                fontFamily: body, fontSize: 12, fontWeight: 800,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}>{i + 1}</div>
-              <span style={{ fontFamily: body, fontSize: 13, fontWeight: 700, color: C.navy }}>{e.post}</span>
-              {e.payScale && (
-                <span style={{
-                  marginLeft: 'auto', fontFamily: body, fontSize: 11, fontWeight: 700,
-                  color: '#7A4F00', background: C.goldL,
-                  padding: '2px 10px', borderRadius: 4, whiteSpace: 'nowrap',
-                }}>
-                  💰 {e.payScale}
-                </span>
-              )}
-            </div>
-            <div style={{ padding: '12px 16px', fontFamily: body, fontSize: 13, color: C.sub, lineHeight: 1.7 }}>
-              {e.qualification || 'Refer to official notification for qualification details.'}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Selection Process ──────────────────────────────────────────────────────
-function SelectionProcessCard({ steps }) {
-  if (!steps?.length) return null
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <SectionLabel icon="🏆" color={C.saffron}>Selection Process</SectionLabel>
-      <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, padding: '20px 16px', overflowX: 'auto' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, minWidth: steps.length * 90 }}>
-          {steps.map((step, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-              {i < steps.length - 1 && (
-                <div style={{
-                  position: 'absolute', top: 16, left: '50%',
-                  width: '100%', height: 2,
-                  background: `linear-gradient(90deg, ${C.saffron}, ${C.gold})`,
-                  zIndex: 0,
-                }} />
-              )}
-              <div style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: `linear-gradient(135deg, ${C.saffron}, ${C.gold})`,
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: body, fontSize: 13, fontWeight: 800,
-                position: 'relative', zIndex: 1, flexShrink: 0, marginBottom: 10,
-                boxShadow: `0 2px 8px ${C.saffron}44`,
-              }}>
-                {i + 1}
-              </div>
-              <div style={{
-                fontFamily: body, fontSize: 10.5, color: C.sub,
-                textAlign: 'center', lineHeight: 1.4, padding: '0 4px', fontWeight: 600,
-              }}>
-                {step}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Human Content Blocks ───────────────────────────────────────────────────
-const BLOCK_META = {
-  introduction:       { icon: '📌', bg: C.blueL,    border: C.blue,    label: 'Overview' },
-  'exam-tips':        { icon: '🎯', bg: '#FFFBEB',   border: C.gold,    label: 'Exam Tips' },
-  salary:             { icon: '💰', bg: C.greenL,    border: C.green,   label: 'Salary Info' },
-  'how-to':           { icon: '📝', bg: C.greenL,    border: C.green,   label: 'How To Apply' },
-  preparation:        { icon: '📚', bg: '#FDF4FF',   border: '#7C3AED', label: 'Preparation' },
-  trust:              { icon: '🔒', bg: C.redL,      border: C.red,     label: 'Official Source' },
-  'trust-signal':     { icon: '🔒', bg: C.redL,      border: C.red,     label: 'Important Note' },
-  analysis:           { icon: '📊', bg: C.blueL,     border: C.blue,    label: 'Analysis' },
-  documents:          { icon: '📄', bg: '#FAFAF0',   border: C.gold,    label: 'Documents' },
-  'fee-tips':         { icon: '💳', bg: C.goldL,     border: C.gold,    label: 'Fee Tips' },
-  'age-info':         { icon: '🎂', bg: C.saffronL,  border: C.saffron, label: 'Age & Relaxation' },
-  'vacancy-insight':  { icon: '📊', bg: C.blueL,     border: C.blue,    label: 'Vacancy Insights' },
-  'who-should-apply': { icon: '🎓', bg: '#FEFCE8',   border: C.gold,    label: 'Who Should Apply' },
-  'exam-strategy':    { icon: '🏆', bg: C.greenL,    border: C.green,   label: 'Exam Strategy' },
-  'expert-faq':       { icon: '❓', bg: '#F8FAFC',   border: C.blue,    label: 'Expert FAQ' },
-  mistakes:           { icon: '⚠️', bg: C.redL,      border: C.red,     label: 'Common Mistakes' },
-}
-
-function HumanContentSection({ humanContent }) {
-  if (!humanContent?.blocks?.length) return null
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '24px 0 16px' }}>
-        <div style={{ flex: 1, height: 1, background: C.border }} />
-        <span style={{ fontFamily: body, fontSize: 10, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.muted }}>
-          Detailed Guide
-        </span>
-        <div style={{ flex: 1, height: 1, background: C.border }} />
-      </div>
-      <div className="human-grid">
-        {humanContent.blocks.map((block) => {
-          const meta = BLOCK_META[block.type] || { icon: '📋', bg: C.bg, border: C.border, label: block.type }
-          const lines = block.content.split('\n').filter(l => l.trim())
-          return (
-            <div key={block.blockId} style={{
-              background: meta.bg,
-              borderRadius: 10,
-              border: `1px solid ${C.border}`,
-              borderLeft: `4px solid ${meta.border}`,
-              padding: '14px 16px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
-                <span style={{ fontSize: 16 }} aria-hidden>{meta.icon}</span>
-                <span style={{
-                  fontFamily: body, fontSize: 9, fontWeight: 800,
-                  letterSpacing: '0.15em', textTransform: 'uppercase', color: C.sub,
-                }}>
-                  {meta.label}
-                </span>
-              </div>
-              <div style={{ fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.75 }}>
-                {lines.map((line, i) => {
-                  const isList = /^[•\-]/.test(line) || /^\d+[.)]\s/.test(line)
-                  return isList
-                    ? <div key={i} style={{ marginBottom: 5, paddingLeft: 6, display: 'flex', gap: 6 }}>
-                        <span style={{ color: meta.border, flexShrink: 0 }}>▸</span>
-                        <span>{line.replace(/^[•\-]\s*/,'').replace(/^\d+[.)]\s*/,'')}</span>
-                      </div>
-                    : <p key={i} style={{ margin: i > 0 ? '8px 0 0' : 0 }}>{line}</p>
-                })}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── Structured FAQ ─────────────────────────────────────────────────────────
-function StructuredFaqSection({ faq }) {
-  if (!faq?.length) return null
-  const faqSchema = {
-    '@context': 'https://schema.org', '@type': 'FAQPage',
-    mainEntity: faq.map(f => ({ '@type':'ListItem', position:1, name:f.q, acceptedAnswer: { '@type':'Answer', text:f.a } })),
-  }
-  return (
-    <div style={{ marginBottom: 20 }}>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-      <SectionLabel icon="❓" color={C.blue}>Frequently Asked Questions</SectionLabel>
-      <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-        {faq.map((item, i) => (
-          <details key={i} style={{ borderBottom: i < faq.length - 1 ? `1px solid ${C.border}` : 'none' }}>
-            <summary style={{
-              padding: '13px 18px',
-              cursor: 'pointer', display: 'flex',
-              justifyContent: 'space-between', alignItems: 'flex-start', gap: 12,
-              listStyle: 'none', fontFamily: body, fontSize: 13.5,
-              fontWeight: 700, color: C.ink, userSelect: 'none',
-            }}>
-              <span>{item.q}</span>
-              <span style={{
-                color: C.saffron, flexShrink: 0, fontSize: 20,
-                lineHeight: 1, fontWeight: 300,
-              }}>+</span>
-            </summary>
-            <div style={{
-              padding: '12px 18px 16px', background: C.bg,
-              fontFamily: body, fontSize: 13, color: C.sub, lineHeight: 1.75,
-              borderTop: `1px solid ${C.border}`,
-            }}>
-              {item.a}
-            </div>
-          </details>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Dynamic Editorial Section ──────────────────────────────────────────────
-// Generates ~300 words of unique, candidate-useful content from structured
-// job fields. Fixes thin-page SEO issue without any server-side changes.
+// ── How to Apply + Documents ──────────────────────────────────────────────────
 function DynamicEditorialSection({ job }) {
   const authority = job.conductingAuthority || 'the official authority'
   const lastDate = job.applyLastDate
     ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' })
     : null
 
-  // How to Apply steps (conditional fee step)
   const applySteps = [
     `Visit the official website of ${authority}.`,
     'Navigate to the Recruitment / Latest Jobs section.',
@@ -834,7 +559,6 @@ function DynamicEditorialSection({ job }) {
     'Keep the submitted form printout safe for admit card download, exam day, and document verification.',
   ].filter(Boolean)
 
-  // Documents checklist — education documents derived from eligibility, rest standard
   const eduDocs = []
   if (job.eligibility?.length) {
     const quals = job.eligibility.map(e => (e.qualification || '').toLowerCase()).join(' ')
@@ -855,147 +579,346 @@ function DynamicEditorialSection({ job }) {
     'Date of Birth Proof (Birth Certificate or 10th Marksheet)',
   ]
 
-  // Preparation tips — 7 category-aware buckets
+  return (
+    <>
+      <Divider label="Quick Reference" />
+      {/* How to Apply */}
+      <div className="mb-7">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">📝</span>
+          <span className="font-extrabold tracking-tight" style={{ fontFamily: body, fontSize: 13, color: C.navy }}>
+            How to Apply — Step by Step
+          </span>
+          {lastDate && (
+            <span className="ml-auto font-bold" style={{ fontFamily: body, fontSize: 11, color: C.green }}>
+              ⏰ Deadline: {lastDate}
+            </span>
+          )}
+        </div>
+        <ol className="flex flex-col gap-2" style={{ paddingLeft: 20, margin: 0 }}>
+          {applySteps.map((step, i) => (
+            <li key={i} style={{ fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.7 }}>{step}</li>
+          ))}
+        </ol>
+        {job.officialWebsite && (
+          <a href={job.officialWebsite} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-3 no-underline font-bold" style={{ fontFamily: body, fontSize: 12.5, color: C.green }}>
+            → Apply at Official Website ↗
+          </a>
+        )}
+      </div>
+
+      {/* Documents Required */}
+      <div className="mb-7">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-base">📄</span>
+          <span className="font-extrabold tracking-tight" style={{ fontFamily: body, fontSize: 13, color: C.navy }}>
+            Documents Required
+          </span>
+        </div>
+        <ul className="flex flex-col gap-1.5" style={{ paddingLeft: 0, margin: 0, listStyle: 'none' }}>
+          {documents.map((doc, i) => (
+            <li key={i} className="flex items-start gap-2" style={{ fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>
+              <span className="font-extrabold flex-shrink-0 mt-0.5" style={{ color: C.blue }}>✓</span>
+              <span>{doc}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="italic mt-2.5" style={{ fontFamily: body, fontSize: 11, color: C.muted }}>
+          * Carry originals and self-attested photocopies for document verification.
+        </p>
+      </div>
+    </>
+  )
+}
+
+// ── Human Content Blocks — PLAIN LIST STYLE (moved to bottom) ─────────────────
+const BLOCK_META = {
+  introduction:       { icon: '📌', label: 'Overview',        accent: C.blue },
+  'exam-tips':        { icon: '🎯', label: 'Exam Tips',        accent: C.gold },
+  salary:             { icon: '💰', label: 'Salary Info',      accent: C.green },
+  'how-to':           { icon: '📝', label: 'How To Apply',     accent: C.green },
+  preparation:        { icon: '📚', label: 'Preparation',      accent: '#7C3AED' },
+  trust:              { icon: '🔒', label: 'Official Source',  accent: C.red },
+  'trust-signal':     { icon: '🔒', label: 'Important Note',   accent: C.red },
+  analysis:           { icon: '📊', label: 'Analysis',         accent: C.blue },
+  documents:          { icon: '📄', label: 'Documents',        accent: C.gold },
+  'fee-tips':         { icon: '💳', label: 'Fee Tips',         accent: C.gold },
+  'age-info':         { icon: '🎂', label: 'Age & Relaxation', accent: C.saffron },
+  'vacancy-insight':  { icon: '📊', label: 'Vacancy Insights', accent: C.blue },
+  'who-should-apply': { icon: '🎓', label: 'Who Should Apply', accent: C.gold },
+  'exam-strategy':    { icon: '🏆', label: 'Exam Strategy',    accent: C.green },
+  'expert-faq':       { icon: '❓', label: 'Expert FAQ',       accent: C.blue },
+  mistakes:           { icon: '⚠️', label: 'Common Mistakes',  accent: C.red },
+}
+
+function HumanContentSection({ humanContent }) {
+  if (!humanContent?.blocks?.length) return null
+  return (
+    <div className="mb-6">
+      <Divider label="Detailed Guide" />
+      <div className="flex flex-col gap-6">
+        {humanContent.blocks.map((block) => {
+          const meta = BLOCK_META[block.type] || { icon: '📋', label: block.type, accent: C.border }
+          const lines = block.content.split('\n').filter(l => l.trim())
+          return (
+            <div key={block.blockId}>
+              {/* Section heading — plain, no box */}
+              <div className="flex items-center gap-2 mb-3 pb-2" style={{ borderBottom: `2px solid ${meta.accent}` }}>
+                <span className="text-base">{meta.icon}</span>
+                <span className="font-extrabold uppercase tracking-widest" style={{ fontFamily: body, fontSize: 10, color: meta.accent, letterSpacing: '0.18em' }}>
+                  {meta.label}
+                </span>
+              </div>
+              {/* Content as plain list */}
+              <ul className="flex flex-col gap-1.5" style={{ paddingLeft: 0, margin: 0, listStyle: 'none' }}>
+                {lines.map((line, i) => {
+                  const isList = /^[•\-]/.test(line) || /^\d+[.)]\s/.test(line)
+                  const cleanLine = line.replace(/^[•\-]\s*/,'').replace(/^\d+[.)]\s*/,'')
+                  return (
+                    <li key={i} className="flex items-start gap-2" style={{ fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.75 }}>
+                      {isList ? (
+                        <>
+                          <span className="flex-shrink-0 font-bold mt-0.5" style={{ color: meta.accent }}>▸</span>
+                          <span>{cleanLine}</span>
+                        </>
+                      ) : (
+                        <p className="m-0">{line}</p>
+                      )}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// ── FAQ ───────────────────────────────────────────────────────────────────────
+function FaqSection({ faq }) {
+  if (!faq?.length) return null
+  const faqSchema = {
+    '@context': 'https://schema.org', '@type': 'FAQPage',
+    mainEntity: faq.map(f => ({ '@type':'Question', name:f.q, acceptedAnswer: { '@type':'Answer', text:f.a } })),
+  }
+  return (
+    <div className="mb-6">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      <SectionHeader icon="❓" title="Frequently Asked Questions" accent={C.blue} />
+      <Card accent={C.blue}>
+        {faq.map((item, i) => (
+          <details key={i} style={{ borderBottom: i < faq.length - 1 ? `1px solid ${C.divider}` : 'none' }}>
+            <summary className="flex justify-between items-start gap-3 cursor-pointer select-none font-bold" style={{ padding: '14px 20px', listStyle: 'none', fontFamily: body, fontSize: 14, color: C.ink }}>
+              <span>{item.q}</span>
+              <span className="flex-shrink-0 font-light text-2xl leading-none" style={{ color: C.saffron }}>+</span>
+            </summary>
+            <div className="leading-relaxed" style={{ padding: '12px 20px 16px', background: C.bg, fontFamily: body, fontSize: 13.5, color: C.sub, lineHeight: 1.78, borderTop: `1px solid ${C.divider}` }}>
+              {item.a}
+            </div>
+          </details>
+        ))}
+      </Card>
+    </div>
+  )
+}
+
+// ── START PREPARING SECTION ──────────────────────────────────────────────────
+function StartPreparingSection({ job }) {
   const combined = `${job.category || ''} ${job.sectionName || ''} ${job.title || ''}`.toLowerCase()
   let prepTips
   if (/railway|rrb|ntpc|group[\s-]*d/.test(combined)) {
     prepTips = [
-      'Mathematics (Arithmetic): Number System, Percentage, Ratio, and Simplification are RRB exam staples — start here.',
-      'General Intelligence & Reasoning: Practise coding-decoding, series, and analogy questions daily to build speed.',
-      'General Awareness: Cover last 6 months of current affairs; balance it with static GK (History, Geography, Polity).',
-      'Time Management: Each section has ~25 minutes. Aim for 70–80% accuracy at pace rather than attempting all questions.',
+      { title: 'Mathematics (Arithmetic)', desc: 'Number System, Percentage, Ratio, and Simplification are RRB exam staples — start here.', icon: '🔢' },
+      { title: 'General Intelligence & Reasoning', desc: 'Practise coding-decoding, series, and analogy questions daily to build speed.', icon: '🧠' },
+      { title: 'General Awareness', desc: 'Cover last 6 months of current affairs; balance it with static GK (History, Geography, Polity).', icon: '🌐' },
+      { title: 'Time Management', desc: 'Each section has ~25 minutes. Aim for 70–80% accuracy at pace rather than attempting all questions.', icon: '⏱️' },
     ]
-  } else if (/bank|sbi|ibps|clerk|po|rrb\s*po|rrb\s*clerk/.test(combined)) {
+  } else if (/bank|sbi|ibps|clerk|po/.test(combined)) {
     prepTips = [
-      'Quantitative Aptitude: Data Interpretation and Arithmetic carry the most weight — prioritise these topics.',
-      'English Language: Reading Comprehension, Error Detection, and Cloze Test appear in almost every bank exam.',
-      'Reasoning Ability: Puzzles and Seating Arrangement are time-consuming — build speed through consistent daily practice.',
-      'Current Affairs: A 6-month capsule plus Banking Awareness is essential, especially for the Mains stage.',
+      { title: 'Quantitative Aptitude', desc: 'Data Interpretation and Arithmetic carry the most weight — prioritise these topics.', icon: '📊' },
+      { title: 'English Language', desc: 'Reading Comprehension, Error Detection, and Cloze Test appear in almost every bank exam.', icon: '📖' },
+      { title: 'Reasoning Ability', desc: 'Puzzles and Seating Arrangement are time-consuming — build speed through consistent daily practice.', icon: '🔍' },
+      { title: 'Current Affairs & Banking', desc: 'A 6-month capsule plus Banking Awareness is essential, especially for Mains stage.', icon: '🏦' },
     ]
   } else if (/police|constable|sub\s*inspector|\bsi\b/.test(combined)) {
     prepTips = [
-      'Physical Fitness First: PET / PST eliminates many candidates — begin running and physical training at least 3 months early.',
-      'State-specific GK: Each state exam includes questions on local history, geography, and current events — do not skip.',
-      'General Knowledge & Reasoning: Practise SSC-level material for the written examination.',
-      'Know the Sequence: Written → PET → Medical. Clear each stage fully before focusing on the next.',
+      { title: 'Physical Fitness', desc: 'PET / PST eliminates many candidates — begin running and physical training at least 3 months early.', icon: '🏃' },
+      { title: 'State-specific GK', desc: 'Each state exam includes questions on local history, geography, and current events.', icon: '🗺️' },
+      { title: 'General Knowledge & Reasoning', desc: 'Practise SSC-level material for the written examination.', icon: '🧩' },
+      { title: 'Know the Exam Stages', desc: 'Written → PET → Medical. Clear each stage fully before focusing on the next.', icon: '🎯' },
     ]
-  } else if (/teacher|tet|ctet|shikshak|kvs|nvs/.test(combined)) {
+  } else if (/teacher|tet|ctet|kvs|nvs/.test(combined)) {
     prepTips = [
-      'Child Development & Pedagogy (CDP): Highest-weightage section — study Piaget, Vygotsky, and learning theories in depth.',
-      'NCERT Mastery: Deep knowledge of subject NCERT books (6th–12th) is essential for the Paper II subject section.',
-      'Language Sections: Both L1 and L2 are tested on grammar, comprehension, and pedagogy — do not neglect either.',
-      'Previous Year Papers: CTET patterns are consistent — solving 2019–2024 papers is a must for exam readiness.',
-    ]
-  } else if (/navy|army|air\s*force|nda|cds|agniveer|military|defence|ssb/.test(combined)) {
-    prepTips = [
-      'Physical Preparation: Begin at least 3–4 months before the exam — running, chin-ups, and endurance training are tested.',
-      'Mathematics (NDA / CDS): Class 11–12 NCERT Maths is the backbone — Algebra, Trigonometry, and Statistics are key areas.',
-      'General Ability Test (GAT): Covers English, Physics, Chemistry, History, Geography, Current Events — distribute study evenly.',
-      'SSB Interview: Personality, group activities, and psychological tests matter as much as academics — prepare holistically.',
+      { title: 'Child Development & Pedagogy', desc: 'Highest-weightage section — study Piaget, Vygotsky, and learning theories in depth.', icon: '👶' },
+      { title: 'NCERT Mastery', desc: 'Deep knowledge of subject NCERT books (6th–12th) is essential for the Paper II subject section.', icon: '📚' },
+      { title: 'Language Sections', desc: 'Both L1 and L2 are tested on grammar, comprehension, and pedagogy — do not neglect either.', icon: '🗣️' },
+      { title: 'Previous Year Papers', desc: 'CTET patterns are consistent — solving 2019–2024 papers is a must for exam readiness.', icon: '📝' },
     ]
   } else if (/ssc|staff\s*selection|cgl|chsl|mts|cpo/.test(combined)) {
     prepTips = [
-      'Tier I Focus: Reasoning and General Awareness are the fastest to score — master these in the Tier I stage.',
-      'Quantitative Aptitude: Arithmetic (Percentage, SI/CI, Profit-Loss, Time-Work) is tested at every level.',
-      'English: Fill in the Blanks, Sentence Improvement, and One-word Substitution are high-frequency question types.',
-      'Tier II: English Language and Quantitative Ability go deeper — start Tier II preparation early after clearing Tier I.',
+      { title: 'Tier I: Reasoning & GA', desc: 'Reasoning and General Awareness are the fastest to score — master these in the Tier I stage.', icon: '🧠' },
+      { title: 'Quantitative Aptitude', desc: 'Arithmetic (Percentage, SI/CI, Profit-Loss, Time-Work) is tested at every level.', icon: '🔢' },
+      { title: 'English Language', desc: 'Fill in the Blanks, Sentence Improvement, and One-word Substitution are high-frequency question types.', icon: '📖' },
+      { title: 'Tier II Preparation', desc: 'English Language and Quantitative Ability go deeper — start Tier II prep early after clearing Tier I.', icon: '📊' },
     ]
   } else {
     prepTips = [
-      'Read the full official notification — the syllabus and exam pattern are officially defined there.',
-      'Make a topic-wise study schedule and follow it consistently — regularity beats last-minute cramming.',
-      'Solve previous year question papers for pattern familiarity and to identify high-weightage topics.',
-      'Attempt full-length mock tests regularly to build speed, accuracy, and exam composure.',
+      { title: 'Read the Notification', desc: 'The syllabus and exam pattern are officially defined in the notification — read it fully.', icon: '📋' },
+      { title: 'Topic-wise Schedule', desc: 'Make a study schedule and follow it consistently — regularity beats last-minute cramming.', icon: '🗓️' },
+      { title: 'Previous Year Papers', desc: 'Solve PYQs for pattern familiarity and to identify high-weightage topics.', icon: '📝' },
+      { title: 'Mock Tests', desc: 'Attempt full-length mock tests regularly to build speed, accuracy, and exam composure.', icon: '🎯' },
     ]
   }
-
+  const examName = job.title || 'This Exam'
   return (
-    <div style={{ marginBottom: 20 }}>
-
-      {/* ── How to Apply ── */}
-      <div style={{ marginBottom: 20 }}>
-        <SectionLabel icon="📝" color={C.green}>How to Apply — Step by Step</SectionLabel>
-        <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, borderTop: `3px solid ${C.green}`, padding: '16px 20px' }}>
-          {lastDate && (
-            <div style={{ background: C.greenL, border: '1px solid #86EFAC', borderRadius: 7, padding: '8px 14px', marginBottom: 14, fontFamily: body, fontSize: 12, color: C.green, fontWeight: 700 }}>
-              ⏰ Application Deadline: {lastDate}
+    <div className="mb-6">
+      <Divider label="Preparation Zone" />
+      <div className="rounded-2xl p-6 mb-4" style={{ background: `linear-gradient(135deg, ${C.navy} 0%, #1B3A5E 100%)` }}>
+        <div className="flex items-center gap-3 mb-1.5">
+          <span className="text-3xl">🚀</span>
+          <div>
+            <div className="font-bold text-white leading-tight" style={{ fontFamily: heading, fontSize: 20 }}>
+              Start Preparing for {examName}
             </div>
-          )}
-          <ol style={{ paddingLeft: 22, margin: 0 }}>
-            {applySteps.map((step, i) => (
-              <li key={i} style={{ fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.7, marginBottom: 8 }}>
-                {step}
-              </li>
-            ))}
-          </ol>
-          {job.officialWebsite && (
-            <a href={job.officialWebsite} target="_blank" rel="noopener noreferrer"
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 14, fontFamily: body, fontSize: 12, fontWeight: 700, color: C.green, textDecoration: 'none' }}>
-              → Apply at Official Website ↗
-            </a>
-          )}
-        </div>
-      </div>
-
-      {/* ── Documents Required ── */}
-      <div style={{ marginBottom: 20 }}>
-        <SectionLabel icon="📄" color={C.blue}>Documents Required</SectionLabel>
-        <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, borderTop: `3px solid ${C.blue}`, padding: '14px 20px' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 0' }}>
-            {documents.map((doc, i) => (
-              <div key={i} style={{ width: '50%', minWidth: 200, display: 'flex', alignItems: 'flex-start', gap: 8, fontFamily: body, fontSize: 12.5, color: C.ink, lineHeight: 1.55, padding: '5px 12px 5px 0' }}>
-                <span style={{ color: C.blue, fontWeight: 800, flexShrink: 0 }}>✓</span>
-                <span>{doc}</span>
-              </div>
-            ))}
+            <div className="mt-1" style={{ fontFamily: body, fontSize: 12, color: 'rgba(255,255,255,0.45)' }}>
+              Follow this strategy to maximise your chances of selection
+            </div>
           </div>
-          <p style={{ fontFamily: body, fontSize: 11, color: C.muted, marginTop: 12, fontStyle: 'italic' }}>
-            * Carry originals and self-attested photocopies for document verification.
-          </p>
         </div>
       </div>
-
-      {/* ── Preparation Tips ── */}
-      <div style={{ marginBottom: 20 }}>
-        <SectionLabel icon="🎯" color={C.gold}>Preparation Tips</SectionLabel>
-        <div style={{ background: C.surface, borderRadius: 10, border: `1px solid ${C.border}`, borderTop: `3px solid ${C.gold}`, padding: '14px 20px' }}>
-          {prepTips.map((tip, i) => (
-            <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', fontFamily: body, fontSize: 13, color: C.ink, lineHeight: 1.7, padding: '8px 0', borderBottom: i < prepTips.length - 1 ? `1px dashed ${C.border}` : 'none' }}>
-              <span style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', background: C.goldL, color: C.gold, fontFamily: body, fontSize: 11, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {i + 1}
-              </span>
-              <span>{tip}</span>
+      <div className="grid gap-3 mb-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
+        {prepTips.map((tip, i) => (
+          <div key={i} className="flex gap-3.5 items-start rounded-xl p-4" style={{ background: C.surface, border: `1px solid ${C.border}`, borderLeft: `4px solid ${C.saffron}` }}>
+            <div className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center text-xl" style={{ background: C.saffronL }}>
+              {tip.icon}
             </div>
-          ))}
+            <div>
+              <div className="font-extrabold mb-1.5" style={{ fontFamily: body, fontSize: 13, color: C.navy }}>
+                <span className="inline-block text-white rounded mr-1.5 font-extrabold uppercase tracking-wide align-middle" style={{ background: C.navy, fontSize: 9, padding: '1px 7px', borderRadius: 4 }}>0{i + 1}</span>
+                {tip.title}
+              </div>
+              <div style={{ fontFamily: body, fontSize: 12.5, color: C.sub, lineHeight: 1.65 }}>{tip.desc}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-start gap-3 rounded-xl p-3.5" style={{ background: C.greenL, border: `1px solid #86EFAC` }}>
+        <span className="text-xl flex-shrink-0">💡</span>
+        <div style={{ fontFamily: body, fontSize: 13, color: C.green, lineHeight: 1.7 }}>
+          <strong>Pro Tip:</strong> Dedicate at least 3–4 hours daily starting today. Split your time: 50% on your weakest subject, 30% on moderate areas, and 20% on revision and mock tests. Consistency is more important than marathon sessions.
         </div>
       </div>
-
     </div>
   )
 }
 
-// ── Meta Strip Pill ────────────────────────────────────────────────────────
-function HeroPill({ icon, label, value, accent }) {
+// ── RECOMMENDED BOOKS ─────────────────────────────────────────────────────────
+function RecommendedBooksSection({ job }) {
+  const combined = `${job.category || ''} ${job.sectionName || ''} ${job.title || ''}`.toLowerCase()
+  let books
+  if (/railway|rrb|ntpc|group[\s-]*d/.test(combined)) {
+    books = [
+      { title: 'RRB NTPC CBT Stage-1 & 2', author: 'Arihant Publications', subject: 'Complete Guide', icon: '🚂', color: C.blue },
+      { title: 'Fast Track Objective Arithmetic', author: 'Rajesh Verma', subject: 'Mathematics', icon: '🔢', color: C.green },
+      { title: 'Verbal & Non-Verbal Reasoning', author: 'R.S. Aggarwal', subject: 'Reasoning', icon: '🧩', color: C.saffron },
+      { title: 'General Knowledge 2025', author: 'Manohar Pandey', subject: 'GK / GS', icon: '🌐', color: C.gold },
+      { title: "Lucent's General Knowledge", author: 'Lucent Publication', subject: 'Static GK', icon: '📖', color: C.navy },
+      { title: 'Kiran Railway Group-D Practice Sets', author: 'Kiran Prakashan', subject: 'Practice', icon: '📝', color: C.red },
+    ]
+  } else if (/bank|sbi|ibps|clerk|po/.test(combined)) {
+    books = [
+      { title: 'Quantitative Aptitude for Competitive Exams', author: 'R.S. Aggarwal', subject: 'Quant', icon: '📊', color: C.blue },
+      { title: 'Objective English for Competitive Exams', author: 'S.P. Bakshi', subject: 'English', icon: '📖', color: C.green },
+      { title: 'Banking Awareness', author: 'Arihant Publications', subject: 'Banking GK', icon: '🏦', color: C.saffron },
+      { title: 'High Level Data Interpretation', author: 'Disha Experts', subject: 'DI', icon: '📉', color: C.gold },
+      { title: 'A Modern Approach to Verbal Reasoning', author: 'R.S. Aggarwal', subject: 'Reasoning', icon: '🧩', color: C.navy },
+      { title: 'IBPS / SBI Practice Sets', author: 'Kiran Prakashan', subject: 'Practice', icon: '📝', color: C.red },
+    ]
+  } else if (/police|constable/.test(combined)) {
+    books = [
+      { title: 'Constable / Sub-Inspector Guide', author: 'Arihant Publications', subject: 'Complete Guide', icon: '👮', color: C.blue },
+      { title: 'Objective General Knowledge', author: 'S. Chand', subject: 'GK', icon: '🌐', color: C.green },
+      { title: 'Verbal & Non-Verbal Reasoning', author: 'R.S. Aggarwal', subject: 'Reasoning', icon: '🧩', color: C.saffron },
+      { title: "Lucent's General Knowledge", author: 'Lucent Publication', subject: 'Static GK', icon: '📖', color: C.gold },
+    ]
+  } else if (/teacher|tet|ctet|kvs|nvs/.test(combined)) {
+    books = [
+      { title: 'Child Development & Pedagogy', author: 'Disha Experts', subject: 'CDP', icon: '👶', color: C.blue },
+      { title: 'CTET & TETs English Language', author: 'Pearson Education', subject: 'English', icon: '📖', color: C.green },
+      { title: 'NCERT Mathematics Class 6–8', author: 'NCERT', subject: 'Maths (Paper II)', icon: '🔢', color: C.saffron },
+      { title: 'CTET 15 Practice Papers (Paper I)', author: 'Arihant Publications', subject: 'Practice', icon: '📝', color: C.gold },
+      { title: 'CTET Social Studies (Class VI–VIII)', author: 'S. Chand', subject: 'SST', icon: '🗺️', color: C.navy },
+    ]
+  } else if (/ssc|cgl|chsl|mts|cpo/.test(combined)) {
+    books = [
+      { title: 'SSC CGL Tier I & II (Chapter-wise Solved Papers)', author: 'Kiran Prakashan', subject: 'Practice', icon: '📝', color: C.blue },
+      { title: 'Quantitative Aptitude for Competitive Exams', author: 'R.S. Aggarwal', subject: 'Quant', icon: '🔢', color: C.green },
+      { title: 'A Mirror of Common Errors', author: 'A.K. Singh', subject: 'English Grammar', icon: '📖', color: C.saffron },
+      { title: "Lucent's General Knowledge", author: 'Lucent Publication', subject: 'GK', icon: '🌐', color: C.gold },
+      { title: 'Analytical Reasoning', author: 'M.K. Pandey', subject: 'Reasoning', icon: '🧩', color: C.navy },
+      { title: 'SSC English by Kiran', author: 'Kiran Prakashan', subject: 'English', icon: '✍️', color: C.red },
+    ]
+  } else {
+    books = [
+      { title: 'Quantitative Aptitude for Competitive Exams', author: 'R.S. Aggarwal', subject: 'Mathematics', icon: '🔢', color: C.blue },
+      { title: 'Verbal & Non-Verbal Reasoning', author: 'R.S. Aggarwal', subject: 'Reasoning', icon: '🧩', color: C.green },
+      { title: "Lucent's General Knowledge", author: 'Lucent Publication', subject: 'GK', icon: '🌐', color: C.saffron },
+      { title: 'Objective English for Competitive Exams', author: 'S.P. Bakshi', subject: 'English', icon: '📖', color: C.gold },
+      { title: 'General Studies — Paper I', author: 'Disha Experts', subject: 'GS', icon: '📚', color: C.navy },
+      { title: 'Previous Year Solved Papers', author: 'Arihant Publications', subject: 'Practice', icon: '📝', color: C.red },
+    ]
+  }
   return (
-    <div style={{
-      display: 'flex', flexDirection: 'column',
-      padding: '10px 16px',
-      background: 'rgba(255,255,255,0.06)',
-      borderRadius: 8,
-      border: '1px solid rgba(255,255,255,0.1)',
-      minWidth: 100,
-    }}>
-      <span style={{ fontFamily: body, fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 600, marginBottom: 3 }}>
-        {icon} {label}
-      </span>
-      <span style={{ fontFamily: body, fontSize: 13, fontWeight: 700, color: accent || '#fff' }}>
-        {value}
-      </span>
+    <div className="mb-6">
+      <SectionHeader icon="📚" title="Recommended Books" accent={C.gold} />
+      <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        {books.map((book, i) => (
+          <div key={i} className="flex gap-3 items-start rounded-xl p-3.5 relative overflow-hidden" style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+            <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: book.color }} />
+            <div className="w-11 h-14 rounded-md flex-shrink-0 flex items-center justify-center text-2xl" style={{ background: book.color + '18', boxShadow: `inset 0 0 0 1px ${book.color}22` }}>
+              {book.icon}
+            </div>
+            <div className="min-w-0">
+              <div className="font-extrabold uppercase tracking-widest mb-1" style={{ fontFamily: body, fontSize: 9, color: book.color, letterSpacing: '0.12em' }}>{book.subject}</div>
+              <div className="font-bold leading-snug mb-1.5" style={{ fontFamily: body, fontSize: 13, color: C.ink }}>{book.title}</div>
+              <div className="font-semibold" style={{ fontFamily: body, fontSize: 11.5, color: C.muted }}>by {book.author}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 px-4 py-2.5 rounded-lg" style={{ background: C.goldL, border: `1px solid #DDB84A`, fontFamily: body, fontSize: 11.5, color: '#7A4F00' }}>
+        📌 <strong>Note:</strong> Books listed are based on exam category. Always check the latest edition. Official NCERT books are recommended alongside these.
+      </div>
     </div>
   )
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
+// ── Strip duplicate scraped sections ─────────────────────────────────────────
+function stripDuplicateSections(html, patterns) {
+  if (!html || !patterns.length) return html
+  const headingRe = /<(h[1-6])(?:\s[^>]*)?>[\s\S]*?<\/h[1-6]>/gi
+  const headings = []
+  let hm
+  while ((hm = headingRe.exec(html)) !== null) {
+    headings.push({ start: hm.index, end: hm.index + hm[0].length, level: parseInt(hm[0][2]), text: hm[0].replace(/<[^>]+>/g, '').trim() })
+  }
+  const toRemove = []
+  for (let i = 0; i < headings.length; i++) {
+    const h = headings[i]
+    if (!patterns.some(p => p.test(h.text))) continue
+    let end = html.length
+    for (let j = i + 1; j < headings.length; j++) { if (headings[j].level <= h.level) { end = headings[j].start; break } }
+    toRemove.push([h.start, end])
+  }
+  let result = html
+  for (let i = toRemove.length - 1; i >= 0; i--) { result = result.slice(0, toRemove[i][0]) + result.slice(toRemove[i][1]) }
+  return result
+}
+
+// ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default async function JobDetailPage({ params }) {
   const { slug } = await params
   let job = null
@@ -1012,59 +935,26 @@ export default async function JobDetailPage({ params }) {
   const vacancyTable   = job.structured?.vacancyTable || []
   const importantLinks = job.structured?.importantLinks || []
 
-  // ── Strip scraped sections already shown in structured sidebar cards ────
-  // Only strips when the corresponding card actually has data — avoids wiping
-  // content that would otherwise appear nowhere. Uses heading-level traversal
-  // instead of nested lookahead regex (no catastrophic backtracking risk).
+  // Strip duplicate sections — including human content block types to avoid duplication
+  const humanBlockTypes = (job.humanContent?.blocks || []).map(b => b.type)
+  const humanDupePatterns = []
+  if (humanBlockTypes.includes('how-to'))           humanDupePatterns.push(/how\s*to\s*apply/i)
+  if (humanBlockTypes.includes('documents'))        humanDupePatterns.push(/documents?\s*required/i)
+  if (humanBlockTypes.includes('vacancy-insight'))  humanDupePatterns.push(/vacancy\s*(?:insight|detail)/i)
+  if (humanBlockTypes.includes('who-should-apply')) humanDupePatterns.push(/who\s*should\s*apply/i)
+
   const stripPatterns = [
-    /short\s+details/i,              // always — duplicates hero meta row
-    /pay\s+scale/i,                  // always — shown in eligibility/stats card
-    ...(importantDates && Object.keys(importantDates).length
-      ? [/important\s+dates?/i] : []),
-    ...(job.applicationFee
-      ? [/application\s+fee/i, /fee\s+(?:details?|payment)/i] : []),
-    ...((job.ageLimit?.min || job.ageLimit?.max || job.ageLimit?.byCategory?.length)
-      ? [/age\s+limit/i, /age\s+relaxation/i] : []),
-    ...(vacancyTable.length > 0
-      ? [/vacancy\s+(?:details?|break)/i, /post[\s-]*wise\s+vacancy/i] : []),
+    /short\s+details/i,
+    /pay\s+scale/i,
+    ...(importantDates && Object.keys(importantDates).length ? [/important\s+dates?/i] : []),
+    ...(job.applicationFee ? [/application\s+fee/i, /fee\s+(?:details?|payment)/i] : []),
+    ...((job.ageLimit?.min || job.ageLimit?.max || job.ageLimit?.byCategory?.length) ? [/age\s+limit/i, /age\s+relaxation/i] : []),
+    ...(vacancyTable.length > 0 ? [/vacancy\s+(?:details?|break)/i, /post[\s-]*wise\s+vacancy/i] : []),
     ...(job.eligibility?.length ? [/educational\s+qualif/i] : []),
     ...(job.selectionProcess?.length ? [/selection\s+process/i] : []),
+    ...humanDupePatterns,
   ]
-  function stripDuplicateSections(html, patterns) {
-    if (!html || !patterns.length) return html
-    // Collect all heading tags with position, nesting level, and plain-text content
-    const headingRe = /<(h[1-6])(?:\s[^>]*)?>[\s\S]*?<\/h[1-6]>/gi
-    const headings = []
-    let hm
-    while ((hm = headingRe.exec(html)) !== null) {
-      headings.push({
-        start: hm.index,
-        end:   hm.index + hm[0].length,
-        level: parseInt(hm[0][2]),
-        text:  hm[0].replace(/<[^>]+>/g, '').trim(),
-      })
-    }
-    // For each heading matching a strip pattern, remove from heading start to
-    // the next heading of equal-or-higher level (end of that section)
-    const toRemove = []
-    for (let i = 0; i < headings.length; i++) {
-      const h = headings[i]
-      if (!patterns.some(p => p.test(h.text))) continue
-      let end = html.length
-      for (let j = i + 1; j < headings.length; j++) {
-        if (headings[j].level <= h.level) { end = headings[j].start; break }
-      }
-      toRemove.push([h.start, end])
-    }
-    // Apply in reverse so earlier indices stay valid after each splice
-    let result = html
-    for (let i = toRemove.length - 1; i >= 0; i--) {
-      result = result.slice(0, toRemove[i][0]) + result.slice(toRemove[i][1])
-    }
-    return result
-  }
-  const cleanedHtml = stripDuplicateSections(contentHtml, stripPatterns)
-
+  const cleanedHtml  = stripDuplicateSections(contentHtml, stripPatterns)
   const { expired, upcoming } = classifyDates(cleanedHtml)
   const annotatedHtml = injectDateBadges(cleanedHtml, expired, upcoming, { isActive: job.isActive, updatedAt: job.updatedAt })
 
@@ -1084,7 +974,6 @@ export default async function JobDetailPage({ params }) {
       { '@type':'ListItem', position:3, name:job.title, item:canonical },
     ],
   }
-
   const jobPostingSchema = {
     '@context': 'https://schema.org', '@type': 'JobPosting',
     title: job.jobtitle || job.title,
@@ -1107,8 +996,7 @@ export default async function JobDetailPage({ params }) {
 
       {/* ══ HERO ══ */}
       <header className="sa-hero">
-        <div className="sa-hero-inner">
-
+        <div className="sa-inner">
           {/* Breadcrumb */}
           <nav aria-label="breadcrumb" className="sa-breadcrumb">
             <Link href="/" className="sa-bc-link">Home</Link>
@@ -1118,22 +1006,15 @@ export default async function JobDetailPage({ params }) {
             <span className="sa-bc-curr">{job.title}</span>
           </nav>
 
-          {/* Badge row */}
-          <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14 }}>
-            {job.sectionName && (
-              <span className="sa-tag sa-tag-gold">{job.sectionName}</span>
-            )}
-            {job.category && (
-              <span className="sa-tag sa-tag-ghost">{job.category}</span>
-            )}
+          {/* Badges */}
+          <div className="flex gap-2 flex-wrap mb-3.5">
+            {job.sectionName && <span className="sa-tag sa-tag-gold">{job.sectionName}</span>}
+            {job.category    && <span className="sa-tag sa-tag-ghost">{job.category}</span>}
             <span className={`sa-tag ${job.isActive ? 'sa-tag-green' : 'sa-tag-red'}`}>
               {job.isActive ? '● Active' : '● Closed'}
             </span>
             {job.updatedAt && (
-              <time
-                dateTime={new Date(job.updatedAt).toISOString()}
-                className="sa-tag sa-tag-blue"
-              >
+              <time dateTime={new Date(job.updatedAt).toISOString()} className="sa-tag sa-tag-blue">
                 ↻ Updated {new Date(job.updatedAt).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}
               </time>
             )}
@@ -1144,93 +1025,115 @@ export default async function JobDetailPage({ params }) {
 
           {/* Author */}
           {job.author?.name && (
-            <div style={{ fontFamily: body, fontSize:11, color:'rgba(255,255,255,0.45)', marginBottom:18 }}
+            <div className="mb-4" style={{ fontFamily: body, fontSize:11.5, color:'rgba(255,255,255,0.4)' }}
               itemScope itemType="https://schema.org/Person">
               By <span itemProp="name">{job.author.name}</span>
             </div>
           )}
 
-          {/* Meta pills */}
-          <div className="sa-hero-pills">
-            <HeroPill icon="📅" label="Posted" value={postedDate} />
-            <HeroPill icon="⏰" label="Last Date" value={applyDate} accent="#FCD34D" />
-            {job.conductingAuthority && <HeroPill icon="🏢" label="Authority" value={job.conductingAuthority} />}
-            {job.totalVacancies && <HeroPill icon="👥" label="Vacancies" value={String(job.totalVacancies)} accent="#6EE7B7" />}
+          {/* Meta row */}
+          <div className="sa-meta-row">
+            <div className="sa-meta-pill">
+              <span className="sa-meta-label">📅 Posted</span>
+              <span className="sa-meta-val">{postedDate}</span>
+            </div>
+            <div className="sa-meta-pill sa-meta-pill--accent">
+              <span className="sa-meta-label">⏰ Last Date</span>
+              <span className="sa-meta-val">{applyDate}</span>
+            </div>
+            {job.conductingAuthority && (
+              <div className="sa-meta-pill">
+                <span className="sa-meta-label">🏢 Authority</span>
+                <span className="sa-meta-val">{job.conductingAuthority}</span>
+              </div>
+            )}
+            {job.totalVacancies && (
+              <div className="sa-meta-pill sa-meta-pill--green">
+                <span className="sa-meta-label">👥 Vacancies</span>
+                <span className="sa-meta-val">{String(job.totalVacancies)}</span>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       {/* ══ BODY ══ */}
       <main className="sa-body">
-
-        {/* Back link */}
-        <Link href="/jobs" className="sa-back">
-          ← All Jobs
-        </Link>
+        {/* Back */}
+        <Link href="/jobs" className="sa-back">← All Jobs</Link>
 
         {/* Top Ad */}
-        <div className="sa-ad-wrap" style={{ marginBottom:20 }}>
+        <div className="sa-ad-wrap mb-6">
           <AdsenseUnit placement="detail-top" className="w-full" />
         </div>
 
-        {/* Two-column layout */}
-        <div className="sa-layout">
+        {/* Apply button — full width at top */}
+        <ApplyButton href={job.officialWebsite} />
 
-          {/* ── MAIN CONTENT ── */}
-          <article className="sa-main">
-            <VacancyTableCard vacancyTable={vacancyTable} totalVacancies={job.totalVacancies} />
-            <AppFeeCard fee={job.applicationFee} />
-            <EligibilityCard eligibility={job.eligibility} />
-            <SelectionProcessCard steps={job.selectionProcess} />
-            <DynamicEditorialSection job={job} />
+        {/* Overview strip */}
+        <OverviewStrip job={job} />
 
-            {/* Mid Ad */}
-            <div className="sa-ad-wrap" style={{ marginBottom:20 }}>
-              <AdsenseUnit placement="detail-inarticle" className="w-full" />
-            </div>
+        {/* Dates + Fee side by side */}
+        <DatesFeeRow dates={importantDates} fee={job.applicationFee} />
 
-            {/* Scraped content */}
-            {annotatedHtml && (
-              <div style={{ marginBottom:20 }}>
-                <SectionLabel icon="📋" color={C.navy}>Full Details</SectionLabel>
-                <div
-                  className="sa-content"
-                  dangerouslySetInnerHTML={{ __html: annotatedHtml }}
-                />
-              </div>
-            )}
+        {/* Age limit */}
+        <AgeLimitSection ageLimit={job.ageLimit} />
 
-            <HumanContentSection humanContent={job.humanContent} />
-            <StructuredFaqSection faq={structuredFaq} />
-          </article>
+        {/* Vacancy table */}
+        <VacancySection vacancyTable={vacancyTable} totalVacancies={job.totalVacancies} />
 
-          {/* ── SIDEBAR ── */}
-          <aside className="sa-sidebar" aria-label="Job summary">
-            <ApplyButton href={job.officialWebsite} />
-            <ImportantDatesCard dates={importantDates} />
-            <AgeLimitCard ageLimit={job.ageLimit} />
-            <QuickStatsCard job={job} hasVacancyTable={vacancyTable.length > 0} />
-            <ImportantLinksCard links={importantLinks} />
+        {/* Eligibility */}
+        <EligibilitySection eligibility={job.eligibility} />
 
-            {/* Sidebar Ad */}
-            <div className="sa-ad-wrap">
-              <AdsenseUnit placement="detail-sidebar" className="w-full" />
-            </div>
-          </aside>
+        {/* Selection process */}
+        <SelectionProcessSection steps={job.selectionProcess} />
 
+        {/* Important Links */}
+        <ImportantLinksSection links={importantLinks} />
+
+        {/* Mid Ad */}
+        <div className="sa-ad-wrap mb-6">
+          <AdsenseUnit placement="detail-inarticle" className="w-full" />
         </div>
 
+        {/* Scraped full content */}
+        {annotatedHtml && (
+          <div className="mb-6">
+            <Divider label="Full Details" />
+            <div className="sa-content" dangerouslySetInnerHTML={{ __html: annotatedHtml }} />
+          </div>
+        )}
+
+        {/* FAQ */}
+        <FaqSection faq={structuredFaq} />
+
+        {/* ★ Start Preparing */}
+        <StartPreparingSection job={job} />
+
+        {/* ★ Recommended Books */}
+        <RecommendedBooksSection job={job} />
+
+        {/* How to Apply + Documents — plain listing */}
+        <DynamicEditorialSection job={job} />
+
+        {/* ★ Human Content Blocks — MOVED TO BOTTOM, plain list style */}
+        <HumanContentSection humanContent={job.humanContent} />
+
+        {/* Bottom Apply button */}
+        <ApplyButton href={job.officialWebsite} />
+
         {/* Bottom Ad */}
-        <div className="sa-ad-wrap" style={{ marginTop:28 }}>
+        <div className="sa-ad-wrap mt-2.5">
           <AdsenseUnit placement="detail-bottom" className="w-full" />
         </div>
       </main>
 
       {/* ══ GLOBAL CSS ══ */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&family=Roboto+Slab:wght@600;700;800&display=swap');
+
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* Root */
         .sa-root { background: ${C.bg}; min-height: 100vh; font-family: ${body}; }
 
         /* Hero */
@@ -1238,16 +1141,16 @@ export default async function JobDetailPage({ params }) {
           background: linear-gradient(160deg, ${C.navyD} 0%, ${C.navy} 60%, #1B3A5E 100%);
           border-bottom: 4px solid ${C.saffron};
         }
-        .sa-hero-inner { max-width: 1140px; margin: 0 auto; padding: 24px 20px 28px; }
+        .sa-inner { max-width: 860px; margin: 0 auto; padding: 24px 20px 28px; }
 
         /* Breadcrumb */
         .sa-breadcrumb {
           display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
           font-family: ${body}; font-size: 11px; color: rgba(255,255,255,0.35);
-          margin-bottom: 16px; list-style: none;
+          margin-bottom: 16px;
         }
         .sa-bc-link { color: rgba(255,255,255,0.4); text-decoration: none; }
-        .sa-bc-link:hover { color: rgba(255,255,255,0.7); }
+        .sa-bc-link:hover { color: rgba(255,255,255,0.75); }
         .sa-bc-curr { color: ${C.gold}; font-weight: 600; }
 
         /* Tags */
@@ -1256,30 +1159,42 @@ export default async function JobDetailPage({ params }) {
           padding: 3px 11px; border-radius: 20px;
           letter-spacing: 0.04em; white-space: nowrap;
         }
-        .sa-tag-gold   { background: rgba(201,149,42,0.2); color: ${C.gold}; border: 1px solid rgba(201,149,42,0.35); }
-        .sa-tag-ghost  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.12); }
-        .sa-tag-green  { background: rgba(26,122,74,0.25); color: #4ADE80; border: 1px solid rgba(74,222,128,0.3); }
-        .sa-tag-red    { background: rgba(192,57,43,0.25); color: #F87171; border: 1px solid rgba(248,113,113,0.3); }
-        .sa-tag-blue   { background: rgba(27,79,138,0.3); color: #93C5FD; border: 1px solid rgba(147,197,253,0.3); }
+        .sa-tag-gold  { background: rgba(201,149,42,0.2);  color: ${C.gold};   border: 1px solid rgba(201,149,42,0.35); }
+        .sa-tag-ghost { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.12); }
+        .sa-tag-green { background: rgba(26,122,74,0.25);  color: #4ADE80;     border: 1px solid rgba(74,222,128,0.3); }
+        .sa-tag-red   { background: rgba(192,57,43,0.25);  color: #F87171;     border: 1px solid rgba(248,113,113,0.3); }
+        .sa-tag-blue  { background: rgba(27,79,138,0.3);   color: #93C5FD;     border: 1px solid rgba(147,197,253,0.3); }
 
         /* Title */
         .sa-title {
           font-family: ${heading};
-          font-size: clamp(20px, 3.5vw, 30px);
+          font-size: clamp(20px, 3.5vw, 28px);
           font-weight: 800; color: #fff;
-          line-height: 1.2; margin-bottom: 10px;
-          letter-spacing: -0.01em;
+          line-height: 1.22; margin-bottom: 10px;
         }
 
-        /* Hero pills */
-        .sa-hero-pills {
+        /* Meta row */
+        .sa-meta-row {
           display: flex; gap: 10px; flex-wrap: wrap;
           padding-top: 18px;
           border-top: 1px solid rgba(255,255,255,0.1);
         }
+        .sa-meta-pill {
+          display: flex; flex-direction: column; gap: 3px;
+          padding: 10px 16px;
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; min-width: 110px; flex: 1;
+        }
+        .sa-meta-pill--accent { border-color: rgba(252,211,77,0.35); background: rgba(252,211,77,0.08); }
+        .sa-meta-pill--green  { border-color: rgba(74,222,128,0.3);  background: rgba(26,122,74,0.15); }
+        .sa-meta-label { font-family: ${body}; font-size: 9.5px; color: rgba(255,255,255,0.4); font-weight: 600; }
+        .sa-meta-val   { font-family: ${body}; font-size: 13px; font-weight: 700; color: #fff; }
+        .sa-meta-pill--accent .sa-meta-val { color: #FCD34D; }
+        .sa-meta-pill--green  .sa-meta-val { color: #6EE7B7; }
 
         /* Body */
-        .sa-body { max-width: 1140px; margin: 0 auto; padding: 24px 20px 56px; }
+        .sa-body { max-width: 860px; margin: 0 auto; padding: 24px 20px 56px; }
 
         /* Back link */
         .sa-back {
@@ -1288,7 +1203,6 @@ export default async function JobDetailPage({ params }) {
           color: ${C.sub}; text-decoration: none; margin-bottom: 20px;
           padding: 6px 14px; border-radius: 6px;
           background: ${C.surface}; border: 1px solid ${C.border};
-          transition: border-color 0.15s;
         }
         .sa-back:hover { border-color: ${C.saffron}; color: ${C.saffron}; }
 
@@ -1298,27 +1212,16 @@ export default async function JobDetailPage({ params }) {
           background: ${C.surface}; padding: 4px; overflow: hidden;
         }
 
-        /* Two-column layout */
-        .sa-layout {
-          display: grid;
-          grid-template-columns: 1fr 300px;
-          gap: 24px;
-          align-items: start;
-        }
-
-        /* Sidebar sticky */
-        .sa-sidebar { position: sticky; top: 20px; }
-
-        /* Human content grid */
-        .human-grid {
+        /* Dates + Fee side by side */
+        .dates-fee-row {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 12px;
+          gap: 16px;
         }
 
-        /* Scraped content styling */
-        .sa-content { font-family: ${body}; font-size: 13.5px; color: #3A3530; line-height: 1.78; }
-        .sa-content h1 { font-family: ${heading}; font-size: 20px; font-weight: 700; color: ${C.navy}; margin: 0 0 14px; line-height: 1.3; }
+        /* Scraped content */
+        .sa-content { font-family: ${body}; font-size: 13.5px; color: #3A3530; line-height: 1.8; }
+        .sa-content h1 { font-family: ${heading}; font-size: 20px; font-weight: 700; color: ${C.navy}; margin: 0 0 14px; }
         .sa-content h2 {
           font-family: ${body}; font-size: 11px; font-weight: 800;
           letter-spacing: 0.16em; text-transform: uppercase; color: ${C.sub};
@@ -1327,8 +1230,8 @@ export default async function JobDetailPage({ params }) {
           border-radius: 0 6px 6px 0;
         }
         .sa-content ul { padding-left: 20px; margin: 10px 0; }
-        .sa-content li { margin-bottom: 6px; color: #3A3530; }
-        .sa-content table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 12.5px; border-radius: 8px; overflow: hidden; border: 1px solid ${C.border}; }
+        .sa-content li { margin-bottom: 6px; }
+        .sa-content table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; border-radius: 8px; overflow: hidden; border: 1px solid ${C.border}; }
         .sa-content table td, .sa-content table th { padding: 9px 13px; border: 1px solid ${C.border}; vertical-align: top; }
         .sa-content table tr:first-child td, .sa-content table thead th { background: ${C.navy}; font-weight: 700; color: #fff; border-color: ${C.navyD}; }
         .sa-content table tr:nth-child(even) td { background: ${C.bg}; }
@@ -1338,34 +1241,15 @@ export default async function JobDetailPage({ params }) {
         details summary::-webkit-details-marker { display: none; }
         details[open] summary span:last-child { transform: rotate(45deg); display: inline-block; }
 
-        /* Animations */
-        @keyframes sa-pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
-
-        /* ── RESPONSIVE ── */
-        @media (max-width: 900px) {
-          .sa-layout {
-            grid-template-columns: 1fr;
-          }
-          .sa-sidebar {
-            position: static;
-            /* On mobile, show sidebar ABOVE article */
-            order: -1;
-          }
-          .sa-main { order: 0; }
-          .human-grid { grid-template-columns: 1fr; }
-        }
-
-        @media (max-width: 600px) {
-          .sa-hero-inner { padding: 18px 14px 22px; }
-          .sa-body { padding: 16px 14px 40px; }
+        /* Responsive */
+        @media (max-width: 640px) {
+          .dates-fee-row { grid-template-columns: 1fr; }
+          .sa-meta-pill  { min-width: calc(50% - 5px); }
+          .sa-inner, .sa-body { padding-left: 14px; padding-right: 14px; }
           .sa-title { font-size: 20px; }
-          .sa-hero-pills { gap: 8px; }
-          .sa-hero-pills > div { min-width: calc(50% - 4px); flex: 1; }
-          .sa-layout { gap: 16px; }
         }
-
         @media (max-width: 400px) {
-          .sa-hero-pills > div { min-width: 100%; }
+          .sa-meta-pill { min-width: 100%; }
           .sa-tag { font-size: 9px; padding: 2px 8px; }
         }
       `}</style>
