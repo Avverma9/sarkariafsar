@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
@@ -13,7 +13,7 @@ function authFetch(path) {
   }).then(r => r.json())
 }
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user, isLoggedIn, loading, logout } = useAuth()
   const router      = useRouter()
   const params      = useSearchParams()
@@ -271,5 +271,17 @@ function EmptyState({ icon, msg }) {
       <div className="text-4xl mb-3">{icon}</div>
       <p className="text-gray-500 text-sm max-w-xs mx-auto">{msg}</p>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
