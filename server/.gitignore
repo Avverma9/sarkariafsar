@@ -6,3 +6,4 @@ git add .gitignore
 git commit -m "ignore notification state files"
 git push
 node_modules/
+uploads/
