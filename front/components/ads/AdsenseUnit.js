@@ -1,24 +1,14 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 
-const RESERVED_HEIGHTS = {
-  'home-below-stats': 260,
-  'listing-infeed': 320,
-  'detail-inarticle': 300,
-}
-const DEFAULT_HEIGHT = 220
-
 export default function AdsenseUnit({ placement, className = '' }) {
   const [mounted, setMounted] = useState(false)
-  const reservedHeight = RESERVED_HEIGHTS[placement] || DEFAULT_HEIGHT
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return <div className={`${className}`} style={{ minHeight: reservedHeight }} aria-hidden="true" />
-  }
+  if (!mounted) return null
 
   const client = process.env.NEXT_PUBLIC_ADSENSE_CLIENT || 'ca-pub-5390089359360512'
   const slot = '7294493703'
@@ -29,12 +19,11 @@ export default function AdsenseUnit({ placement, className = '' }) {
       slot={slot}
       placement={placement}
       className={className}
-      reservedHeight={reservedHeight}
     />
   )
 }
 
-function ClientAd({ client, slot, placement, className, reservedHeight }) {
+function ClientAd({ client, slot, placement, className }) {
   const containerRef = useRef(null)
   const initialized = useRef(false)
 
@@ -67,12 +56,11 @@ function ClientAd({ client, slot, placement, className, reservedHeight }) {
     <div
       ref={containerRef}
       className={`overflow-hidden ${className}`}
-      style={{ minHeight: reservedHeight }}
       data-ad-placement={placement}
     >
       <ins
         className="adsbygoogle"
-        style={{ display: 'block', textAlign: 'center', minHeight: reservedHeight }}
+        style={{ display: 'block', textAlign: 'center' }}
         data-ad-client={client}
         data-ad-slot={slot}
         data-ad-layout="in-article"

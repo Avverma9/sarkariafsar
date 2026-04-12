@@ -13,6 +13,8 @@ router.use('/schemes', require('./schemes'));
 router.use('/search', require('./search'));
 router.use('/stats', require('./stats'));
 router.use('/content-template', require('./contentTemplate'));
+router.use('/resources', require('./resource'));
+router.use('/mock-tests', require('./mockTest'));
 router.use('/ai-crons', require('./aiCrons'));
 router.use('/scrapper', require('./scrapperCron'));
 router.use('/scrapper', require('../scrapper/fetchSection').router);

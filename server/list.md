@@ -1,0 +1,23 @@
+[
+  "Bharat Heavy Electricals Limited",
+  "Bihar Public Service Commission",
+  "Bihar Staff Selection Commission",
+  "Central Selection Board of Constable, Bihar",
+  "Council of Scientific & Industrial Research",
+  "High Court",
+  "Indian Air Force",
+  "Indian Army",
+  "Indian Navy",
+  "Madhya Pradesh Public Service Commission",
+  "National Testing Agency",
+  "National Thermal Power Corporation",
+  "Railway Recruitment Board",
+  "Railway Recruitment Cell",
+  "Rajasthan Public Service Commission",
+  "Rajasthan Staff Selection Board",
+  "Staff Selection Commission",
+  "Union Public Service Commission",
+  "Uttar Pradesh Police Recruitment & Promotion Board",
+  "Uttar Pradesh Public Service Commission",
+  "Uttar Pradesh Subordinate Services Selection Commission"
+]

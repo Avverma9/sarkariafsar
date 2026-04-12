@@ -82,7 +82,21 @@ const SECTION_META = {
 // ── Sub-components ─────────────────────────────────────────────────────────
 
 function SectionBlock({ name, jobs, meta }) {
+  const isLatestGovJobs = name === 'Latest Gov Jobs'
+  const newTagIds = isLatestGovJobs
+    ? new Set(
+        [...jobs]
+          .filter(j => j.isActive && j.applyLastDate)
+          .map(j => ({ id: j._id, ms: new Date(j.applyLastDate) - Date.now() }))
+          .filter(j => j.ms > 0)
+          .sort((a, b) => b.ms - a.ms)
+          .slice(0, 15)
+          .map(j => j.id)
+      )
+    : new Set()
+
   return (
+    <>
     <div style={{
       background: T.white,
       border: `1px solid ${T.rule}`,
@@ -142,15 +156,26 @@ function SectionBlock({ name, jobs, meta }) {
             return (
               <tr key={job._id || i} style={{ borderBottom: `1px solid ${T.rule}` }}>
                 <td style={{ padding: '9px 14px' }}>
-                  <Link href={`/jobs/${job.slug}`} style={{
-                    fontFamily: sans, fontSize: 12.5, fontWeight: 500,
-                    color: meta.accentText, textDecoration: 'none',
-                    display: '-webkit-box', WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                    lineHeight: 1.45,
-                  }} className="hover:underline">
-                    {job.title}
-                  </Link>
+                  <span style={{ display: 'flex', alignItems: 'flex-start', gap: 4 }}>
+                    <Link href={`/jobs/${job.slug}`} style={{
+                      fontFamily: sans, fontSize: 12.5, fontWeight: 500,
+                      color: meta.accentText, textDecoration: 'none',
+                      display: '-webkit-box', WebkitLineClamp: 2,
+                      WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                      lineHeight: 1.45,
+                    }}>
+                      {job.title}
+                    </Link>
+                    {newTagIds.has(job._id) && (
+                      <span className="animate-pulse" style={{
+                        display: 'inline-flex', alignItems: 'center',
+                        fontSize: 9, fontWeight: 800, letterSpacing: '0.1em',
+                        color: '#fff', background: '#dc2626',
+                        padding: '1px 6px', borderRadius: 4,
+                        marginLeft: 4, flexShrink: 0, lineHeight: 1.4,
+                      }}>NEW</span>
+                    )}
+                  </span>
                 </td>
                 <td style={{ padding: '9px 14px', textAlign: 'center', fontFamily: sans, fontSize: 11, color: T.faint, whiteSpace: 'nowrap' }} className="hidden sm:table-cell">
                   {lastDate}
@@ -172,6 +197,7 @@ function SectionBlock({ name, jobs, meta }) {
         </tbody>
       </table>
     </div>
+    </>
   )
 }
 

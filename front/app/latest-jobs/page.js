@@ -42,16 +42,23 @@ async function fetchSection(page = 1, limit = 30) {
   } catch { return { jobs: [], total: 0, totalPages: 1 } }
 }
 
-function JobRow({ job }) {
+function JobRow({ job, isNew = false }) {
   const lastDate = job.applyLastDate
     ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
     : '—'
   return (
     <tr className="hover:bg-gray-50 transition-colors">
       <td className="px-4 py-2.5">
-        <Link href={`/jobs/${job.slug}`} className="text-blue-700 hover:underline font-medium leading-snug line-clamp-2">
-          {job.title}
-        </Link>
+        <span className="flex items-start gap-1.5">
+          <Link href={`/jobs/${job.slug}`} className="text-blue-700 hover:underline font-medium leading-snug line-clamp-2">
+            {job.title}
+          </Link>
+          {isNew && (
+            <span className="animate-pulse flex-shrink-0 inline-flex items-center text-white bg-red-600 font-extrabold rounded" style={{ fontSize: 9, padding: '1px 6px', letterSpacing: '0.1em', lineHeight: 1.4 }}>
+              NEW
+            </span>
+          )}
+        </span>
       </td>
       <td className="px-4 py-2.5 text-center text-xs text-gray-500 hidden sm:table-cell whitespace-nowrap">{lastDate}</td>
       <td className="px-4 py-2.5 text-center">
@@ -91,6 +98,18 @@ export default async function LatestJobsPage({ searchParams }) {
   const params = await searchParams
   const page = Math.max(1, parseInt(params?.page || '1', 10))
   const { jobs, total, totalPages } = await fetchSection(page, 30)
+
+  const newTagIds = page === 1
+    ? new Set(
+        [...jobs]
+          .filter(j => j.isActive && j.applyLastDate)
+          .map(j => ({ id: j._id, ms: new Date(j.applyLastDate) - Date.now() }))
+          .filter(j => j.ms > 0)
+          .sort((a, b) => b.ms - a.ms)
+          .slice(0, 15)
+          .map(j => j.id)
+      )
+    : new Set()
 
   const breadcrumbSchema = {
     '@context': 'https://schema.org',
@@ -139,7 +158,7 @@ export default async function LatestJobsPage({ searchParams }) {
               <tbody className="divide-y divide-gray-50">
                 {jobs.length === 0
                   ? <tr><td colSpan={3} className="py-20 text-center text-gray-400">No jobs found</td></tr>
-                  : jobs.map((job, i) => <JobRow key={job._id || i} job={job} />)
+                  : jobs.map((job, i) => <JobRow key={job._id || i} job={job} isNew={newTagIds.has(job._id)} />)
                 }
               </tbody>
             </table>

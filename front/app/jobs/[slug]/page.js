@@ -62,80 +62,6 @@ export async function generateMetadata({ params }) {
   } catch { return { title: 'Job Details - Sarkari Afsar' } }
 }
 
-// ── Date utilities ──────────────────────────────────────────────────────────
-const MONTH_MAP = {
-  jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11,
-  january:0,february:1,march:2,april:3,may2:4,june:5,july:6,august:7,september:8,october:9,november:10,december:11,
-}
-function parseTextDate(str) {
-  const s = String(str||'').trim()
-  let m = s.match(/^(\d{1,2})(?:st|nd|rd|th)?[\s-]+([A-Za-z]+)[,\s]+(\d{4})/i)
-  if(m){const mo=MONTH_MAP[m[2].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[3],mo,+m[1])}
-  m=s.match(/^([A-Za-z]+)[\s]+([0-9]{1,2})(?:st|nd|rd|th)?[,\s]+(\d{4})/i)
-  if(m){const mo=MONTH_MAP[m[1].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[3],mo,+m[2])}
-  m=s.match(/^(\d{1,2})-(\d{1,2})[\s]+([A-Za-z]+)[,\s]+(\d{4})/i)
-  if(m){const mo=MONTH_MAP[m[3].toLowerCase().slice(0,9)];if(mo!==undefined)return new Date(+m[4],mo,+m[1])}
-  const iso=new Date(s);return isNaN(iso.getTime())?null:iso
-}
-const DATE_LABEL_KEYWORDS=[
-  {re:/fee\s*(?:payment|deposit)|last\s*date\s*for\s*fee|payment\s*last\s*date/i,label:'Fee Last Date'},
-  {re:/application\s*(?:start|begin|open)|apply\s*start\s*date|online\s*apply\s*start/i,label:'Application Start'},
-  {re:/(?:last\s*date|closing\s*date|apply\s*(?:by|before)|end\s*date)/i,label:'Last Date to Apply'},
-  {re:/(?:admit\s*card|hall\s*ticket)/i,label:'Admit Card'},
-  {re:/(?:exam\s*date|written\s*test|cbt|examination\s*date)/i,label:'Exam Date'},
-  {re:/(?:result|merit\s*list)/i,label:'Result Date'},
-  {re:/(?:interview|document\s*verif)/i,label:'Interview'},
-  {re:/(?:notification|advt|advertisement)/i,label:'Notification'},
-  {re:/(?:age\s*limit|age\s*as\s*on|as\s*on\s*date)/i,label:'Age Cutoff Date'},
-  {re:/(?:registration|apply\s*online)/i,label:'Registration'},
-]
-function getDateLabel(text,idx){
-  const win=text.slice(Math.max(0,idx-80),idx);let result=null,lastMatchEnd=-1
-  for(const{re,label}of DATE_LABEL_KEYWORDS){const gr=new RegExp(re.source,'gi');let m2;while((m2=gr.exec(win))!==null){const end=m2.index+m2[0].length;if(end>lastMatchEnd){lastMatchEnd=end;result=label}}}
-  return result
-}
-function extractAllDates(text){
-  const patterns=[
-    /\d{1,2}-\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi,
-    /\d{1,2}(?:st|nd|rd|th)?\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)[,\s]+\d{4}/gi,
-    /(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:st|nd|rd|th)?[,\s]+\d{4}/gi,
-  ]
-  const found=new Map()
-  for(const p of patterns){let m;while((m=p.exec(text))!==null){const raw=m[0].trim();if(!found.has(raw)){const d=parseTextDate(raw);if(d){const label=getDateLabel(text,m.index);found.set(raw,{text:raw,date:d,idx:m.index,label})}}}}
-  return[...found.values()]
-}
-function classifyDates(html){
-  const today=new Date();today.setHours(0,0,0,0)
-  const minDate=new Date(today.getFullYear()-1,0,1);const maxDate=new Date(today.getFullYear()+2,11,31)
-  const text=(html||'').replace(/<[^>]+>/g,' ');const all=extractAllDates(text);const expired=[],upcoming=[]
-  for(const d of all){if(d.date<minDate||d.date>maxDate)continue;if(d.date<today)expired.push(d);else upcoming.push(d)}
-  return{expired:expired.slice(0,8),upcoming:upcoming.slice(0,6)}
-}
-function detectExtensions(expired,upcoming){
-  const extensionMap=new Map()
-  for(const exp of expired){if(!exp.label)continue;const matches=upcoming.filter(up=>{if(up.label!==exp.label)return false;if(up.date<=exp.date)return false;return(up.date-exp.date)/(1000*60*60*24)<=60}).sort((a,b)=>a.date-b.date);if(matches.length>0)extensionMap.set(exp.text,matches[0])}
-  return extensionMap
-}
-const NO_BADGE_LABELS=new Set(['Application Start','Date of Birth','Age Cutoff Date','Notification'])
-function injectDateBadges(html,expired,upcoming,jobMeta={}){
-  if(!html)return html
-  const{isActive,updatedAt}=jobMeta;const today=new Date();today.setHours(0,0,0,0)
-  const postUpdatedAt=updatedAt?new Date(updatedAt):null;const updatedDaysAgo=postUpdatedAt&&!isNaN(postUpdatedAt)?Math.round((today-postUpdatedAt)/(1000*60*60*24)):Infinity
-  const isRecentlyUpdated=updatedDaysAgo<=60;const formattedUpdatedAt=postUpdatedAt&&!isNaN(postUpdatedAt)?postUpdatedAt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}):''
-  const extensionMap=detectExtensions(expired,upcoming);const extensionTargetTexts=new Set([...extensionMap.values()].map(e=>e.text))
-  const ACTIVE_BADGE=`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#16a34a;background:#f0fdf4;border:1px solid #86efac;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Active</span>`
-  const UPDATED_BADGE=`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #93c5fd;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Updated: ${formattedUpdatedAt}</span>`
-  const extendedBadge=(newDateText)=>`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #c4b5fd;padding:1px 8px;border-radius:9999px;margin-left:5px;vertical-align:middle;white-space:nowrap;line-height:1.4;">Extended to ${newDateText}</span>`
-  const badgeMap=new Map()
-  for(const item of expired){if(NO_BADGE_LABELS.has(item.label))continue;const ext=extensionMap.get(item.text);if(ext)badgeMap.set(item.text,extendedBadge(ext.text));else if(isActive)badgeMap.set(item.text,ACTIVE_BADGE);else if(isRecentlyUpdated&&formattedUpdatedAt)badgeMap.set(item.text,UPDATED_BADGE)}
-  for(const item of upcoming){if(extensionTargetTexts.has(item.text))continue;if(NO_BADGE_LABELS.has(item.label))continue;if(!badgeMap.has(item.text))badgeMap.set(item.text,ACTIVE_BADGE)}
-  if(!badgeMap.size)return html
-  const sortedTexts=[...badgeMap.keys()].sort((a,b)=>b.length-a.length)
-  const escapedParts=sortedTexts.map(t=>t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'))
-  const combinedRe=new RegExp(`(${escapedParts.join('|')})(?![^<>]*>)`,'g')
-  return html.replace(combinedRe,(match)=>match+(badgeMap.get(match)??''))
-}
-
 // ── Design Tokens ────────────────────────────────────────────────────────────
 const C = {
   bg:       '#F5F3EE',
@@ -159,6 +85,7 @@ const C = {
   borderD:  '#C8C2B6',
   divider:  '#EDEAE4',
 }
+
 // ── Font: Roboto (user-specified) ─────────────────────────────────────────────
 const heading = "'Roboto Slab', Georgia, serif"
 const body    = "'Roboto', 'Segoe UI', sans-serif"
@@ -275,9 +202,10 @@ function DatesFeeRow({ dates, fee }) {
           <table className="w-full" style={{ borderCollapse: 'collapse' }}>
             <tbody>
               {Object.entries(dates).filter(([, v]) => v).map(([label, value], i) => {
-                const parsed    = parseTextDate(String(value))
-                const isUpcoming = parsed && parsed >= today
-                const isExpired  = parsed && parsed < today
+                const parsed    = new Date(String(value))
+                const validDate  = !isNaN(parsed.getTime())
+                const isUpcoming = validDate && parsed >= today
+                const isExpired  = validDate && parsed < today
                 return (
                   <tr key={label} style={{ background: i % 2 === 0 ? C.surface : C.bg }}>
                     <td className="font-semibold align-middle" style={{ fontFamily: body, fontSize: 11.5, color: C.sub, padding: '10px 18px', borderBottom: `1px solid ${C.divider}`, width: '52%' }}>
@@ -286,7 +214,7 @@ function DatesFeeRow({ dates, fee }) {
                     <td className="align-middle font-bold" style={{ fontFamily: body, fontSize: 12, color: isUpcoming ? C.green : isExpired ? C.red : C.ink, padding: '10px 18px', borderBottom: `1px solid ${C.divider}` }}>
                       <span className="flex items-center gap-1.5">
                         {isUpcoming && <span className="w-2 h-2 rounded-full flex-shrink-0 inline-block" style={{ background: C.green }} />}
-                        <time dateTime={parsed ? parsed.toISOString().slice(0, 10) : undefined}>{String(value)}</time>
+                        <time dateTime={validDate ? parsed.toISOString().slice(0, 10) : undefined}>{String(value)}</time>
                       </span>
                     </td>
                   </tr>
@@ -757,7 +685,7 @@ function StartPreparingSection({ job }) {
       { title: 'Language Sections', desc: 'Both L1 and L2 are tested on grammar, comprehension, and pedagogy — do not neglect either.', icon: '🗣️' },
       { title: 'Previous Year Papers', desc: 'CTET patterns are consistent — solving 2019–2024 papers is a must for exam readiness.', icon: '📝' },
     ]
-  } else if (/ssc|staff\s*selection|cgl|chsl|mts|cpo/.test(combined)) {
+  } else if (/ssc|cgl|chsl|mts|cpo/.test(combined)) {
     prepTips = [
       { title: 'Tier I: Reasoning & GA', desc: 'Reasoning and General Awareness are the fastest to score — master these in the Tier I stage.', icon: '🧠' },
       { title: 'Quantitative Aptitude', desc: 'Arithmetic (Percentage, SI/CI, Profit-Loss, Time-Work) is tested at every level.', icon: '🔢' },
@@ -896,28 +824,6 @@ function RecommendedBooksSection({ job }) {
   )
 }
 
-// ── Strip duplicate scraped sections ─────────────────────────────────────────
-function stripDuplicateSections(html, patterns) {
-  if (!html || !patterns.length) return html
-  const headingRe = /<(h[1-6])(?:\s[^>]*)?>[\s\S]*?<\/h[1-6]>/gi
-  const headings = []
-  let hm
-  while ((hm = headingRe.exec(html)) !== null) {
-    headings.push({ start: hm.index, end: hm.index + hm[0].length, level: parseInt(hm[0][2]), text: hm[0].replace(/<[^>]+>/g, '').trim() })
-  }
-  const toRemove = []
-  for (let i = 0; i < headings.length; i++) {
-    const h = headings[i]
-    if (!patterns.some(p => p.test(h.text))) continue
-    let end = html.length
-    for (let j = i + 1; j < headings.length; j++) { if (headings[j].level <= h.level) { end = headings[j].start; break } }
-    toRemove.push([h.start, end])
-  }
-  let result = html
-  for (let i = toRemove.length - 1; i >= 0; i--) { result = result.slice(0, toRemove[i][0]) + result.slice(toRemove[i][1]) }
-  return result
-}
-
 // ── MAIN PAGE ─────────────────────────────────────────────────────────────────
 export default async function JobDetailPage({ params }) {
   const { slug } = await params
@@ -929,34 +835,10 @@ export default async function JobDetailPage({ params }) {
   } catch {}
   if (!job) return notFound()
 
-  const contentHtml    = job.scrapedContent?.contentHtml || job.content || ''
   const importantDates = job.scrapedContent?.contentJson?.importantDates || job.importantDates || null
   const structuredFaq  = job.structured?.faq || []
   const vacancyTable   = job.structured?.vacancyTable || []
   const importantLinks = job.structured?.importantLinks || []
-
-  // Strip duplicate sections — including human content block types to avoid duplication
-  const humanBlockTypes = (job.humanContent?.blocks || []).map(b => b.type)
-  const humanDupePatterns = []
-  if (humanBlockTypes.includes('how-to'))           humanDupePatterns.push(/how\s*to\s*apply/i)
-  if (humanBlockTypes.includes('documents'))        humanDupePatterns.push(/documents?\s*required/i)
-  if (humanBlockTypes.includes('vacancy-insight'))  humanDupePatterns.push(/vacancy\s*(?:insight|detail)/i)
-  if (humanBlockTypes.includes('who-should-apply')) humanDupePatterns.push(/who\s*should\s*apply/i)
-
-  const stripPatterns = [
-    /short\s+details/i,
-    /pay\s+scale/i,
-    ...(importantDates && Object.keys(importantDates).length ? [/important\s+dates?/i] : []),
-    ...(job.applicationFee ? [/application\s+fee/i, /fee\s+(?:details?|payment)/i] : []),
-    ...((job.ageLimit?.min || job.ageLimit?.max || job.ageLimit?.byCategory?.length) ? [/age\s+limit/i, /age\s+relaxation/i] : []),
-    ...(vacancyTable.length > 0 ? [/vacancy\s+(?:details?|break)/i, /post[\s-]*wise\s+vacancy/i] : []),
-    ...(job.eligibility?.length ? [/educational\s+qualif/i] : []),
-    ...(job.selectionProcess?.length ? [/selection\s+process/i] : []),
-    ...humanDupePatterns,
-  ]
-  const cleanedHtml  = stripDuplicateSections(contentHtml, stripPatterns)
-  const { expired, upcoming } = classifyDates(cleanedHtml)
-  const annotatedHtml = injectDateBadges(cleanedHtml, expired, upcoming, { isActive: job.isActive, updatedAt: job.updatedAt })
 
   const applyDate  = job.applyLastDate
     ? new Date(job.applyLastDate).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })
@@ -1095,15 +977,6 @@ export default async function JobDetailPage({ params }) {
         <div className="sa-ad-wrap mb-6">
           <AdsenseUnit placement="detail-inarticle" className="w-full" />
         </div>
-
-        {/* Scraped full content */}
-        {annotatedHtml && (
-          <div className="mb-6">
-            <Divider label="Full Details" />
-            <div className="sa-content" dangerouslySetInnerHTML={{ __html: annotatedHtml }} />
-          </div>
-        )}
-
         {/* FAQ */}
         <FaqSection faq={structuredFaq} />
 
@@ -1206,11 +1079,8 @@ export default async function JobDetailPage({ params }) {
         }
         .sa-back:hover { border-color: ${C.saffron}; color: ${C.saffron}; }
 
-        /* Ad wrapper */
-        .sa-ad-wrap {
-          border: 1px solid ${C.border}; border-radius: 8px;
-          background: ${C.surface}; padding: 4px; overflow: hidden;
-        }
+        /* Ad wrapper — no visible border/bg; AdsenseUnit reserves height internally for CLS */
+        .sa-ad-wrap { overflow: hidden; }
 
         /* Dates + Fee side by side */
         .dates-fee-row {
@@ -1218,24 +1088,6 @@ export default async function JobDetailPage({ params }) {
           grid-template-columns: 1fr 1fr;
           gap: 16px;
         }
-
-        /* Scraped content */
-        .sa-content { font-family: ${body}; font-size: 13.5px; color: #3A3530; line-height: 1.8; }
-        .sa-content h1 { font-family: ${heading}; font-size: 20px; font-weight: 700; color: ${C.navy}; margin: 0 0 14px; }
-        .sa-content h2 {
-          font-family: ${body}; font-size: 11px; font-weight: 800;
-          letter-spacing: 0.16em; text-transform: uppercase; color: ${C.sub};
-          margin: 22px 0 10px; padding: 8px 14px;
-          background: ${C.bg}; border-left: 4px solid ${C.saffron};
-          border-radius: 0 6px 6px 0;
-        }
-        .sa-content ul { padding-left: 20px; margin: 10px 0; }
-        .sa-content li { margin-bottom: 6px; }
-        .sa-content table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; border-radius: 8px; overflow: hidden; border: 1px solid ${C.border}; }
-        .sa-content table td, .sa-content table th { padding: 9px 13px; border: 1px solid ${C.border}; vertical-align: top; }
-        .sa-content table tr:first-child td, .sa-content table thead th { background: ${C.navy}; font-weight: 700; color: #fff; border-color: ${C.navyD}; }
-        .sa-content table tr:nth-child(even) td { background: ${C.bg}; }
-        .sa-content p { margin: 9px 0; }
 
         /* FAQ */
         details summary::-webkit-details-marker { display: none; }
