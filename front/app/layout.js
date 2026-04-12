@@ -1,6 +1,8 @@
 import './globals.css'
 import Link from 'next/link'
 import Script from 'next/script'
+import Providers from '@/components/Providers'
+import HeaderUserNav from '@/components/HeaderUserNav'
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
 const GA4_ID = process.env.NEXT_PUBLIC_GA4_ID || ''
@@ -113,7 +115,11 @@ function Header() {
               Search
             </Link>
           </nav>
+          <div className="hidden md:flex items-center">
+            <HeaderUserNav />
+          </div>
           <div className="md:hidden flex items-center gap-3">
+            <HeaderUserNav compact />
             <Link href="/search" className="p-2" aria-label="Search">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -254,11 +260,13 @@ export default function RootLayout({ children }) {
             </Script>
           </>
         )}
-        <Header />
-        <main className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <Providers>
+          <Header />
+          <main className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </Providers>
       </body>
     </html>
   )

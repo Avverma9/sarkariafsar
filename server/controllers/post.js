@@ -2,6 +2,24 @@ const mongoose = require("mongoose");
 const JobPost = require("../models/post");
 const { postData } = require("../bulk-post");
 const { applyNoIndexFlag } = require("../utils/thinContentCheck");
+const { notifyPostSubscribers } = require("./notification");
+
+/**
+ * Detect meaningful changes between old and new post for notification message
+ */
+function detectChangeDescription(oldDoc, newData) {
+  const changes = [];
+  const oldApply = oldDoc?.applyLastDate ? new Date(oldDoc.applyLastDate).toDateString() : null;
+  const newApply = newData?.applyLastDate ? new Date(newData.applyLastDate).toDateString() : null;
+  if (newApply && oldApply !== newApply) changes.push(`Apply Last Date बदलकर ${newApply} हो गई`);
+  if (newData?.totalVacancies !== undefined && oldDoc?.totalVacancies !== newData.totalVacancies)
+    changes.push(`Total Vacancies: ${newData.totalVacancies}`);
+  if (newData?.isActive !== undefined && oldDoc?.isActive !== newData.isActive)
+    changes.push(newData.isActive ? 'Post अब Active है' : 'Post बंद हो गई');
+  if (newData?.status !== undefined && oldDoc?.status !== newData.status)
+    changes.push(`Status: ${newData.status}`);
+  return changes.length ? changes.join(' | ') : 'Post में नया Update आया है';
+}
 
 
 
@@ -224,6 +242,8 @@ exports.updateJobPost = async (req,res) => {
     if (!isValidObjectId(id)) return res.status(400).json({ success:false,message:"Invalid ID"});
     const err = validateUpdatePayload(data); if (err) return res.status(400).json({ success:false,message:err});
     const sanitized = sanitizeJobPostData(data,{isUpdate:true});
+    // Fetch old doc for change detection
+    const oldDoc = await JobPost.findById(id).select('applyLastDate totalVacancies isActive status').lean();
     const updated = await JobPost.findByIdAndUpdate(id, sanitized, { new:true, runValidators:true });
     if (!updated) return res.status(404).json({ success:false,message:"Not found"});
     // re-compute noIndex after update
@@ -234,6 +254,9 @@ exports.updateJobPost = async (req,res) => {
       await updated.save();
     }
     res.status(200).json({ success:true,message:"Updated",data:updated });
+    // Fire-and-forget: notify subscribers asynchronously
+    const changeDesc = detectChangeDescription(oldDoc, data);
+    notifyPostSubscribers(updated, changeDesc).catch(e => console.error('[Notify] auto error', e));
   } catch(e){return handleMongooseError(e,res,"Update error:");}
 };
 

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import AdsenseUnit from '@/components/ads/AdsenseUnitClient'
+import SaveNotifyButtons from '@/components/SaveNotifyButtons'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://sarkariafsar.com'
@@ -744,7 +745,70 @@ function StartPreparingSection({ job }) {
 }
 
 // ── RECOMMENDED BOOKS ─────────────────────────────────────────────────────────
-function RecommendedBooksSection({ job }) {
+function RecommendedBooksSection({ job, resources }) {
+  // Use dynamic resources if available, otherwise fall back to static books
+  const allResources = resources?.postResources || []
+  const authorityResources = resources?.authorityResources || []
+  const mergedResources = [...allResources, ...authorityResources].filter(r => r.isActive !== false)
+  
+  // If dynamic resources exist, use them
+  if (mergedResources.length > 0) {
+    return (
+      <div className="mb-6">
+        <SectionHeader icon="�" title="Study Materials & Resources" accent={C.gold} />
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+          {mergedResources.map((resource, i) => {
+            // Map resource type to icon and color
+            const typeConfig = {
+              book: { icon: '�', color: C.blue },
+              pyq: { icon: '�', color: C.green },
+              notes: { icon: '�', color: C.saffron },
+              syllabus: { icon: '📋', color: C.gold },
+              mock_test_ref: { icon: '🎯', color: C.navy },
+              video: { icon: '🎬', color: '#9333EA' },
+              other: { icon: '�', color: C.sub },
+            }
+            const cfg = typeConfig[resource.type] || typeConfig.other
+            
+            return (
+              <a key={i} href={resource.accessType === 'external' ? resource.url : resource.fileUrl} 
+                 target="_blank" rel="noopener noreferrer"
+                 className="flex gap-3 items-start rounded-xl p-3.5 relative overflow-hidden no-underline"
+                 style={{ background: C.surface, border: `1px solid ${C.border}` }}>
+                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: cfg.color }} />
+                <div className="w-11 h-14 rounded-md flex-shrink-0 flex items-center justify-center text-2xl" 
+                     style={{ background: cfg.color + '18', boxShadow: `inset 0 0 0 1px ${cfg.color}22` }}>
+                  {cfg.icon}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-extrabold uppercase tracking-widest mb-1" 
+                       style={{ fontFamily: body, fontSize: 9, color: cfg.color, letterSpacing: '0.12em' }}>
+                    {resource.type}
+                  </div>
+                  <div className="font-bold leading-snug mb-1.5" 
+                       style={{ fontFamily: body, fontSize: 13, color: C.ink }}>
+                    {resource.title}
+                  </div>
+                  {resource.description && (
+                    <div className="font-semibold" 
+                         style={{ fontFamily: body, fontSize: 11.5, color: C.muted }}>
+                      {resource.description}
+                    </div>
+                  )}
+                </div>
+              </a>
+            )
+          })}
+        </div>
+        <div className="mt-3 px-4 py-2.5 rounded-lg" 
+             style={{ background: C.goldL, border: `1px solid #DDB84A`, fontFamily: body, fontSize: 11.5, color: '#7A4F00' }}>
+          📌 <strong>Note:</strong> Resources are curated for this exam. Click to view/download.
+        </div>
+      </div>
+    )
+  }
+
+  // Fallback to static books if no dynamic resources
   const combined = `${job.category || ''} ${job.sectionName || ''} ${job.title || ''}`.toLowerCase()
   let books
   if (/railway|rrb|ntpc|group[\s-]*d/.test(combined)) {
@@ -834,6 +898,14 @@ export default async function JobDetailPage({ params }) {
     job = data?.data
   } catch {}
   if (!job) return notFound()
+
+  // Fetch dynamic resources for this job post
+  let resources = null
+  try {
+    const res = await fetch(`${API_BASE}/resource/by-post/${job._id}`, { cache: 'no-store' })
+    const data = await res.json()
+    resources = data?.data || null
+  } catch {}
 
   const importantDates = job.scrapedContent?.contentJson?.importantDates || job.importantDates || null
   const structuredFaq  = job.structured?.faq || []
@@ -952,6 +1024,11 @@ export default async function JobDetailPage({ params }) {
         {/* Apply button — full width at top */}
         <ApplyButton href={job.officialWebsite} />
 
+        {/* Save + Notify buttons — only for Latest Gov Jobs */}
+        {job.sectionName === 'Latest Gov Jobs' && (
+          <SaveNotifyButtons postId={String(job._id)} postTitle={job.title} />
+        )}
+
         {/* Overview strip */}
         <OverviewStrip job={job} />
 
@@ -984,7 +1061,7 @@ export default async function JobDetailPage({ params }) {
         <StartPreparingSection job={job} />
 
         {/* ★ Recommended Books */}
-        <RecommendedBooksSection job={job} />
+        <RecommendedBooksSection job={job} resources={resources} />
 
         {/* How to Apply + Documents — plain listing */}
         <DynamicEditorialSection job={job} />

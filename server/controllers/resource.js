@@ -30,12 +30,12 @@ exports.addResource = async (req, res) => {
       body.authorityKey = normalizeAuthorityKey(body.conductingAuthorityFull);
     }
 
-    // Handle uploaded_file via multer (fileUrl set by route middleware)
-    if (body.accessType === 'uploaded_file' && req.file) {
-      body.fileUrl = `/uploads/resources/${req.file.filename}`;
-      body.fileName = req.file.originalname;
-      body.fileSizeBytes = req.file.size;
-      body.mimeType = req.file.mimetype;
+    // Handle uploaded_file via R2 middleware (req.uploadedFile set by uploadMiddleware)
+    if (body.accessType === 'uploaded_file' && req.uploadedFile) {
+      body.fileUrl = req.uploadedFile.url;
+      body.fileName = req.uploadedFile.originalName;
+      body.fileSizeBytes = req.uploadedFile.size;
+      body.mimeType = req.uploadedFile.mimeType;
     }
 
     const resource = await Resource.create(body);

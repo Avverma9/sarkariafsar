@@ -4,7 +4,9 @@ const nextConfig = {
     formats: ['image/webp', 'image/avif'],
   },
   serverExternalPackages: ['mongodb'],
-  turbopack: {},
+  turbopack: {
+    root: __dirname,
+  },
   onDemandEntries: {
     maxInactiveAge: 10000,
     pagesBufferLength: 2,
@@ -91,7 +93,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https:",
-              "connect-src 'self' https://sarkariafsar.com https://www.google-analytics.com",
+              "connect-src 'self' https://sarkariafsar.com http://localhost:5000 https://www.google-analytics.com",
               "frame-src 'self' https://googleads.g.doubleclick.net https://tpc.googlesyndication.com",
               "frame-ancestors 'self'",
             ].join('; '),
@@ -115,14 +117,7 @@ const nextConfig = {
           { key: 'Expires', value: '0' },
         ],
       },
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate' },
-          { key: 'Pragma', value: 'no-cache' },
-          { key: 'Expires', value: '0' },
-        ],
-      },
+      // Note: /_next/static/(.*) headers removed — Next.js manages these automatically in dev
       // ── Fonts ────────────────────────────────────────────────────────────
       {
         source: '/(.*)\\.(woff|woff2|ttf|otf)',
