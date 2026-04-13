@@ -103,9 +103,17 @@ function Header() {
             <span className="inline-flex items-center justify-center w-8 h-8 rounded-md bg-[#1d4ed8] text-white text-sm font-bold tracking-wide">SA</span>
             <span>Sarkari<span className="text-[#f59e0b]">Afsar</span></span>
           </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+          <nav className="hidden md:flex items-center gap-5 text-sm font-medium">
             <Link href="/jobs" className="hover:text-[#f59e0b] transition-colors">Jobs</Link>
             <Link href="/yojana" className="hover:text-[#f59e0b] transition-colors">Yojana</Link>
+            <Link href="/books" className="hover:text-[#f59e0b] transition-colors flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+              Books
+            </Link>
+            <Link href="/mock-tests" className="hover:text-[#f59e0b] transition-colors flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
+              Mock Tests
+            </Link>
             <Link href="/blog" className="hover:text-[#f59e0b] transition-colors">Blog</Link>
             <Link href="/about" className="hover:text-[#f59e0b] transition-colors">About</Link>
             <Link href="/search" className="hover:text-[#f59e0b] transition-colors flex items-center gap-1">
@@ -134,6 +142,8 @@ function Header() {
               <div className="absolute right-0 mt-2 w-48 bg-[#1e3a5f] rounded-lg shadow-xl border border-blue-700 py-2 z-50">
                 <Link href="/jobs" className="block px-4 py-2 hover:bg-blue-800 text-sm">Jobs</Link>
                 <Link href="/yojana" className="block px-4 py-2 hover:bg-blue-800 text-sm">Yojana</Link>
+                <Link href="/books" className="block px-4 py-2 hover:bg-blue-800 text-sm">📚 Books</Link>
+                <Link href="/mock-tests" className="block px-4 py-2 hover:bg-blue-800 text-sm">📝 Mock Tests</Link>
                 <Link href="/blog" className="block px-4 py-2 hover:bg-blue-800 text-sm">Blog</Link>
                 <Link href="/about" className="block px-4 py-2 hover:bg-blue-800 text-sm">About</Link>
                 <Link href="/contact" className="block px-4 py-2 hover:bg-blue-800 text-sm">Contact</Link>
