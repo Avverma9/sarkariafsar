@@ -1,5 +1,5 @@
 const nextConfig = {
-  output: 'standalone',
+  output: process.env.VERCEL ? undefined : 'standalone',
   images: {
     formats: ['image/webp', 'image/avif'],
   },
