@@ -24,6 +24,15 @@ jobs:
             cd server
             npm install
 
+            cd front 
+            npm install 
+            npm run build
+
+            cd panel 
+            npm install
+            npm run build
+    
+
             # Write server .env from GitHub secrets
             {
               echo "SCRAPPER_PORT=5000"
