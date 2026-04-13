@@ -24,10 +24,9 @@ const normalizeUrl = (value, fallback) => {
 // Detect environment for proper URL handling
 const isDevelopment = process.env.NODE_ENV === 'development' || CASHFREE_ENV === 'sandbox';
 
-// For localhost development, use production domain (already whitelisted in Cashfree)
-const FRONTEND_URL = 'https://sarkariafsar.com';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sarkariafsar.com';
 
-const SERVER_URL = normalizeUrl(process.env.SERVER_URL, 'https://sarkariafsar.com');
+const SERVER_URL = normalizeUrl(process.env.SERVER_URL, 'https://api.sarkariafsar.com');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
