@@ -8,7 +8,7 @@ const authUser = require('../middleware/authUser');
 
 // Create resource (with optional file upload to R2)
 // Supports: PDF, images, audio, video (max 100MB for video, 20MB for others)
-router.post('/', ...uploadMiddleware('file', 'resources', { 
+router.post('/', ...uploadMiddleware('file', 'resources', {
   maxSizeMB: 100, // 100MB for video support
   allowedTypes: [
     // Documents
@@ -39,6 +39,9 @@ router.get('/by-post/:postId', ctrl.getResourcesByPost);
 
 // Fetch authority-level resources by authorityKey or conductingAuthorityFull
 router.get('/by-authority', ctrl.getResourcesByAuthority);
+
+// Get sample PDF (first N pages) — public, no auth required
+router.get('/:id/sample', ctrl.getSample);
 
 // Get full resource (with fileUrl/url) — auth required, checks purchase for paid items
 router.get('/:id/access', authUser, ctrl.getResourceAccess);

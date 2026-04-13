@@ -44,11 +44,10 @@ const jobSectionSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-jobSectionSchema.pre('save', function ensureCanonicalUrl(next) {
+jobSectionSchema.pre('save', function ensureCanonicalUrl() {
   if (this.name && !this.canonicalUrl) {
     this.canonicalUrl = toCanonicalUrl(this.name);
   }
-  next();
 });
 
 const JobSection = mongoose.models.JobSection || mongoose.model('JobSection', jobSectionSchema);

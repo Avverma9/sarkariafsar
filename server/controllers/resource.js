@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { PDFDocument } = require('pdf-lib');
 const Resource = require('../models/resource');
 const JobPost = require('../models/post');
 
@@ -176,6 +177,55 @@ exports.getResourceAccess = async (req, res) => {
     return res.status(200).json({ success: true, data: resource });
   } catch (err) {
     return handleError(res, err, 'getResourceAccess:');
+  }
+};
+
+// ── GET /resources/:id/sample — public, returns first N pages of PDF ─────────
+exports.getSample = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
+
+    const resource = await Resource.findById(id).lean();
+    if (!resource || !resource.isActive) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
+    }
+
+    const pdfUrl = resource.fileUrl;
+    if (!pdfUrl) {
+      return res.status(400).json({ success: false, message: 'No PDF file for this resource' });
+    }
+
+    const samplePages = resource.samplePages ?? 5;
+    if (samplePages <= 0) {
+      return res.status(403).json({ success: false, message: 'Sample preview not available for this resource' });
+    }
+
+    const resp = await fetch(pdfUrl);
+    if (!resp.ok) {
+      return res.status(502).json({ success: false, message: 'Could not fetch PDF from storage' });
+    }
+
+    const fullPdfBytes = Buffer.from(await resp.arrayBuffer());
+    const fullPdf = await PDFDocument.load(fullPdfBytes);
+    const totalPages = fullPdf.getPageCount();
+    const pagesToCopy = Math.min(samplePages, totalPages);
+
+    const samplePdf = await PDFDocument.create();
+    const copiedPages = await samplePdf.copyPages(fullPdf, Array.from({ length: pagesToCopy }, (_, i) => i));
+    copiedPages.forEach(p => samplePdf.addPage(p));
+
+    const sampleBytes = await samplePdf.save();
+
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="sample-${resource.title.replace(/[^a-zA-Z0-9]/g, '_')}.pdf"`,
+      'Content-Length': sampleBytes.length,
+      'Cache-Control': 'public, max-age=3600',
+    });
+    return res.send(Buffer.from(sampleBytes));
+  } catch (err) {
+    return handleError(res, err, 'getSample:');
   }
 };
 

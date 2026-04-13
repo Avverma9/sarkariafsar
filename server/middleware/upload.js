@@ -130,14 +130,14 @@ function uploadMiddleware(fieldName = 'file', folder = 'uploads', opts = {}) {
   const upload = buildMulter(opts)
 
   return [
-    // Step 1 — parse multipart
+    // Step 1 — parse multipart with error handling
     (req, res, next) => {
       upload.single(fieldName)(req, res, (err) => {
         if (!err) return next()
-        const status = err.code === 'UNSUPPORTED_TYPE' ? 415
-          : err.code === 'LIMIT_FILE_SIZE'             ? 413
+        const status = err.code === 'LIMIT_FILE_SIZE' ? 413
+          : err.code === 'UNSUPPORTED_TYPE' ? 415
           : 400
-        res.status(status).json({ error: err.message })
+        return res.status(status).json({ error: err.message })
       })
     },
 

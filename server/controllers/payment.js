@@ -1,21 +1,31 @@
 const mongoose = require('mongoose');
-const { Cashfree } = require('cashfree-pg');
+const { Cashfree, CFEnvironment } = require('cashfree-pg');
 const Order = require('../models/order');
 const User = require('../models/user');
 const Resource = require('../models/resource');
 const MockTest = require('../models/mockTest');
 
-// ── Cashfree init ─────────────────────────────────────────────────────────────
-Cashfree.XClientId = process.env.CASHFREE_APP_ID;
-Cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-Cashfree.XEnvironment =
-  process.env.CASHFREE_ENV === 'production'
-    ? Cashfree.Environment.PRODUCTION
-    : Cashfree.Environment.SANDBOX;
+// ── Cashfree init (v5.1.0 API) ─────────────────────────────────────────────────────
+const cashfree = new Cashfree();
+cashfree.XClientId = process.env.CASHFREE_APP_ID;
+cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
+cashfree.XEnvironment = (process.env.CASHFREE_ENV || '').toLowerCase() === 'production'
+  ? CFEnvironment.PRODUCTION
+  : CFEnvironment.SANDBOX;
 
-const CF_API_VERSION = '2023-08-01';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sarkariafsar.com';
-const SERVER_URL   = process.env.SERVER_URL   || 'https://sarkariafsar.com';
+const normalizeUrl = (value, fallback) => {
+  const url = (value || fallback || '').trim().replace(/\/$/, '');
+  return url || fallback;
+};
+
+const configuredFrontendUrl = normalizeUrl(
+  process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL,
+  'https://sarkariafsar.com'
+);
+const FRONTEND_URL = configuredFrontendUrl.startsWith('https://')
+  ? configuredFrontendUrl
+  : 'https://sarkariafsar.com';
+const SERVER_URL = normalizeUrl(process.env.SERVER_URL, 'https://sarkariafsar.com');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
 
@@ -35,6 +45,36 @@ const grantAccess = async (order) => {
       },
     },
   });
+};
+
+const syncOrderWithCashfree = async (order) => {
+  if (!order) return { status: 'not_found', order: null };
+
+  if (order.status === 'paid') {
+    return { status: 'paid', order };
+  }
+
+  const cfResp = await cashfree.PGFetchOrder(order.cfOrderId);
+  const cfStatus = cfResp.data?.order_status;
+
+  if (cfStatus === 'PAID') {
+    const paymentsResp = await cashfree.PGOrderFetchPayments(order.cfOrderId);
+    const successPayment = (paymentsResp.data || []).find((p) => p.payment_status === 'SUCCESS');
+
+    order.status = 'paid';
+    order.cfPaymentId = successPayment?.cf_payment_id ? String(successPayment.cf_payment_id) : null;
+    order.paidAt = order.paidAt || new Date();
+    await order.save();
+    await grantAccess(order);
+
+    return { status: 'paid', order };
+  }
+
+  const statusMap = { ACTIVE: 'pending', EXPIRED: 'expired', TERMINATED: 'failed' };
+  return {
+    status: statusMap[cfStatus] || cfStatus?.toLowerCase() || 'pending',
+    order,
+  };
 };
 
 // ── POST /payment/create-order ────────────────────────────────────────────────
@@ -72,13 +112,13 @@ exports.createOrder = async (req, res) => {
     const cfOrderId = `SA_${Date.now()}_${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
     const cfRequest = {
-      order_id:       cfOrderId,
-      order_amount:   amount,
+      order_id: cfOrderId,
+      order_amount: amount,
       order_currency: 'INR',
       customer_details: {
-        customer_id:    String(user._id),
+        customer_id: String(user._id),
         customer_email: user.email,
-        customer_name:  user.name || 'User',
+        customer_name: user.name || 'User',
         customer_phone: user.phone || '9999999999',
       },
       order_meta: {
@@ -88,7 +128,7 @@ exports.createOrder = async (req, res) => {
       order_note: `${itemType} — ${item.title}`,
     };
 
-    const cfResp = await Cashfree.PGCreateOrder(CF_API_VERSION, cfRequest);
+    const cfResp = await cashfree.PGCreateOrder(cfRequest);
     const { payment_session_id } = cfResp.data;
 
     const order = await Order.create({
@@ -135,7 +175,7 @@ exports.webhook = async (req, res) => {
 
     let isValid = false;
     try {
-      isValid = Cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp);
+      isValid = cashfree.PGVerifyWebhookSignature(signature, rawBody, timestamp);
     } catch {
       isValid = false;
     }
@@ -190,34 +230,39 @@ exports.verifyOrder = async (req, res) => {
     const order = await Order.findOne({ cfOrderId, userId: user._id });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
-    if (order.status === 'paid') {
-      return res.status(200).json({ success: true, status: 'paid', data: order });
-    }
-
-    const cfResp = await Cashfree.PGFetchOrder(CF_API_VERSION, cfOrderId);
-    const cfStatus = cfResp.data?.order_status;
-
-    if (cfStatus === 'PAID') {
-      const paymentsResp = await Cashfree.PGOrderFetchPayments(CF_API_VERSION, cfOrderId);
-      const successPayment = (paymentsResp.data || []).find((p) => p.payment_status === 'SUCCESS');
-
-      order.status      = 'paid';
-      order.cfPaymentId = successPayment?.cf_payment_id ? String(successPayment.cf_payment_id) : null;
-      order.paidAt      = new Date();
-      await order.save();
-      await grantAccess(order);
-
-      return res.status(200).json({ success: true, status: 'paid', data: order });
-    }
-
-    const statusMap = { ACTIVE: 'pending', EXPIRED: 'expired', TERMINATED: 'failed' };
-    return res.status(200).json({
-      success: true,
-      status: statusMap[cfStatus] || cfStatus?.toLowerCase() || 'pending',
-      data: order,
-    });
+    const result = await syncOrderWithCashfree(order);
+    return res.status(200).json({ success: true, status: result.status, data: result.order });
   } catch (err) {
     console.error('verifyOrder:', err?.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: err?.response?.data?.message || err.message,
+    });
+  }
+};
+
+// ── GET /payment/status/:cfOrderId (public status check for return page) ──────
+exports.getOrderStatus = async (req, res) => {
+  try {
+    const { cfOrderId } = req.params;
+    const order = await Order.findOne({ cfOrderId }).lean(false);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+    const result = await syncOrderWithCashfree(order);
+    return res.status(200).json({
+      success: true,
+      status: result.status,
+      data: {
+        orderId: result.order?._id,
+        cfOrderId: result.order?.cfOrderId,
+        itemType: result.order?.itemType,
+        itemId: result.order?.itemId,
+        itemTitle: result.order?.itemTitle,
+        amount: result.order?.amount,
+      },
+    });
+  } catch (err) {
+    console.error('getOrderStatus:', err?.response?.data || err.message);
     return res.status(500).json({
       success: false,
       message: err?.response?.data?.message || err.message,

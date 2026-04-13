@@ -64,7 +64,7 @@ exports.uploadAndExtract = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ success: false, message: 'PDF file is required' });
 
-    const { title, jobPostId, conductingAuthorityFull, durationMin, difficulty, examYear, examStage } = req.body || {};
+    const { title, jobPostId, conductingAuthorityFull, durationMin, difficulty, examYear, examStage, isFree, price, discountedPrice } = req.body || {};
     if (!title) return res.status(400).json({ success: false, message: 'title is required' });
 
     // Extract text from PDF
@@ -98,6 +98,9 @@ exports.uploadAndExtract = async (req, res) => {
       difficulty: difficulty || 'mixed',
       examYear: examYear ? parseInt(examYear, 10) : null,
       examStage: examStage || null,
+      isFree: isFree !== 'false' && isFree !== false,
+      price: Number(price) || 0,
+      discountedPrice: discountedPrice ? Number(discountedPrice) : null,
       status: 'draft',
       questions,
       parseStats: {
@@ -126,11 +129,12 @@ exports.uploadAndExtract = async (req, res) => {
 // ── GET /mock-tests ──────────────────────────────────────────────────────────
 exports.listMockTests = async (req, res) => {
   try {
-    const { status, jobPostId, authorityKey, page = 1, limit = 20 } = req.query;
+    const { status, jobPostId, authorityKey, search, page = 1, limit = 20 } = req.query;
     const filter = {};
     if (status) filter.status = status;
     if (jobPostId && isValidObjectId(jobPostId)) filter.jobPostId = jobPostId;
     if (authorityKey) filter.authorityKey = authorityKey;
+    if (search) filter.title = { $regex: search, $options: 'i' };
 
     const p = Math.max(parseInt(page, 10), 1);
     const l = Math.min(Math.max(parseInt(limit, 10), 1), 100);

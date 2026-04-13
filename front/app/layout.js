@@ -242,6 +242,12 @@ export default function RootLayout({ children }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }} />
       </head>
       <body className="min-h-screen flex flex-col">
+        {/* Cashfree Payment Gateway SDK */}
+        <Script
+          id="cashfree-sdk"
+          src="https://sdk.cashfree.com/js/v3/cashfree.js"
+          strategy="afterInteractive"
+        />
         {/* Adsterra Popunder — afterInteractive: high-CPM pop ad */}
         <Script
           id="adsterra-popunder"

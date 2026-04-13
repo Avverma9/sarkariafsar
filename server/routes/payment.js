@@ -12,6 +12,9 @@ router.post('/webhook', ctrl.webhook);
 // ── Frontend calls this after payment redirect ────────────────────────────────
 router.get('/verify/:cfOrderId', authUser, ctrl.verifyOrder);
 
+// ── Public order status check for return page (no auth required) ────────────────
+router.get('/status/:cfOrderId', ctrl.getOrderStatus);
+
 // ── Get logged-in user's order history ───────────────────────────────────────
 router.get('/my-orders', authUser, ctrl.getMyOrders);
 

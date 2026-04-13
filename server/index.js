@@ -24,6 +24,7 @@ const passport = require('./utils/passportSetup');
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({
+  limit: '10mb',
   verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); },
 }));
 app.use(express.urlencoded({ extended: true }));

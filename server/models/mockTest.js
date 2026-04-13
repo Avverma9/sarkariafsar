@@ -93,9 +93,8 @@ mockTestSchema.index({ jobPostId: 1, status: 1 });
 mockTestSchema.index({ authorityKey: 1, status: 1 });
 
 // Auto-sync totalQuestions before save
-mockTestSchema.pre('save', function (next) {
+mockTestSchema.pre('save', function () {
   this.totalQuestions = this.questions.length;
-  next();
 });
 
 module.exports = mongoose.model('MockTest', mockTestSchema);

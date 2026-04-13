@@ -5,9 +5,9 @@ const resourceSchema = new mongoose.Schema(
     // Scope — authority-wide ya post-specific
     scopeType: {
       type: String,
-      enum: ['authority', 'post'],
+      enum: ['global', 'authority', 'post'],
       required: true,
-      default: 'authority',
+      default: 'global',
     },
 
     // Authority-level scope fields
@@ -68,6 +68,7 @@ const resourceSchema = new mongoose.Schema(
     isFree: { type: Boolean, default: true },
     price: { type: Number, default: 0, min: 0 },
     discountedPrice: { type: Number, default: null, min: 0 },
+    samplePages: { type: Number, default: 5, min: 0 },
     currency: { type: String, default: 'INR' },
     priority: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
@@ -84,23 +85,22 @@ resourceSchema.index({ jobPostId: 1, isActive: 1 });
 resourceSchema.index({ type: 1, isActive: 1 });
 
 // Validation: conditional required fields based on accessType
-resourceSchema.pre('save', function (next) {
+resourceSchema.pre('save', function () {
   if (this.accessType === 'external' && !this.url) {
-    return next(new Error('url is required when accessType is external'));
+    throw new Error('url is required when accessType is external');
   }
   if (this.accessType === 'uploaded_file' && !this.fileUrl) {
-    return next(new Error('fileUrl is required when accessType is uploaded_file'));
+    throw new Error('fileUrl is required when accessType is uploaded_file');
   }
   if (this.accessType === 'generated' && !this.linkedMockTestId) {
-    return next(new Error('linkedMockTestId is required when accessType is generated'));
+    throw new Error('linkedMockTestId is required when accessType is generated');
   }
   if (this.scopeType === 'authority' && !this.authorityKey) {
-    return next(new Error('authorityKey is required when scopeType is authority'));
+    throw new Error('authorityKey is required when scopeType is authority');
   }
   if (this.scopeType === 'post' && !this.jobPostId) {
-    return next(new Error('jobPostId is required when scopeType is post'));
+    throw new Error('jobPostId is required when scopeType is post');
   }
-  next();
 });
 
 module.exports = mongoose.model('Resource', resourceSchema);
