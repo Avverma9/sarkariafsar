@@ -17,7 +17,8 @@ export default function CacheControl() {
       await api.post('/cache/flush');
       setStatus({ type: 'success', text: 'All cache flushed successfully.' });
     } catch (err) {
-      setStatus({ type: 'error', text: 'Failed to flush cache. Please check server logs.' });
+      const msg = err?.response?.data?.message || 'Failed to flush cache. Please check server logs.';
+      setStatus({ type: 'error', text: msg });
     } finally {
       setLoading(false);
     }
@@ -34,7 +35,8 @@ export default function CacheControl() {
       setStatus({ type: 'success', text: `Cache matching pattern "${pattern}" flushed successfully.` });
       setPattern('');
     } catch (err) {
-      setStatus({ type: 'error', text: 'Failed to flush pattern.' });
+      const msg = err?.response?.data?.message || 'Failed to flush pattern.';
+      setStatus({ type: 'error', text: msg });
     } finally {
       setLoading(false);
     }

@@ -21,15 +21,16 @@ jobs:
 
             git pull origin main
 
+            # API / server
             cd server
             npm install
 
-            # Write server .env from GitHub secrets (inside server/)
+            # server/.env from GitHub secrets
             {
               echo "SCRAPPER_PORT=5000"
               echo "JWT_SECRET=${{ secrets.JWT_SECRET }}"
               echo "GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback"
-              echo "PRODUCTION_CALLBACK_URL=https://api.sarkariafsar.com/api/auth/google/callback"
+              echo "PRODUCTION_CALLBACK_URL=https://sarkariafsar.com/api/auth/google/callback"
               echo "SCRAPPER_MONGO_URI=${{ secrets.SCRAPPER_MONGO_URI }}"
               echo "MAIL_SERVICE=gmail"
               echo "MAIL_USER=${{ secrets.MAIL_USER }}"
@@ -46,20 +47,25 @@ jobs:
               echo "CASHFREE_APP_ID=${{ secrets.CASHFREE_APP_ID }}"
               echo "CASHFREE_SECRET_KEY=${{ secrets.CASHFREE_SECRET_KEY }}"
               echo "CASHFREE_ENV=PRODUCTION"
-              echo "SERVER_URL=https://api.sarkariafsar.com"
+              echo "SERVER_URL=https://sarkariafsar.com"
               echo "FRONTEND_URL=https://sarkariafsar.com"
             } > .env
 
+            echo "=== server/.env GOOGLE_CALLBACK_URL check ==="
+            grep "GOOGLE_CALLBACK_URL" .env || true
+
+            # Frontend build
             cd ../front
             npm install
             npm run build
 
+            # Panel build
             cd ../panel
             npm install
             npm run build
 
+            # PM2 restart via ecosystem
             cd ..
-
             pm2 start ecosystem.config.cjs --update-env
             pm2 restart all --update-env
             pm2 save --force
