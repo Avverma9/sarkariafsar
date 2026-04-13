@@ -24,33 +24,33 @@ jobs:
             cd server
             npm install
 
-            # Write .env from GitHub secrets
-            cat > .env << 'ENVEOF'
-            SCRAPPER_PORT=5000
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback
-            PRODUCTION_CALLBACK_URL=${{ secrets.PRODUCTION_CALLBACK_URL }}
-            SCRAPPER_MONGO_URI=${{ secrets.SCRAPPER_MONGO_URI }}
-            MAIL_SERVICE=gmail
-            MAIL_USER=${{ secrets.MAIL_USER }}
-            MAIL_PASS=${{ secrets.MAIL_PASS }}
-            ALERT_MAIL_TO=${{ secrets.ALERT_MAIL_TO }}
-            MAIL_PORT=465
-            GEMINI_API_KEYS=${{ secrets.GEMINI_API_KEYS }}
-            GEMINI_MODELS=gemini-2.5-flash,gemini-flash-latest,gemini-2.0-flash,gemini-2.0-flash-001,gemini-2.0-flash-lite,gemini-2.0-flash-lite-001,gemini-2.5-flash-lite,gemini-flash-lite-latest
-            R2_ACCOUNT_ID=${{ secrets.R2_ACCOUNT_ID }}
-            R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}
-            R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}
-            R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}
-            R2_PUBLIC_DOMAIN=${{ secrets.R2_PUBLIC_DOMAIN }}
-            CASHFREE_APP_ID=${{ secrets.CASHFREE_APP_ID }}
-            CASHFREE_SECRET_KEY=${{ secrets.CASHFREE_SECRET_KEY }}
-            CASHFREE_ENV=PRODUCTION
-            SERVER_URL=https://api.sarkariafsar.com
-            FRONTEND_URL=https://sarkariafsar.com
-            ENVEOF
+            # Write server .env from GitHub secrets
+            {
+              echo "SCRAPPER_PORT=5000"
+              echo "JWT_SECRET=${{ secrets.JWT_SECRET }}"
+              echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
+              echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
+              echo "GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback"
+              echo "PRODUCTION_CALLBACK_URL=https://api.sarkariafsar.com/api/auth/google/callback"
+              echo "SCRAPPER_MONGO_URI=${{ secrets.SCRAPPER_MONGO_URI }}"
+              echo "MAIL_SERVICE=gmail"
+              echo "MAIL_USER=${{ secrets.MAIL_USER }}"
+              echo "MAIL_PASS=${{ secrets.MAIL_PASS }}"
+              echo "ALERT_MAIL_TO=${{ secrets.ALERT_MAIL_TO }}"
+              echo "MAIL_PORT=465"
+              echo "GEMINI_API_KEYS=${{ secrets.GEMINI_API_KEYS }}"
+              echo "GEMINI_MODELS=gemini-2.5-flash,gemini-flash-latest,gemini-2.0-flash,gemini-2.0-flash-001,gemini-2.0-flash-lite,gemini-2.0-flash-lite-001,gemini-2.5-flash-lite,gemini-flash-lite-latest"
+              echo "R2_ACCOUNT_ID=${{ secrets.R2_ACCOUNT_ID }}"
+              echo "R2_ACCESS_KEY_ID=${{ secrets.R2_ACCESS_KEY_ID }}"
+              echo "R2_SECRET_ACCESS_KEY=${{ secrets.R2_SECRET_ACCESS_KEY }}"
+              echo "R2_BUCKET_NAME=${{ secrets.R2_BUCKET_NAME }}"
+              echo "R2_PUBLIC_DOMAIN=${{ secrets.R2_PUBLIC_DOMAIN }}"
+              echo "CASHFREE_APP_ID=${{ secrets.CASHFREE_APP_ID }}"
+              echo "CASHFREE_SECRET_KEY=${{ secrets.CASHFREE_SECRET_KEY }}"
+              echo "CASHFREE_ENV=PRODUCTION"
+              echo "SERVER_URL=https://api.sarkariafsar.com"
+              echo "FRONTEND_URL=https://sarkariafsar.com"
+            } > .env
 
             cd ..
 
