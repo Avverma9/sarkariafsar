@@ -139,9 +139,6 @@ exports.createOrder = async (req, res) => {
       order_note: `${itemType} — ${item.title}`,
     };
 
-    console.log('DEBUG FRONTEND_URL:', FRONTEND_URL);
-    console.log('DEBUG return_url:', `${FRONTEND_URL}/payment/status?order_id=${cfOrderId}`);
-
     const cfResp = await axios.post(`${CASHFREE_BASE_URL}/orders`, cfRequest, {
       headers: {
         'x-client-id': CASHFREE_APP_ID,
