@@ -1,7 +1,7 @@
 'use client'
 
 const TOKEN_KEY = 'sa_token'
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.sarkariafsar.com/api'
 // SERVER_BASE = API_BASE without trailing /api  (works for both dev and prod)
 const SERVER_BASE = API_BASE.replace(/\/api\/?$/, '')
 

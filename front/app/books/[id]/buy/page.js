@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { getToken, loginWithGoogle } from '@/lib/auth'
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.sarkariafsar.com/api'
 const CASHFREE_MODE = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
 
 export default function BuyResourcePage() {

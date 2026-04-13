@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.sarkariafsar.com/api'
 
 function SearchResultItem({ item, type }) {
   const href = type === 'job' ? `/jobs/${item.slug}` : type === 'scheme' ? `/yojana/${item.slug}` : `/blog/${item.slug}`

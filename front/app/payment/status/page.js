@@ -3,7 +3,7 @@ import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.sarkariafsar.com/api'
 
 function PaymentStatusContent() {
   const searchParams = useSearchParams()

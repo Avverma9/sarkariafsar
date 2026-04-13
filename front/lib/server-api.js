@@ -7,4 +7,4 @@
 export const SERVER_API_BASE =
   process.env.INTERNAL_API_BASE_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'https://sarkariafsar.com/api'
+  'https://api.sarkariafsar.com/api'

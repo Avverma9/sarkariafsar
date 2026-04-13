@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://api.sarkariafsar.com/api'
 
 const TYPE_META = {
   book:     { label: 'Book',     color: 'bg-blue-100 text-blue-700',   icon: '📚' },
