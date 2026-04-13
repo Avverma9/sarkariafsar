@@ -151,8 +151,8 @@ function Footer() {
   return (
     <footer className="bg-[#1e3a5f] text-white mt-16">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          <div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 mb-8">
+          <div className="col-span-2 md:col-span-3 lg:col-span-1">
             <div className="flex items-center gap-2 font-bold text-xl mb-3">
               <span className="text-[#f59e0b]">&#9733;</span>
               <span>Sarkari<span className="text-[#f59e0b]">Afsar</span></span>
@@ -179,6 +179,15 @@ function Footer() {
             </ul>
           </div>
           <div>
+            <h4 className="font-semibold text-[#f59e0b] mb-3">Policies</h4>
+            <ul className="space-y-2 text-sm text-blue-200">
+              <li><Link href="/terms-and-conditions" className="hover:text-white transition-colors">Terms &amp; Conditions</Link></li>
+              <li><Link href="/refund-policy" className="hover:text-white transition-colors">Refund Policy</Link></li>
+              <li><Link href="/cancellation-policy" className="hover:text-white transition-colors">Cancellation Policy</Link></li>
+              <li><Link href="/delivery-policy" className="hover:text-white transition-colors">Delivery Policy</Link></li>
+            </ul>
+          </div>
+          <div>
             <h4 className="font-semibold text-[#f59e0b] mb-3">States</h4>
             <div className="flex flex-wrap gap-2">
               {states.map(s => (
@@ -189,9 +198,13 @@ function Footer() {
         </div>
         <div className="border-t border-blue-700 pt-6 flex flex-col md:flex-row justify-between items-center gap-3">
           <p className="text-blue-200 text-sm">&copy; 2026 SarkariAfsar.com &mdash; All Rights Reserved</p>
-          <div className="flex gap-4 text-xs text-blue-300">
+          <div className="flex flex-wrap justify-center gap-3 text-xs text-blue-300">
             <Link href="/privacy-policy" className="hover:text-white">Privacy Policy</Link>
             <Link href="/disclaimer" className="hover:text-white">Disclaimer</Link>
+            <Link href="/terms-and-conditions" className="hover:text-white">Terms</Link>
+            <Link href="/refund-policy" className="hover:text-white">Refund Policy</Link>
+            <Link href="/cancellation-policy" className="hover:text-white">Cancellation</Link>
+            <Link href="/delivery-policy" className="hover:text-white">Delivery Policy</Link>
             <Link href="/sitemap-page" className="hover:text-white">Sitemap</Link>
           </div>
         </div>
