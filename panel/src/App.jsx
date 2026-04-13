@@ -14,6 +14,7 @@ import MockTests from './pages/MockTests';
 import Notifications from './pages/Notifications';
 import CacheControl from './pages/CacheControl';
 import Controls from './pages/Controls';
+import AuthSettings from './pages/AuthSettings';
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="notifications" element={<Notifications />} />
             <Route path="cache" element={<CacheControl />} />
             <Route path="controls" element={<Controls />} />
+            <Route path="auth-settings" element={<AuthSettings />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,20 +1,24 @@
-const router = require('express').Router();
-const passport = require('passport');
-const { googleCallback, getMe } = require('../controllers/auth');
+const router   = require('express').Router();
 const authUser = require('../middleware/authUser');
+const {
+  getMethods,
+  googleInitiate, googleCallback,
+  sendOtp, verifyOtp,
+  getMe,
+} = require('../controllers/auth');
 
-// Step 1: Redirect to Google
-router.get('/google',
-  passport.authenticate('google', { scope: ['profile', 'email'], session: false })
-);
+// Public: which methods are enabled
+router.get('/methods', getMethods);
 
-// Step 2: Google redirects back here
-router.get('/google/callback',
-  passport.authenticate('google', { session: false, failureRedirect: '/auth/failed' }),
-  googleCallback
-);
+// Google OAuth (manual — creds from DB)
+router.get('/google',          googleInitiate);
+router.get('/google/callback', googleCallback);
 
-// Step 3: Get current user
+// Email OTP
+router.post('/send-otp',   sendOtp);
+router.post('/verify-otp', verifyOtp);
+
+// Current user
 router.get('/me', authUser, getMe);
 
 module.exports = router;

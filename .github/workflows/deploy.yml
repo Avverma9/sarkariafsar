@@ -28,8 +28,6 @@ jobs:
             {
               echo "SCRAPPER_PORT=5000"
               echo "JWT_SECRET=${{ secrets.JWT_SECRET }}"
-              echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}"
-              echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}"
               echo "GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback"
               echo "PRODUCTION_CALLBACK_URL=https://api.sarkariafsar.com/api/auth/google/callback"
               echo "SCRAPPER_MONGO_URI=${{ secrets.SCRAPPER_MONGO_URI }}"
@@ -51,9 +49,6 @@ jobs:
               echo "SERVER_URL=https://api.sarkariafsar.com"
               echo "FRONTEND_URL=https://sarkariafsar.com"
             } > .env
-
-            echo "=== .env GOOGLE_CLIENT_ID check ==="
-            grep "GOOGLE_CLIENT_ID" .env
 
             cd ../front
             npm install

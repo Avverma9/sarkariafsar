@@ -172,4 +172,42 @@ async function sendWelcomeEmail(user, post) {
   console.log('[Mailer] Welcome email sent to', user.email, '| messageId:', info.messageId);
 }
 
-module.exports = { sendNotificationEmail, sendWelcomeEmail };
+/**
+ * Send OTP email using SMTP credentials stored in AuthSettings (DB).
+ * @param {string} toEmail
+ * @param {string} otp
+ * @param {number} expireMinutes
+ */
+async function sendOtpEmail(toEmail, otp, expireMinutes) {
+  const AuthSettings = require('../models/authSettings');
+  const cfg = await AuthSettings.getSingleton();
+
+  const dynamicTransporter = nodemailer.createTransport({
+    host:   cfg.smtpHost   || 'smtp.gmail.com',
+    port:   cfg.smtpPort   || 465,
+    secure: cfg.smtpSecure !== false,
+    auth: {
+      user: cfg.smtpUser,
+      pass: cfg.smtpPass,
+    },
+  });
+
+  await dynamicTransporter.sendMail({
+    from:    cfg.smtpFrom || cfg.smtpUser,
+    to:      toEmail,
+    subject: 'Your Sarkari Afsar Login OTP',
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px;">
+        <h2 style="color:#1d4ed8;margin-bottom:8px;">Login OTP — Sarkari Afsar</h2>
+        <p style="color:#374151;font-size:15px;">Your one-time password is:</p>
+        <div style="font-size:40px;font-weight:700;letter-spacing:10px;color:#111827;margin:24px 0;text-align:center;background:#fff;padding:18px;border-radius:8px;border:2px dashed #e5e7eb;">
+          ${otp}
+        </div>
+        <p style="color:#6b7280;font-size:13px;">Valid for <strong>${expireMinutes} minutes</strong>. Do not share this OTP with anyone.</p>
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px;">Sarkari Afsar — Government Jobs Portal</p>
+      </div>
+    `,
+  });
+}
+
+module.exports = { sendNotificationEmail, sendWelcomeEmail, sendOtpEmail };

@@ -48,4 +48,41 @@ export function loginWithGoogle() {
   window.location.href = `${SERVER_BASE}/api/auth/google`
 }
 
+/**
+ * Request OTP for email login
+ */
+export async function requestOtp(email) {
+  const res = await fetch(`${API_BASE}/auth/send-otp`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ email }),
+  })
+  return res.json()
+}
+
+/**
+ * Verify OTP and get JWT
+ */
+export async function verifyOtp(email, otp) {
+  const res = await fetch(`${API_BASE}/auth/verify-otp`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ email, otp }),
+  })
+  return res.json()
+}
+
+/**
+ * Fetch which auth methods are enabled
+ */
+export async function fetchAuthMethods() {
+  try {
+    const res = await fetch(`${API_BASE}/auth/methods`)
+    const data = await res.json()
+    return data?.data || { google: true, emailOtp: false }
+  } catch {
+    return { google: true, emailOtp: false }
+  }
+}
+
 export { SERVER_BASE, API_BASE }

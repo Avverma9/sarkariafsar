@@ -12,6 +12,7 @@ import {
   Users, 
   Database, 
   Cpu,
+  ShieldCheck,
   LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -29,6 +30,7 @@ const navItems = [
   { name: 'Users', path: '/users', icon: Users },
   { name: 'Cache Control', path: '/cache', icon: Database },
   { name: 'AI & Scrapper', path: '/controls', icon: Cpu },
+  { name: 'Auth Settings', path: '/auth-settings', icon: ShieldCheck },
 ];
 
 export default function Sidebar() {

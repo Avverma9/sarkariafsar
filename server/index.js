@@ -18,9 +18,6 @@ const { startSchemeCron } = require('./utils/aiCrons/schemeCron');
 
 const { seedAdmin } = require('./controllers/admin');
 
-// Passport setup (Google OAuth)
-const passport = require('./utils/passportSetup');
-
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({
@@ -28,12 +25,6 @@ app.use(express.json({
   verify: (req, _res, buf) => { req.rawBody = buf.toString('utf8'); },
 }));
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
-  secret: process.env.JWT_SECRET || 'sarkariafsar_secret',
-  resave: false,
-  saveUninitialized: false,
-}));
-app.use(passport.initialize());
 
 // Serve uploaded OG images publicly at /og/ and /uploads/
 const path = require('path');
@@ -65,9 +56,30 @@ app.use((err, req, res, next) => {
 // MongoDB connection + server start
 mongoose
   .connect(mongoUri)
-  .then(() => {
+  .then(async () => {
     console.log('MongoDB connected successfully');
     seedAdmin();
+
+    // Seed AuthSettings from env on first boot (one-time migration)
+    const AuthSettings = require('./models/authSettings');
+    const existing = await AuthSettings.findOne();
+    if (!existing) {
+      await AuthSettings.create({
+        googleEnabled:    true,
+        googleClientId:   '',
+        googleClientSecret: '',
+        emailOtpEnabled:  false,
+        smtpHost:         'smtp.gmail.com',
+        smtpPort:         465,
+        smtpSecure:       true,
+        smtpUser:         '',
+        smtpPass:         '',
+        smtpFrom:         '',
+        otpExpireMinutes: 10,
+      });
+      console.log('[AuthSettings] Default record created — configure credentials in Admin Panel → Auth Settings');
+    }
+
     startSectionScrapeCron();
     startBlogCron();
     startSchemeCron();

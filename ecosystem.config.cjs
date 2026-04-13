@@ -20,7 +20,7 @@ module.exports = {
       },
     },
     {
-      name: "sarkariafsar-panel",
+      name: "sarkariafsar-panel",     
       cwd: "/home/ubuntu/apps/sarkariafsar/panel",
       script: "npm",
       args: "start",
