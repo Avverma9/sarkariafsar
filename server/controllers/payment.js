@@ -24,10 +24,8 @@ const normalizeUrl = (value, fallback) => {
 // Detect environment for proper URL handling
 const isDevelopment = process.env.NODE_ENV === 'development' || CASHFREE_ENV === 'sandbox';
 
-// For localhost development, use ngrok or production domain for Cashfree whitelisting
-const FRONTEND_URL = isDevelopment
-  ? 'https://sarkariafsar.com'  // Use production domain for Cashfree (whitelisted)
-  : normalizeUrl(process.env.FRONTEND_URL, 'https://sarkariafsar.com');
+// For localhost development, use production domain (already whitelisted in Cashfree)
+const FRONTEND_URL = 'https://sarkariafsar.com';
 
 const SERVER_URL = normalizeUrl(process.env.SERVER_URL, 'https://sarkariafsar.com');
 
