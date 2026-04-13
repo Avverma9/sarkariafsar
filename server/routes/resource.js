@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/resource');
 const { uploadMiddleware } = require('../middleware/upload');
+const authUser = require('../middleware/authUser');
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
@@ -38,6 +39,9 @@ router.get('/by-post/:postId', ctrl.getResourcesByPost);
 
 // Fetch authority-level resources by authorityKey or conductingAuthorityFull
 router.get('/by-authority', ctrl.getResourcesByAuthority);
+
+// Get full resource (with fileUrl/url) — auth required, checks purchase for paid items
+router.get('/:id/access', authUser, ctrl.getResourceAccess);
 
 // Update resource
 router.patch('/:id', ctrl.updateResource);

@@ -66,6 +66,9 @@ const resourceSchema = new mongoose.Schema(
     examTags: { type: [String], default: [] },
     language: { type: String, default: 'Hindi/English' },
     isFree: { type: Boolean, default: true },
+    price: { type: Number, default: 0, min: 0 },
+    discountedPrice: { type: Number, default: null, min: 0 },
+    currency: { type: String, default: 'INR' },
     priority: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
 

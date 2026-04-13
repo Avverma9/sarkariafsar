@@ -59,6 +59,9 @@ const mockTestSchema = new mongoose.Schema(
     examStage: { type: String, default: null },
     language: { type: String, default: 'Hindi/English' },
     isFree: { type: Boolean, default: true },
+    price: { type: Number, default: 0, min: 0 },
+    discountedPrice: { type: Number, default: null, min: 0 },
+    currency: { type: String, default: 'INR' },
 
     // Lifecycle status
     status: {

@@ -16,6 +16,13 @@ const mockHistorySchema = new mongoose.Schema({
   takenAt:      { type: Date, default: Date.now },
 }, { _id: false });
 
+const purchaseSchema = new mongoose.Schema({
+  itemId:      { type: mongoose.Schema.Types.ObjectId, required: true },
+  itemType:    { type: String, enum: ['resource', 'mock_test'], required: true },
+  orderId:     { type: mongoose.Schema.Types.ObjectId, ref: 'Order' },
+  purchasedAt: { type: Date, default: Date.now },
+}, { _id: false });
+
 const userSchema = new mongoose.Schema({
   googleId: { type: String, required: true, unique: true },
   name:     { type: String, required: true },
@@ -25,6 +32,7 @@ const userSchema = new mongoose.Schema({
 
   savedJobs:       { type: [savedJobSchema],   default: [] },
   mockTestHistory: { type: [mockHistorySchema], default: [] },
+  purchases:       { type: [purchaseSchema],    default: [] },
 
   lastLoginAt: { type: Date, default: Date.now },
 }, { timestamps: true });

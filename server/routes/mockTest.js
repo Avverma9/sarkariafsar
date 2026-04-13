@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const router = express.Router();
 const ctrl = require('../controllers/mockTest');
+const authUser = require('../middleware/authUser');
 
 // Ensure upload directory exists
 const UPLOAD_DIR = path.join(__dirname, '../uploads/mock-pdfs');
@@ -36,6 +37,9 @@ router.get('/', ctrl.listMockTests);
 
 // Get published mock tests for a specific job post (user-facing)
 router.get('/by-post/:postId', ctrl.getMockTestsByPost);
+
+// Access gate — returns full test with questions only if user has purchased (or free)
+router.get('/:id/access', authUser, ctrl.getMockTestAccess);
 
 // Get single mock test by id (full detail — admin + test-taking)
 router.get('/:id', ctrl.getMockTest);

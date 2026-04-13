@@ -19,6 +19,7 @@ router.use('/auth', require('./auth'));
 router.use('/user', require('./user'));
 router.use('/notify', require('./notification'));
 router.use('/admin', require('./admin'));
+router.use('/payment', require('./payment'));
 router.use('/ai-crons', require('./aiCrons'));
 router.use('/scrapper', require('./scrapperCron'));
 router.use('/scrapper', require('../scrapper/fetchSection').router);

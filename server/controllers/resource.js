@@ -147,6 +147,38 @@ exports.updateResource = async (req, res) => {
   }
 };
 
+// ── GET /resources/:id/access (auth — returns full data if user has access) ───
+exports.getResourceAccess = async (req, res) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
+
+    const resource = await Resource.findById(id).lean();
+    if (!resource || !resource.isActive) {
+      return res.status(404).json({ success: false, message: 'Resource not found' });
+    }
+
+    const isFree = resource.isFree;
+    const purchased = (user.purchases || []).some(
+      (p) => p.itemType === 'resource' && String(p.itemId) === String(id)
+    );
+
+    if (!isFree && !purchased) {
+      return res.status(403).json({
+        success: false,
+        message: 'Purchase required to access this resource',
+        price: resource.discountedPrice ?? resource.price,
+        itemTitle: resource.title,
+      });
+    }
+
+    return res.status(200).json({ success: true, data: resource });
+  } catch (err) {
+    return handleError(res, err, 'getResourceAccess:');
+  }
+};
+
 // ── DELETE /resources/:id ────────────────────────────────────────────────────
 exports.deleteResource = async (req, res) => {
   try {

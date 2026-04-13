@@ -181,6 +181,37 @@ exports.getMockTest = async (req, res) => {
   }
 };
 
+// ── GET /mock-tests/:id/access (auth — questions only if free or purchased) ───
+exports.getMockTestAccess = async (req, res) => {
+  try {
+    const user = req.user;
+    const { id } = req.params;
+    if (!isValidObjectId(id)) return res.status(400).json({ success: false, message: 'Invalid id' });
+
+    const test = await MockTest.findById(id, { extractedText: 0 }).lean();
+    if (!test) return res.status(404).json({ success: false, message: 'Mock test not found' });
+    if (test.status !== 'published') return res.status(403).json({ success: false, message: 'Test not available' });
+
+    const isFree = test.isFree;
+    const purchased = (user.purchases || []).some(
+      (p) => p.itemType === 'mock_test' && String(p.itemId) === String(id)
+    );
+
+    if (!isFree && !purchased) {
+      return res.status(403).json({
+        success: false,
+        message: 'Purchase required to start this test',
+        price: test.discountedPrice ?? test.price,
+        itemTitle: test.title,
+      });
+    }
+
+    return res.status(200).json({ success: true, data: test });
+  } catch (err) {
+    return handleError(res, err, 'getMockTestAccess:');
+  }
+};
+
 // ── PATCH /mock-tests/:id/questions/:qid ────────────────────────────────────
 exports.updateQuestion = async (req, res) => {
   try {

@@ -1,0 +1,21 @@
+const express = require('express');
+const router = express.Router();
+const ctrl = require('../controllers/payment');
+const authUser = require('../middleware/authUser');
+
+// ── Create Cashfree order (user must be logged in) ────────────────────────────
+router.post('/create-order', authUser, ctrl.createOrder);
+
+// ── Cashfree webhook — NO auth, signature verified inside controller ──────────
+router.post('/webhook', ctrl.webhook);
+
+// ── Frontend calls this after payment redirect ────────────────────────────────
+router.get('/verify/:cfOrderId', authUser, ctrl.verifyOrder);
+
+// ── Get logged-in user's order history ───────────────────────────────────────
+router.get('/my-orders', authUser, ctrl.getMyOrders);
+
+// ── Check if user has access to an item ──────────────────────────────────────
+router.get('/check-access', authUser, ctrl.checkAccess);
+
+module.exports = router;
