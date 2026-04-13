@@ -3,7 +3,7 @@ module.exports = {
     {
       name: "sarkariafsar-api",
       cwd: "/home/ubuntu/apps/sarkariafsar/server",
-      script: "server.mjs",
+      script: "index.js",
       env: {
         NODE_ENV: "production",
         PORT: 5000,
