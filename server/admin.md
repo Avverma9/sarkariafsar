@@ -2,7 +2,6 @@
 
 **Last updated:** April 2026
 **Base API URL (prod):** `https://sarkariafsar.com/api`
-**Base API URL (dev):**  `http://localhost:5000/api`
 **Auth header:** `Authorization: Bearer <JWT>`
 
 ---
