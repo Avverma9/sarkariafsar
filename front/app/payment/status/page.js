@@ -21,6 +21,10 @@ function PaymentStatusContent() {
       return
     }
 
+    let isMounted = true
+    let intervalId = null
+    let timeoutId = null
+
     async function checkStatus() {
       try {
         const res = await fetch(`${API}/payment/status/${cfOrderId}`)
@@ -30,37 +34,38 @@ function PaymentStatusContent() {
           throw new Error(data.message || 'Failed to check payment status')
         }
 
-        setStatus(data.status)
-        setOrderData(data.data)
+        if (isMounted) {
+          setStatus(data.status)
+          setOrderData(data.data)
+        }
       } catch (err) {
-        setError(err.message)
-        setStatus('error')
+        if (isMounted) {
+          setError(err.message)
+          setStatus('error')
+        }
       }
     }
 
     checkStatus()
 
     // Poll every 3 seconds for up to 30 seconds if pending
-    const interval = setInterval(() => {
-      if (status === 'pending' || status === 'loading') {
-        checkStatus()
-      } else {
-        clearInterval(interval)
-      }
+    intervalId = setInterval(() => {
+      checkStatus()
     }, 3000)
 
-    const timeout = setTimeout(() => {
-      clearInterval(interval)
-      if (status === 'pending' || status === 'loading') {
+    timeoutId = setTimeout(() => {
+      if (intervalId) clearInterval(intervalId)
+      if (isMounted && (status === 'pending' || status === 'loading')) {
         setStatus('timeout')
       }
     }, 30000)
 
     return () => {
-      clearInterval(interval)
-      clearTimeout(timeout)
+      isMounted = false
+      if (intervalId) clearInterval(intervalId)
+      if (timeoutId) clearTimeout(timeoutId)
     }
-  }, [cfOrderId, status])
+  }, [cfOrderId])
 
   if (status === 'loading') {
     return (

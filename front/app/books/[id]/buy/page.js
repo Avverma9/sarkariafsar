@@ -5,15 +5,18 @@ import Link from 'next/link'
 import { getToken, loginWithGoogle } from '@/lib/auth'
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
+const CASHFREE_MODE = process.env.NODE_ENV === 'production' ? 'production' : 'sandbox'
 
 export default function BuyResourcePage() {
   const { id } = useParams()
   const [resource, setResource] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     async function fetchResource() {
+      setLoading(true)
       try {
         const res = await fetch(`${API}/resources?limit=100&isActive=true`)
         if (!res.ok) throw new Error('Failed to fetch')
@@ -23,6 +26,8 @@ export default function BuyResourcePage() {
         setResource(found)
       } catch (err) {
         setError(err.message)
+      } finally {
+        setLoading(false)
       }
     }
     fetchResource()
@@ -62,25 +67,53 @@ export default function BuyResourcePage() {
 
       // Use Cashfree SDK checkout
       if (typeof window !== 'undefined') {
-        const script = document.createElement('script')
-        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
-        script.async = true
-        script.onload = async () => {
-          if (window.Cashfree) {
-            const cashfree = window.Cashfree({ mode: 'production' })
+        // Check if script is already loaded
+        if (!window.Cashfree) {
+          const script = document.createElement('script')
+          script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+          script.async = true
+          script.onload = async () => {
+            if (window.Cashfree) {
+              const cashfree = window.Cashfree({ mode: CASHFREE_MODE })
+              await cashfree.checkout({
+                paymentSessionId,
+                redirectTarget: '_self',
+              })
+            }
+          }
+          script.onerror = () => {
+            setError('Failed to load payment gateway. Please try again.')
+            setPaying(false)
+          }
+          document.head.appendChild(script)
+        } else {
+          // Script already loaded, use it directly
+          try {
+            const cashfree = window.Cashfree({ mode: CASHFREE_MODE })
             await cashfree.checkout({
               paymentSessionId,
               redirectTarget: '_self',
             })
+          } catch (checkoutErr) {
+            setError(checkoutErr?.message || 'Payment checkout failed. Please try again.')
+            setPaying(false)
           }
         }
-        document.head.appendChild(script)
       }
     } catch (err) {
       setError(err?.message || 'Payment failed. Please try again.')
     } finally {
       setPaying(false)
     }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center gap-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e3a5f]"></div>
+        <p className="text-gray-500">Loading resource...</p>
+      </div>
+    )
   }
 
   if (!resource) {
