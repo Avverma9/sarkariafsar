@@ -1,9 +1,23 @@
-echo "server/job-notification/.notification-state.json" >> .gitignore
-echo "server/job-notification/.notification-state.json.bak" >> .gitignore
-git rm --cached server/job-notification/.notification-state.json
-git rm --cached server/job-notification/.notification-state.json.bak
-git add .gitignore
-git commit -m "ignore notification state files"
-git push
 node_modules/
 uploads/
+
+# Environment variables — never commit these
+.env
+.env.local
+.env.production
+.env.staging
+.env.development
+.env.*
+
+# Notification state
+job-notification/.notification-state.json
+job-notification/.notification-state.json.bak
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
