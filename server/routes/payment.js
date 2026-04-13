@@ -6,6 +6,9 @@ const authUser = require('../middleware/authUser');
 // ── Create Cashfree order (user must be logged in) ────────────────────────────
 router.post('/create-order', authUser, ctrl.createOrder);
 
+// ── Get payment redirect URL (user must be logged in) ─────────────────────────
+router.post('/get-payment-link', authUser, ctrl.getPaymentLink);
+
 // ── Cashfree webhook — NO auth, signature verified inside controller ──────────
 router.post('/webhook', ctrl.webhook);
 

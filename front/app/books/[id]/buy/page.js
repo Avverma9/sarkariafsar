@@ -1,56 +1,16 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { getToken, loginWithGoogle } from '@/lib/auth'
 
 const API = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://sarkariafsar.com/api'
-const CASHFREE_SDK_URL = 'https://sdk.cashfree.com/js/v3/cashfree.js'
-
-function loadCashfreeSdk() {
-  if (typeof window === 'undefined') return Promise.resolve(null)
-  if (window.Cashfree) return Promise.resolve(window.Cashfree)
-
-  const existing = document.querySelector('script[data-cashfree-sdk="true"]')
-  if (existing) {
-    return new Promise((resolve, reject) => {
-      const startedAt = Date.now()
-      const timer = setInterval(() => {
-        if (window.Cashfree) {
-          clearInterval(timer)
-          resolve(window.Cashfree)
-          return
-        }
-        if (Date.now() - startedAt > 8000) {
-          clearInterval(timer)
-          reject(new Error('Payment gateway failed to load'))
-        }
-      }, 200)
-    })
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script')
-    script.src = CASHFREE_SDK_URL
-    script.async = true
-    script.dataset.cashfreeSdk = 'true'
-    script.onload = () => {
-      if (window.Cashfree) resolve(window.Cashfree)
-      else reject(new Error('Payment gateway initialized incorrectly'))
-    }
-    script.onerror = () => reject(new Error('Payment gateway script could not be loaded. Please disable ad blocker or check CSP/domain settings.'))
-    document.head.appendChild(script)
-  })
-}
 
 export default function BuyResourcePage() {
   const { id } = useParams()
-  const router = useRouter()
   const [resource, setResource] = useState(null)
-  const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState(false)
   const [error, setError] = useState(null)
-  const [sdkReady, setSdkReady] = useState(false)
 
   useEffect(() => {
     async function fetchResource() {
@@ -63,26 +23,10 @@ export default function BuyResourcePage() {
         setResource(found)
       } catch (err) {
         setError(err.message)
-      } finally {
-        setLoading(false)
       }
     }
     fetchResource()
   }, [id])
-
-  useEffect(() => {
-    let active = true
-    loadCashfreeSdk()
-      .then(() => {
-        if (active) setSdkReady(true)
-      })
-      .catch((err) => {
-        if (active) setError(err.message)
-      })
-    return () => {
-      active = false
-    }
-  }, [])
 
   const handleBuy = async () => {
     setPaying(true)
@@ -116,30 +60,27 @@ export default function BuyResourcePage() {
 
       const { paymentSessionId } = data.data
 
+      // Use Cashfree SDK checkout
       if (typeof window !== 'undefined') {
-        const Cashfree = window.Cashfree || await loadCashfreeSdk()
-
-        const cashfree = Cashfree({ mode: 'production' })
-        await cashfree.checkout({
-          paymentSessionId,
-          redirectTarget: '_self',
-        })
-      } else {
-        setError('Payment gateway not loaded. Please refresh and try again.')
+        const script = document.createElement('script')
+        script.src = 'https://sdk.cashfree.com/js/v3/cashfree.js'
+        script.async = true
+        script.onload = async () => {
+          if (window.Cashfree) {
+            const cashfree = window.Cashfree({ mode: 'production' })
+            await cashfree.checkout({
+              paymentSessionId,
+              redirectTarget: '_self',
+            })
+          }
+        }
+        document.head.appendChild(script)
       }
     } catch (err) {
       setError(err?.message || 'Payment failed. Please try again.')
     } finally {
       setPaying(false)
     }
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
-      </div>
-    )
   }
 
   if (!resource) {
@@ -230,9 +171,12 @@ export default function BuyResourcePage() {
               </div>
             )}
 
-            <button onClick={handleBuy} disabled={paying || !sdkReady}
-              className="w-full bg-[#1e3a5f] hover:bg-[#1d4ed8] text-white text-base font-bold py-3.5 rounded-xl transition-colors disabled:opacity-50 cursor-pointer">
-              {paying ? 'Processing…' : !sdkReady ? 'Loading Payment Gateway…' : `Pay ₹${price} — Get Instant Access`}
+            <button
+              onClick={handleBuy}
+              disabled={paying}
+              className="w-full bg-[#1e3a5f] hover:bg-[#1d4ed8] disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-bold py-4 rounded-xl transition-all"
+            >
+              {paying ? 'Processing...' : `Pay ₹${resource.discountedPrice || resource.price} — Get Instant Access`}
             </button>
 
             <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-400">

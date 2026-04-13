@@ -1,30 +1,34 @@
 const mongoose = require('mongoose');
-const { Cashfree, CFEnvironment } = require('cashfree-pg');
+const axios = require('axios');
 const Order = require('../models/order');
 const User = require('../models/user');
 const Resource = require('../models/resource');
 const MockTest = require('../models/mockTest');
 
-// ── Cashfree init (v5.1.0 API) ─────────────────────────────────────────────────────
-const cashfree = new Cashfree();
-cashfree.XClientId = process.env.CASHFREE_APP_ID;
-cashfree.XClientSecret = process.env.CASHFREE_SECRET_KEY;
-cashfree.XEnvironment = (process.env.CASHFREE_ENV || '').toLowerCase() === 'production'
-  ? CFEnvironment.PRODUCTION
-  : CFEnvironment.SANDBOX;
+// ── Cashfree REST API (2025-01-01 - Latest) ───────────────────────────────────────────────
+const CASHFREE_APP_ID = process.env.CASHFREE_APP_ID;
+const CASHFREE_SECRET_KEY = process.env.CASHFREE_SECRET_KEY;
+const CASHFREE_ENV = (process.env.CASHFREE_ENV || '').toLowerCase() === 'production' ? 'production' : 'sandbox';
+
+const CASHFREE_BASE_URL = CASHFREE_ENV === 'production'
+  ? 'https://api.cashfree.com/pg'
+  : 'https://sandbox.cashfree.com/pg';
+
+const API_VERSION = '2025-01-01';
 
 const normalizeUrl = (value, fallback) => {
   const url = (value || fallback || '').trim().replace(/\/$/, '');
   return url || fallback;
 };
 
-const configuredFrontendUrl = normalizeUrl(
-  process.env.FRONTEND_URL || process.env.NEXT_PUBLIC_SITE_URL,
-  'https://sarkariafsar.com'
-);
-const FRONTEND_URL = configuredFrontendUrl.startsWith('https://')
-  ? configuredFrontendUrl
-  : 'https://sarkariafsar.com';
+// Detect environment for proper URL handling
+const isDevelopment = process.env.NODE_ENV === 'development' || CASHFREE_ENV === 'sandbox';
+
+// For localhost development, use ngrok or production domain for Cashfree whitelisting
+const FRONTEND_URL = isDevelopment
+  ? 'https://sarkariafsar.com'  // Use production domain for Cashfree (whitelisted)
+  : normalizeUrl(process.env.FRONTEND_URL, 'https://sarkariafsar.com');
+
 const SERVER_URL = normalizeUrl(process.env.SERVER_URL, 'https://sarkariafsar.com');
 
 const isValidObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -54,27 +58,37 @@ const syncOrderWithCashfree = async (order) => {
     return { status: 'paid', order };
   }
 
-  const cfResp = await cashfree.PGFetchOrder(order.cfOrderId);
-  const cfStatus = cfResp.data?.order_status;
+  try {
+    const cfResp = await axios.get(`${CASHFREE_BASE_URL}/orders/${order.cfOrderId}`, {
+      headers: {
+        'x-client-id': CASHFREE_APP_ID,
+        'x-client-secret': CASHFREE_SECRET_KEY,
+        'x-api-version': API_VERSION,
+        'Content-Type': 'application/json',
+      },
+    });
 
-  if (cfStatus === 'PAID') {
-    const paymentsResp = await cashfree.PGOrderFetchPayments(order.cfOrderId);
-    const successPayment = (paymentsResp.data || []).find((p) => p.payment_status === 'SUCCESS');
+    const cfStatus = cfResp.data?.order_status;
 
-    order.status = 'paid';
-    order.cfPaymentId = successPayment?.cf_payment_id ? String(successPayment.cf_payment_id) : null;
-    order.paidAt = order.paidAt || new Date();
-    await order.save();
-    await grantAccess(order);
+    if (cfStatus === 'PAID') {
+      order.status = 'paid';
+      order.cfPaymentId = cfResp.data?.order_id || null;
+      order.paidAt = order.paidAt || new Date();
+      await order.save();
+      await grantAccess(order);
 
-    return { status: 'paid', order };
+      return { status: 'paid', order };
+    }
+
+    const statusMap = { ACTIVE: 'pending', EXPIRED: 'expired', TERMINATED: 'failed' };
+    return {
+      status: statusMap[cfStatus] || cfStatus?.toLowerCase() || 'pending',
+      order,
+    };
+  } catch (err) {
+    console.error('syncOrderWithCashfree:', err?.response?.data || err.message);
+    return { status: 'error', order };
   }
-
-  const statusMap = { ACTIVE: 'pending', EXPIRED: 'expired', TERMINATED: 'failed' };
-  return {
-    status: statusMap[cfStatus] || cfStatus?.toLowerCase() || 'pending',
-    order,
-  };
 };
 
 // ── POST /payment/create-order ────────────────────────────────────────────────
@@ -128,7 +142,18 @@ exports.createOrder = async (req, res) => {
       order_note: `${itemType} — ${item.title}`,
     };
 
-    const cfResp = await cashfree.PGCreateOrder(cfRequest);
+    console.log('DEBUG FRONTEND_URL:', FRONTEND_URL);
+    console.log('DEBUG return_url:', `${FRONTEND_URL}/payment/status?order_id=${cfOrderId}`);
+
+    const cfResp = await axios.post(`${CASHFREE_BASE_URL}/orders`, cfRequest, {
+      headers: {
+        'x-client-id': CASHFREE_APP_ID,
+        'x-client-secret': CASHFREE_SECRET_KEY,
+        'x-api-version': API_VERSION,
+        'Content-Type': 'application/json',
+      },
+    });
+
     const { payment_session_id } = cfResp.data;
 
     const order = await Order.create({
@@ -155,6 +180,50 @@ exports.createOrder = async (req, res) => {
     });
   } catch (err) {
     console.error('createOrder:', err?.response?.data || err.message);
+    return res.status(500).json({
+      success: false,
+      message: err?.response?.data?.message || err.message,
+    });
+  }
+};
+
+// ── POST /payment/get-payment-link (Get payment redirect URL) ───────────────────
+exports.getPaymentLink = async (req, res) => {
+  try {
+    const { paymentSessionId } = req.body;
+
+    if (!paymentSessionId) {
+      return res.status(400).json({ success: false, message: 'paymentSessionId is required' });
+    }
+
+    const cfResp = await axios.post(`${CASHFREE_BASE_URL}/orders/sessions`, {
+      payment_session_id: paymentSessionId,
+    }, {
+      headers: {
+        'x-client-id': CASHFREE_APP_ID,
+        'x-client-secret': CASHFREE_SECRET_KEY,
+        'x-api-version': API_VERSION,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const paymentData = cfResp.data;
+    const redirectUrl = paymentData?.data?.url;
+
+    if (!redirectUrl) {
+      return res.status(500).json({ success: false, message: 'Failed to get payment redirect URL' });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        redirectUrl,
+        paymentMethod: paymentData?.payment_method,
+        cfPaymentId: paymentData?.cf_payment_id,
+      },
+    });
+  } catch (err) {
+    console.error('getPaymentLink:', err?.response?.data || err.message);
     return res.status(500).json({
       success: false,
       message: err?.response?.data?.message || err.message,
