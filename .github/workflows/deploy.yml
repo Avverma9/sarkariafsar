@@ -20,7 +20,9 @@ jobs:
             set -e
             cd /home/ubuntu/apps/sarkariafsar
 
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
+            git clean -fd
 
             # API / server
             cd server
