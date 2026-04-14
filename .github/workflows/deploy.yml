@@ -61,7 +61,7 @@ jobs:
             # Frontend build
             cd ../front
             npm install
-            npm run build
+            NEXT_PUBLIC_API_BASE_URL=https://api.sarkariafsar.com/api npm run build
 
             # Panel build
             cd ../panel

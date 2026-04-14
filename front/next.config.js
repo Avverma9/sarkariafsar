@@ -93,7 +93,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https: https://lh3.googleusercontent.com",
-              "connect-src 'self' https://sdk.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com https://payments.cashfree.com https://fonts.googleapis.com https://fonts.gstatic.com https://sarkariafsar.com http://localhost:5000 https://www.google-analytics.com https://www.googletagmanager.com https://lh3.googleusercontent.com",
+              "connect-src 'self' https://sdk.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com https://payments.cashfree.com https://fonts.googleapis.com https://fonts.gstatic.com https://sarkariafsar.com https://api.sarkariafsar.com http://localhost:5000 https://www.google-analytics.com https://www.googletagmanager.com https://lh3.googleusercontent.com https://accounts.google.com https://oauth2.googleapis.com",
               "frame-src 'self' https://sdk.cashfree.com https://payments.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com",
               "frame-ancestors 'self'",
             ].join('; '),
