@@ -30,6 +30,7 @@ jobs:
 
             # server/.env from GitHub secrets
             {
+              echo "NODE_ENV=production"
               echo "SCRAPPER_PORT=5000"
               echo "JWT_SECRET=${{ secrets.JWT_SECRET }}"
               echo "GOOGLE_CALLBACK_URL=http://localhost:5000/api/auth/google/callback"
