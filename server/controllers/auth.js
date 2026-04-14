@@ -9,7 +9,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://sarkariafsar.com';
 const JWT_EXPIRES  = '30d';
 
 const CALLBACK_URL = process.env.NODE_ENV === 'production'
-  ? (process.env.PRODUCTION_CALLBACK_URL || 'https://sarkariafsar.com/api/auth/google/callback')
+  ? (process.env.PRODUCTION_CALLBACK_URL || 'https://api.sarkariafsar.com/api/auth/google/callback')
   : (process.env.GOOGLE_CALLBACK_URL     || 'http://localhost:5000/api/auth/google/callback');
 
 function signToken(userId) {
