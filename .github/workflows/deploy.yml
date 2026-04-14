@@ -67,6 +67,5 @@ jobs:
 
             # PM2 restart via ecosystem
             cd ..
-            pm2 start ecosystem.config.cjs --update-env
-            pm2 restart all --update-env
+            pm2 startOrRestart ecosystem.config.cjs --update-env
             pm2 save --force
